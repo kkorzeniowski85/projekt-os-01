@@ -1,0 +1,2202 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#131615">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Trener FBW — wspinacz</title>
+<style>
+  :root{
+    --stone-950:#131615;
+    --stone-900:#1B1F1D;
+    --stone-800:#262B28;
+    --stone-700:#333A36;
+    --stone-600:#454E48;
+    --chalk-100:#EDEAE1;
+    --chalk-300:#C7C3B6;
+    --chalk-500:#8B887C;
+    --lichen-500:#8FAE7C;
+    --lichen-400:#A6C295;
+    --lichen-900:#26311F;
+    --rope-500:#D9973F;
+    --rope-400:#E7B268;
+    --alert-500:#C1503F;
+    --alert-400:#DA7565;
+    --radius:14px;
+    font-size:16px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--stone-950); color:var(--chalk-100);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    overscroll-behavior:none;
+  }
+  html{ background:#0A0C0B; }
+  body{
+    display:flex; flex-direction:column;
+    max-width:560px; margin:0 auto;
+    min-height:100vh; min-height:100dvh;
+    background:var(--stone-950);
+  }
+  /* Tablet i komputer: kolumna aplikacji dostaje ramkę, żeby wyglądała
+     jak celowy panel, a nie przypadkowo wąska strona. */
+  @media (min-width:660px){
+    body{
+      border-left:1px solid var(--stone-800);
+      border-right:1px solid var(--stone-800);
+      box-shadow:0 0 80px rgba(0,0,0,0.55);
+    }
+    nav.bottomnav{
+      border-left:1px solid var(--stone-800);
+      border-right:1px solid var(--stone-800);
+    }
+  }
+  .tabnum{ font-variant-numeric:tabular-nums; }
+  h1,h2,h3{ margin:0; font-weight:700; letter-spacing:0.01em; }
+  .eyebrow{
+    text-transform:uppercase; letter-spacing:0.14em; font-size:0.72rem;
+    color:var(--chalk-500); font-weight:600;
+  }
+  header.app-header{
+    padding:18px 20px 14px; border-bottom:1px solid var(--stone-800);
+    display:flex; align-items:center; justify-content:space-between;
+    position:sticky; top:0; background:var(--stone-950); z-index:10;
+  }
+  header.app-header .brand{ display:flex; flex-direction:column; gap:2px; }
+  header.app-header .brand .name{ font-size:1.15rem; font-weight:800; letter-spacing:-0.01em; }
+  header.app-header .brand .sub{ font-size:0.78rem; color:var(--chalk-500); }
+  .dot{
+    width:9px;height:9px;border-radius:50%;
+    background:var(--lichen-500); box-shadow:0 0 0 3px var(--lichen-900);
+  }
+  main{ flex:1; padding:16px 16px 96px; overflow-y:auto; }
+  .screen{ display:none; animation:fade .18s ease; }
+  .screen.active{ display:block; }
+  @keyframes fade{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
+
+  .week-strip{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-bottom:18px; }
+  .day-chip{
+    background:var(--stone-900); border:1px solid var(--stone-800); border-radius:12px;
+    padding:9px 4px; text-align:center; cursor:pointer; position:relative;
+  }
+  .day-chip.ovr{ border-color:var(--rope-500); }
+  .day-chip.today{ border-color:var(--lichen-500); }
+  .day-chip .dlabel{ font-size:0.62rem; color:var(--chalk-500); text-transform:uppercase; letter-spacing:0.06em; }
+  .day-chip .dtype{ margin-top:4px; }
+  .day-chip .icon{ font-size:1.05rem; }
+  .day-chip.selected{ background:var(--lichen-900); border-color:var(--lichen-500); }
+
+  .card{
+    background:var(--stone-900); border:1px solid var(--stone-800);
+    border-radius:var(--radius); padding:16px; margin-bottom:12px;
+  }
+  .card h2{ font-size:1.05rem; }
+  .card .meta, .meta{ color:var(--chalk-500); font-size:0.85rem; margin-top:2px; }
+  .block-title{ display:flex; align-items:center; gap:8px; margin:22px 0 10px; }
+  .block-title .idx{
+    width:22px;height:22px;border-radius:6px; background:var(--stone-800);
+    display:flex;align-items:center;justify-content:center;
+    font-size:0.72rem; font-weight:700; color:var(--lichen-400);
+  }
+  .block-title h3{ font-size:0.95rem; color:var(--chalk-300); }
+
+  .exercise-row{
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--stone-900); border:1px solid var(--stone-800);
+    border-radius:12px; padding:13px 14px; margin-bottom:8px; cursor:pointer;
+  }
+  .exercise-row.done{ border-color:var(--lichen-500); }
+  .exercise-row .left{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+  .exercise-row .exname{ font-weight:600; font-size:0.96rem; }
+  .exercise-row .exsub{ font-size:0.78rem; color:var(--chalk-500); }
+  .exercise-row .exdesc{ font-size:0.8rem; color:var(--chalk-500); line-height:1.45; margin-top:2px; }
+  .checkmark{
+    width:26px;height:26px;border-radius:50%; border:2px solid var(--stone-700);
+    display:flex;align-items:center;justify-content:center; flex-shrink:0; font-size:0.85rem;
+  }
+  .exercise-row.done .checkmark{ background:var(--lichen-500); border-color:var(--lichen-500); color:var(--stone-950); }
+
+  .badge{
+    display:inline-block; font-size:0.68rem; font-weight:700; letter-spacing:0.04em;
+    padding:2px 8px; border-radius:20px; text-transform:uppercase;
+  }
+  .badge.strength{ background:var(--lichen-900); color:var(--lichen-400); }
+  .badge.climb{ background:#2B3A44; color:#8FC1D9; }
+  .badge.rest{ background:var(--stone-800); color:var(--chalk-500); }
+
+  button{ font-family:inherit; }
+  .btn{
+    appearance:none; border:none; border-radius:12px; padding:14px 18px;
+    font-weight:700; font-size:0.95rem; cursor:pointer; width:100%;
+  }
+  .btn-primary{ background:var(--lichen-500); color:#0F1410; }
+  .btn-primary:active{ background:var(--lichen-400); }
+  .btn-secondary{ background:var(--stone-800); color:var(--chalk-100); border:1px solid var(--stone-700); }
+  .btn-ghost{ background:transparent; color:var(--chalk-300); border:1px solid var(--stone-700); }
+  .btn-danger{ background:transparent; color:var(--alert-400); border:1px solid var(--alert-500); }
+  .btn-row{ display:flex; gap:8px; }
+  .btn-row .btn{ flex:1; }
+  .btn:disabled{ opacity:0.35; }
+
+  .back-row{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+  .back-btn{
+    width:36px;height:36px; border-radius:10px; background:var(--stone-900);
+    border:1px solid var(--stone-800); color:var(--chalk-100); font-size:1.1rem;
+    display:flex;align-items:center;justify-content:center; cursor:pointer; flex-shrink:0;
+  }
+  .set-tracker{ display:flex; gap:6px; margin:14px 0; }
+  .set-pip{ flex:1; height:8px; border-radius:4px; background:var(--stone-800); }
+  .set-pip.filled{ background:var(--lichen-500); }
+  .set-pip.current{ background:var(--rope-500); }
+
+  .timer-wrap{ display:flex; flex-direction:column; align-items:center; padding:8px 0 4px; }
+  .timer-ring-holder{ position:relative; width:min(230px, 62vw); height:min(230px, 62vw); margin:6px 0 6px; }
+  .timer-ring-holder svg{ width:100%; height:100%; display:block; }
+  /* Telefon w poziomie / niski ekran: mniejsza tarcza, żeby przyciski
+     zostały widoczne bez przewijania. */
+  @media (max-height:560px){
+    .timer-ring-holder{ width:min(150px, 34vh); height:min(150px, 34vh); }
+    .timer-center .time{ font-size:2rem; }
+    .timer-center .phase{ font-size:0.68rem; padding:0 14px; }
+  }
+  .timer-center{
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+  }
+  .timer-center .phase{ font-size:0.8rem; color:var(--chalk-500); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:2px; text-align:center; padding:0 30px;}
+  .timer-center .time{ font-size:3rem; font-weight:800; letter-spacing:-0.02em; }
+  .timer-center .rep{ font-size:0.85rem; color:var(--lichen-400); margin-top:4px; font-weight:600; }
+
+  .notes-box{
+    background:var(--stone-900); border:1px solid var(--stone-800); border-radius:var(--radius);
+    padding:14px; font-size:0.88rem; line-height:1.55; color:var(--chalk-300); margin-top:16px;
+  }
+  .notes-box b{ color:var(--chalk-100); }
+  .notes-box .warn{ color:var(--alert-400); }
+
+  .banner{
+    border-radius:var(--radius); padding:13px 14px; font-size:0.88rem; line-height:1.55;
+    margin:12px 0;
+  }
+  .banner.block{ background:#33201C; border:1px solid var(--alert-500); color:var(--alert-400); }
+  .banner.warn{ background:#332A1A; border:1px solid var(--rope-500); color:var(--rope-400); }
+  .banner b{ color:inherit; }
+
+  details.tech{
+    background:var(--stone-900); border:1px solid var(--stone-800);
+    border-radius:var(--radius); margin-bottom:8px; overflow:hidden;
+  }
+  details.tech summary{
+    padding:13px 14px; font-weight:600; font-size:0.92rem; cursor:pointer;
+    list-style:none; display:flex; justify-content:space-between; align-items:center;
+    color:var(--chalk-100);
+  }
+  details.tech summary::-webkit-details-marker{ display:none; }
+  details.tech summary::after{ content:'+'; color:var(--chalk-500); font-size:1.15rem; font-weight:400; }
+  details.tech[open] summary::after{ content:'−'; }
+  details.tech .inner{ padding:0 14px 14px; font-size:0.88rem; line-height:1.6; color:var(--chalk-300); }
+  details.tech .inner b{ color:var(--chalk-100); }
+  details.tech .inner .warn{ color:var(--alert-400); }
+  details.tech .inner ol, details.tech .inner ul{ margin:6px 0 0; padding-left:20px; display:flex; flex-direction:column; gap:7px; }
+  .tech-head{ margin:18px 0 8px; font-size:0.85rem; color:var(--chalk-500); text-transform:uppercase; letter-spacing:0.08em; font-weight:600; }
+
+  .log-row{ display:flex; gap:8px; margin-top:14px; }
+  .log-row > div{ flex:1; min-width:0; }
+  .log-row input{
+    width:100%; background:var(--stone-900); border:1px solid var(--stone-700); border-radius:10px;
+    color:var(--chalk-100); padding:11px 12px; font-size:0.92rem; min-width:0;
+  }
+  .log-row label{ font-size:0.7rem; color:var(--chalk-500); display:block; margin-bottom:4px; }
+
+  .slider-card{ margin-bottom:16px; }
+  .slider-row{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
+  .slider-row .val{ font-size:1.4rem; font-weight:800; color:var(--rope-400); }
+  input[type=range]{ width:100%; accent-color:var(--lichen-500); height:28px; }
+  input[type=number], input[type=text], select{
+    background:var(--stone-900); border:1px solid var(--stone-700); border-radius:10px;
+    color:var(--chalk-100); padding:10px 12px; font-size:0.92rem; width:100%;
+  }
+
+  nav.bottomnav{
+    position:fixed; bottom:0; left:0; right:0;
+    max-width:560px; margin:0 auto;
+    background:var(--stone-900); border-top:1px solid var(--stone-800);
+    display:flex; padding:6px 6px calc(6px + env(safe-area-inset-bottom));
+    z-index:20;
+  }
+  nav.bottomnav button{
+    flex:1; background:none; border:none; color:var(--chalk-500);
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    padding:8px 4px; border-radius:10px; font-size:0.68rem; font-weight:600; cursor:pointer;
+  }
+  nav.bottomnav button .ic{ font-size:1.15rem; }
+  nav.bottomnav button.active{ color:var(--lichen-400); background:var(--lichen-900); }
+
+  .empty-hint{ text-align:center; color:var(--chalk-500); font-size:0.88rem; padding:30px 10px; }
+  .hist-item{
+    display:flex; justify-content:space-between; align-items:center; gap:8px;
+    padding:12px 14px; border-bottom:1px solid var(--stone-800); font-size:0.88rem;
+  }
+  .hist-item:last-child{ border-bottom:none; }
+  .hist-item .date{ font-weight:700; white-space:nowrap; }
+  .hist-item .tags{ display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+  .pill{ font-size:0.7rem; padding:2px 7px; border-radius:20px; background:var(--stone-800); color:var(--chalk-300); }
+
+  /* ---------- Ulubione (szybki dostęp na górze zakładki Timery) ---------- */
+  .fav-card{
+    display:flex; align-items:center; gap:14px;
+    background:linear-gradient(180deg, var(--lichen-900), var(--stone-900));
+    border:1px solid var(--lichen-500); border-radius:var(--radius);
+    padding:15px 16px; margin-bottom:9px; cursor:pointer;
+  }
+  .fav-card .play{
+    width:46px; height:46px; border-radius:50%; flex-shrink:0;
+    background:var(--lichen-500); color:#0F1410;
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.15rem; font-weight:700;
+  }
+  .fav-card .txt{ flex:1; min-width:0; }
+  .fav-card .favname{ font-weight:700; font-size:1rem; }
+  .fav-card .favsub{ font-size:0.8rem; color:var(--chalk-300); margin-top:2px; }
+  .fav-btn{
+    background:none; border:none; cursor:pointer; flex-shrink:0;
+    font-size:1.15rem; line-height:1; padding:8px; margin:-8px -6px -8px 4px;
+    color:var(--stone-600);
+  }
+  .fav-btn.on{ color:var(--rope-400); }
+  .fav-empty{
+    border:1px dashed var(--stone-700); border-radius:var(--radius);
+    padding:14px; font-size:0.86rem; color:var(--chalk-500); line-height:1.55; margin-bottom:6px;
+  }
+  .preset-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:var(--stone-900); border:1px solid var(--stone-800);
+    border-radius:12px; padding:11px 12px; margin-bottom:8px;
+  }
+  .preset-row .del{
+    background:none; border:none; color:var(--chalk-500); font-size:1.05rem; cursor:pointer; padding:6px;
+  }
+
+  .setting-row{ display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; }
+  .setting-row label{ font-size:0.9rem; }
+  .setting-row select{ width:auto; min-width:150px; }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brand">
+    <span class="name">Trener FBW</span>
+    <span class="sub" id="headerSub">Cykl 1 · Tydzień 1</span>
+  </div>
+  <span class="dot"></span>
+</header>
+
+<main>
+
+  <!-- ===================== EKRAN: DZIŚ ===================== -->
+  <section class="screen active" id="screen-today">
+    <div class="week-strip" id="weekStrip"></div>
+    <div id="todayContent"></div>
+  </section>
+
+  <!-- ===================== EKRAN: SZCZEGÓŁ ĆWICZENIA ===================== -->
+  <section class="screen" id="screen-exercise">
+    <div class="back-row">
+      <button class="back-btn" onclick="goToday()">←</button>
+      <div style="flex:1;min-width:0;">
+        <div class="eyebrow" id="exBreadcrumb">MODUŁ</div>
+        <h2 id="exTitle" style="font-size:1.05rem;"></h2>
+      </div>
+      <button class="back-btn" id="exEditBtn" style="display:none;" title="Zmień liczby dla tej pozycji">✎</button>
+    </div>
+    <div id="exerciseBody"></div>
+  </section>
+
+  <!-- ===================== EKRAN: WSPINANIE ===================== -->
+  <section class="screen" id="screen-climb">
+    <div class="back-row">
+      <button class="back-btn" onclick="goToday()">←</button>
+      <h2 style="font-size:1.05rem;">Wspinanie</h2>
+    </div>
+    <div id="climbLimitBanner"></div>
+    <div class="notes-box" style="margin-top:0;">
+      <b>Najważniejsza zasada dnia:</b> z bulderów schodź po chwytach, <span class="warn">nigdy nie zeskakuj na materac</span>. Zeskok to największe pojedyncze ryzyko dla Twojego ścięgna Achillesa — większe niż wszystkie ćwiczenia razem wzięte.
+    </div>
+    <div class="notes-box">
+      <b>Na co wykorzystać sesję (wg planu):</b> zamiast maksymalnej liczby trudnych dróg — długie, łatwe wspinanie ciągiem przez 20–30 minut (tzw. ARC: cały czas na ścianie, na tyle łatwo, żeby przedramiona nie puchły), powtarzanie tej samej drogi kilka razy z rzędu oraz świadome ćwiczenie odpoczywania na drodze (strzepywanie rąk na dobrych chwytach).
+    </div>
+    <div class="card" style="margin-top:14px;">
+      <h2>Zapis sesji</h2>
+      <div class="log-row">
+        <div><label>Ile dróg</label><input type="number" id="climbRoutes" placeholder="np. 6"></div>
+        <div><label>Ile bulderów</label><input type="number" id="climbBoulders" placeholder="np. 9"></div>
+      </div>
+      <div style="margin-top:12px;">
+        <label style="font-size:0.7rem;color:var(--chalk-500);display:block;margin-bottom:4px;">Jak wypadła wytrzymałość (czy przedramiona „puchły" szybciej/wolniej niż zwykle)</label>
+        <select id="climbFeel">
+          <option value="better">Lepiej niż zwykle</option>
+          <option value="same" selected>Bez zmian</option>
+          <option value="worse">Gorzej niż zwykle</option>
+        </select>
+      </div>
+      <div style="margin-top:12px;">
+        <label style="font-size:0.7rem;color:var(--chalk-500);display:block;margin-bottom:4px;">Notatka</label>
+        <input type="text" id="climbNote" placeholder="opcjonalnie">
+      </div>
+      <div style="margin-top:14px;">
+        <button class="btn btn-primary" onclick="saveClimb()">Zapisz sesję</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== EKRAN: PORANEK ===================== -->
+  <section class="screen" id="screen-stiff">
+    <h2 style="margin-bottom:2px;">Poranny dziennik ścięgien</h2>
+    <div class="meta" style="margin-bottom:14px;">Codziennie rano, zaraz po wstaniu — zajmuje pół minuty.</div>
+
+    <details class="tech" id="stiffInfo">
+      <summary>Po co to jest i jak oceniać?</summary>
+      <div class="inner">
+        <b>Co oceniasz:</b> uczucie „zastania" po nocy — jak sztywne i oporne są przy pierwszych ruchach:<br>
+        • <b>ścięgno Achillesa</b> — przy pierwszych krokach po wstaniu z łóżka,<br>
+        • <b>palce dłoni</b> — przy pierwszym zaciśnięciu pięści.
+        <br><br>
+        <b>Skala 0–10:</b> 0 = nic nie czuć · 2–3 = lekkie zastanie, znika po chwili · 5–6 = wyraźna sztywność, utrudnia pierwsze kroki/ruchy · 8+ = silne usztywnienie.
+        <br><br>
+        <b>Minuty:</b> po ilu minutach od wstania uczucie całkiem znika.
+        <br><br>
+        <b>Dlaczego to najważniejszy wpis w całej aplikacji:</b> poranna sztywność ścięgna to najwcześniejszy sygnał, że dostaje ono więcej obciążenia, niż jest w stanie przerobić — pojawia się na <b>tygodnie przed bólem</b>. Aplikacja liczy z Twoich wpisów osobistą normę i porównuje z nią każdy poranek. Gdy odczyt jest wyraźnie powyżej normy, plan cofa obciążenie, zanim cokolwiek zacznie boleć. Bez codziennych wpisów ten mechanizm nie ma danych i nie działa.
+      </div>
+    </details>
+
+    <div class="card slider-card" style="margin-top:14px;">
+      <div class="slider-row"><b>Achilles — sztywność rano</b><span class="val tabnum" id="achVal">0</span></div>
+      <input type="range" id="achScore" min="0" max="10" value="0" oninput="document.getElementById('achVal').textContent=this.value">
+      <div style="margin-top:10px;"><label style="font-size:0.75rem;color:var(--chalk-500);">Po ilu minutach ustąpiła</label><input type="number" id="achMin" placeholder="np. 5"></div>
+    </div>
+
+    <div class="card slider-card">
+      <div class="slider-row"><b>Palce — sztywność rano</b><span class="val tabnum" id="finVal">0</span></div>
+      <input type="range" id="finScore" min="0" max="10" value="0" oninput="document.getElementById('finVal').textContent=this.value">
+      <div style="margin-top:10px;"><label style="font-size:0.75rem;color:var(--chalk-500);">Po ilu minutach ustąpiła</label><input type="number" id="finMin" placeholder="np. 5"></div>
+    </div>
+
+    <button class="btn btn-primary" onclick="saveStiffness()">Zapisz dzisiejszy wpis</button>
+    <div class="notes-box" id="stiffFlag" style="display:none;"></div>
+  </section>
+
+  <!-- ===================== EKRAN: TIMERY / POJEDYNCZE ĆWICZENIA ===================== -->
+  <section class="screen" id="screen-tools">
+    <h2 style="margin-bottom:2px;">Timery</h2>
+    <div class="meta" style="margin-bottom:16px;">Uruchom dowolne ćwiczenie albo protokół tablicy poza planem dnia. Wyniki zapisują się na dzisiejszy dzień.</div>
+    <div id="toolsContent"></div>
+  </section>
+
+  <!-- ===================== EKRAN: DZIENNIK / HISTORIA ===================== -->
+  <section class="screen" id="screen-history">
+    <h2 style="margin-bottom:14px;">Dziennik</h2>
+    <div class="card" style="padding:0;">
+      <div id="historyList"><div class="empty-hint">Wczytywanie…</div></div>
+    </div>
+  </section>
+
+  <!-- ===================== EKRAN: USTAWIENIA ===================== -->
+  <section class="screen" id="screen-settings">
+    <h2 style="margin-bottom:14px;">Ustawienia</h2>
+    <div class="card">
+      <div class="setting-row">
+        <label>Wspięcia na palce</label>
+        <select id="setAchilles" onchange="saveSettings()">
+          <option value="slow">Obunóż (ostrożnie)</option>
+          <option value="fast">Jednonóż (szybsza progresja)</option>
+        </select>
+      </div>
+      <div class="setting-row">
+        <label>Głębokość dipów</label>
+        <select id="setDips" onchange="saveSettings()">
+          <option value="100-110">Płycej: stop na 100–110°</option>
+          <option value="90">Do kąta prostego</option>
+        </select>
+      </div>
+      <div class="meta">Wersja obunóż obowiązuje, dopóki nie potwierdzisz, ile epizodów zapalenia Achillesa przeszedłeś (jeden czy więcej, jedna noga czy obie). Dipy płycej, dopóki nie zmierzysz szerokości barków i nie porównasz z rozstawem stacji (56 cm).</div>
+    </div>
+    <div class="card">
+      <h2 style="margin-bottom:10px;">Zmienione liczby w ćwiczeniach</h2>
+      <div class="meta" style="margin-bottom:10px;" id="overridesInfo"></div>
+      <button class="btn btn-ghost" onclick="resetAllOverridesConfirm()">Przywróć wszystkie do wartości z planu</button>
+    </div>
+    <div class="card">
+      <h2 style="margin-bottom:10px;">Kopia zapasowa</h2>
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="exportData()">Eksport JSON</button>
+        <button class="btn btn-ghost" onclick="document.getElementById('importFile').click()">Import</button>
+      </div>
+      <input type="file" id="importFile" accept="application/json" style="display:none;" onchange="importData(this)">
+      <div class="meta" style="margin-top:10px;">Wszystkie dane są zapisane wyłącznie na tym telefonie — nie ma konta ani serwera. Rób eksport raz na jakiś czas i trzymaj plik np. na Dysku Google.</div>
+    </div>
+    <div class="meta" style="text-align:center;" id="versionInfo"></div>
+  </section>
+
+</main>
+
+<nav class="bottomnav">
+  <button class="active" data-tab="today" onclick="switchTab('today')"><span class="ic">🏠</span>Dziś</button>
+  <button data-tab="tools" onclick="switchTab('tools')"><span class="ic">⏱️</span>Timery</button>
+  <button data-tab="stiff" onclick="switchTab('stiff')"><span class="ic">🌅</span>Poranek</button>
+  <button data-tab="history" onclick="switchTab('history')"><span class="ic">📓</span>Dziennik</button>
+  <button data-tab="settings" onclick="switchTab('settings')"><span class="ic">⚙️</span>Więcej</button>
+</nav>
+
+<script>
+'use strict';
+const APP_VERSION = '1.5.1';
+
+/* =========================================================================
+   USTAWIENIA + STORAGE (localStorage, offline-first)
+   ========================================================================= */
+const store = {
+  get(key, def){
+    try{
+      const v = localStorage.getItem('fbw:'+key);
+      return v === null ? def : JSON.parse(v);
+    }catch(e){ return def; }
+  },
+  set(key, val){
+    try{ localStorage.setItem('fbw:'+key, JSON.stringify(val)); }
+    catch(e){ console.error('storage', e); }
+  },
+  keys(prefix){
+    const out = [];
+    for(let i=0;i<localStorage.length;i++){
+      const k = localStorage.key(i);
+      if(k && k.startsWith('fbw:'+prefix)) out.push(k.slice(4));
+    }
+    return out;
+  }
+};
+
+let SETTINGS = store.get('settings', { achillesTrack:'slow', dipsDepth:'100-110' });
+
+function saveSettings(){
+  SETTINGS.achillesTrack = document.getElementById('setAchilles').value;
+  SETTINGS.dipsDepth = document.getElementById('setDips').value;
+  store.set('settings', SETTINGS);
+  vibrate(20);
+}
+
+function loadEntry(iso){ return store.get('entries:'+iso, {}); }
+function saveEntry(iso, data){ store.set('entries:'+iso, data); }
+function mergeEntry(iso, patch){
+  const next = {...loadEntry(iso), ...patch};
+  saveEntry(iso, next);
+  return next;
+}
+
+/* =========================================================================
+   WŁASNE USTAWIENIA ĆWICZEŃ — nadpisują liczby z planu (serie, powtórzenia,
+   przerwy, czasy zwisu). Klucz to id pozycji (np. 'E3', 'hangboard',
+   'hangboard_B'), więc edycja Protokołu A z zakładki Timery i z planu na
+   czwartek to ta sama zmiana — to jeden i ten sam protokół.
+   ========================================================================= */
+function getOverrides(){ return store.get('overrides', {}); }
+function getOverride(id){ return getOverrides()[id] || null; }
+function setOverride(id, patch){
+  const o = getOverrides();
+  o[id] = {...(o[id]||{}), ...patch};
+  store.set('overrides', o);
+}
+function clearOverride(id){
+  const o = getOverrides();
+  delete o[id];
+  store.set('overrides', o);
+}
+function clearAllOverrides(){ store.set('overrides', {}); }
+
+function applyExerciseOverride(ex){
+  const o = getOverride(ex.id);
+  if(!o) return ex;
+  const next = {...ex, modified:true};
+  if(o.sets != null) next.sets = o.sets;
+  if(o.rest != null) next.rest = o.rest;
+  if(ex.holdBased){
+    if(o.holdMin != null || o.holdMax != null){
+      next.holdRange = [o.holdMin ?? ex.holdRange[0], o.holdMax ?? ex.holdRange[1]];
+    }
+  } else if(o.repsRange){
+    next.repsRange = o.repsRange;
+  }
+  return next;
+}
+function applyHangboardOverride(block){
+  const o = getOverride(block.id);
+  if(!o) return block;
+  const next = {...block, modified:true};
+  ['series','reps','hang','hangRest','seriesRest'].forEach(k=>{ if(o[k] != null) next[k] = o[k]; });
+  return next;
+}
+/* Element może być pusty (np. 0 s przerwy) — nie traktuj tego jak "brak wartości". */
+function numOr(elId, fallback){
+  const el = document.getElementById(elId);
+  if(!el || el.value === '') return fallback;
+  const n = Number(el.value);
+  return isNaN(n) ? fallback : n;
+}
+
+/* =========================================================================
+   DANE TRENINGOWE — tydzień 1, cykl 1
+   Treść merytoryczna: plan FBW + opisy techniczne (technika_cykl1_tydzien1.md).
+   Moduły B i C oraz tydzień 2: do uzupełnienia po ustaleniu treści.
+   ========================================================================= */
+const GENERAL_WARMUP = {
+  id:'warmup_general', name:'Rozgrzewka ogólna', kind:'warmup',
+  intro:'10 minut przed każdym treningiem. Kolejność kroków jest celowa — od podniesienia tętna do aktywacji mięśni, które za chwilę będą pracować.',
+  steps:[
+    {label:'Podniesienie tętna — 5 min', seconds:300,
+     desc:'Rower, wioślarz albo szybki marsz. Bez skakanki — jest usunięta z planu ze względu na Achillesa. Koniec, gdy oddech wyraźnie przyspieszony, ale da się mówić pełnymi zdaniami; lekki pot na czole to właściwy moment.'},
+    {label:'Krążenia barków + lekkie scapular pull-ups', reps:'2 × 10',
+     desc:'Krążenia: ramiona proste, duże koła w tył, powoli. Scapular pull-ups tutaj bez wysiłku — tylko rozbudzenie łopatek (technika opisana przy ćwiczeniu wieczornym).'},
+    {label:'Pike hold pod ścianą', seconds:20, sets:2,
+     desc:'Stopy na ścianie na wysokości bioder, ręce na podłodze, biodra nad barkami. Barki aktywnie wypchnięte (uszy daleko od barków). Przygotowuje barki do pozycji odwróconej. Jeśli po 20 s drżysz — obniż biodra.'},
+    {label:'Wspięcia na palce obunóż — 1 × 20, tempo 2-1-2', reps:'1 × 20',
+     desc:'To rozgrzewka ścięgna Achillesa, nie seria treningowa: 2 s w górę, 1 s pauzy, 2 s w dół, płasko, bez obciążenia. Robisz je także w dni, gdy wspięcia treningowe są w planie.'},
+    {label:'Aktywacja pośladków — odwodzenie na taśmie', reps:'2 × 15',
+     desc:'Taśma wokół kostek lub tuż nad kolanami. Odwodzenie nogi w bok bez ruchu miednicy — ruch wychodzi z biodra, nie z tułowia.'},
+    {label:'Przysiady + wykroki chodzone', reps:'2 × 10',
+     desc:'Przysiady bez obciążenia, pełny zakres, pięty cały czas na podłodze. Wykroki: krok w przód, kolano tylnej nogi w stronę podłogi, tułów pionowo.'},
+    {label:'Cat-cow + dead bug', reps:'2 × 8',
+     desc:'Cat-cow: w klęku podpartym powolne wyginanie i zaokrąglanie kręgosłupa. Dead bug: na plecach, lędźwie dociśnięte do podłogi przez cały czas, naprzemienne prostowanie przeciwnej ręki i nogi. Jeśli lędźwie odrywają się od podłogi — skróć zakres.'},
+  ]
+};
+
+const FINGER_WARMUP = {
+  id:'warmup_fingers', name:'Rozgrzewka palców', kind:'warmup',
+  intro:'12–15 minut, zawsze w całości — tej rozgrzewki nie wolno skracać. Wykonujesz ją po rozgrzewce ogólnej, bezpośrednio przed chwytotablicą.',
+  steps:[
+    {label:'Podniesienie tętna — 5 min', seconds:300,
+     desc:'Jak w rozgrzewce ogólnej. Jeśli robisz obie rozgrzewki pod rząd, tego kroku nie powtarzasz drugi raz.'},
+    {label:'Mobilizacja barków i nadgarstków — 3 min', seconds:180,
+     desc:'Pełne, powolne zakresy ruchu, bez oporu: krążenia ramion, krążenia nadgarstków, zginanie i prostowanie.'},
+    {label:'Zwisy na dużej listwie — 3 × 10 s', seconds:120,
+     desc:'Największa listwa lub szczebel drabinki, chwyt otwarty, stopa mocno odciąża — ma być zupełnie lekko, zero wysiłku. To dopiero budzenie palców.'},
+    {label:'Zwisy progresywne 50% → 70% → 85% — 3 × 7 s', seconds:240,
+     desc:'Trzy zwisy po 7 s, każdy nieco cięższy. Procent regulujesz odciążeniem stopy, nie zmianą chwytu: 50% = wyraźnie odciążony, 85% = prawie pełny ciężar ciała. Nigdy 100% w rozgrzewce.'},
+  ]
+};
+
+function calfExercise(){
+  const common = {
+    id:'E10', sets:4, repsRange:'10–15 powt.', rest:120,
+    tempo:{label:'3-1-3', phases:[{l:'W górę',s:3},{l:'Pauza',s:1},{l:'W dół',s:3}]},
+    cue:'3 s w górę · 1 s pauzy w górze · 3 s w dół. Płasko, bez obciążenia, bez odbicia.',
+    warn:'Jeśli poranna sztywność Achillesa jest dłuższa niż zwykle — wróć do łatwiejszej wersji ćwiczenia, zanim pojawi się ból. Sztywność wyprzedza ból o tygodnie.',
+    tech:[
+      {t:'Wykonanie', h:'<ol><li>Stań przodostopiem na płaskim podłożu — pięta <b>nie schodzi</b> poniżej poziomu palców (bez deficytu w tej fazie).</li><li><b>3 sekundy w górę</b> — powolne, kontrolowane wspięcie na pełną wysokość.</li><li><b>1 sekunda pauzy</b> w górze.</li><li><b>3 sekundy w dół</b> do pozycji neutralnej stopy, nie niżej.</li><li>Bez odbicia i bez pauzy na dole — kolejne powtórzenie startuje płynnie.</li></ol>'},
+      {t:'Dlaczego tak wolno', h:'Powolna praca pod dużym napięciem (protokół Heavy Slow Resistance — badania Alfredsona i Kongsgaarda nad tendinopatią Achillesa) przebudowuje i wzmacnia ścięgno skuteczniej niż odpoczynek. U Ciebie, przy bezobjawowym ścięgnie po przebytych zapaleniach, działa profilaktycznie: buduje tolerancję na obciążenie, zanim wróci wspinanie z pełną intensywnością.'},
+      {t:'Najczęstsze błędy', h:'<ul><li>Skracanie fazy schodzenia w dół — „opadanie" zamiast opuszczania. To niszczy cały sens protokołu; faza w dół jest najważniejsza.</li><li>Schodzenie piętą poniżej poziomu palców, „bo tak naturalniej" — obniżenie (deficyt) wejdzie dopiero od 5. tygodnia, stopniowo.</li></ul>'},
+    ]
+  };
+  if(SETTINGS.achillesTrack === 'fast'){
+    return {...common, name:'Wspięcia na palce jednonóż',
+      cue: common.cue + ' Jedna noga.',
+    };
+  }
+  return {...common, name:'Wspięcia na palce obunóż',
+    tech:[{t:'Uwaga: wersja tymczasowa', h:'Robisz wersję <b>obunóż</b> (ostrożniejszą), dopóki nie ustalisz, ile epizodów zapalenia Achillesa przeszedłeś. Jeśli był jeden, ponad 2 lata temu — przechodzisz na jednonóż (zmiana w Ustawieniach).'}, ...common.tech]
+  };
+}
+
+function dipsExercise(){
+  const depthTxt = SETTINGS.dipsDepth === '100-110'
+    ? 'schodzisz tylko do kąta <b>100–110°</b> w łokciu (czyli płycej niż do kąta prostego)'
+    : 'schodzisz do <b>kąta prostego</b> w łokciu, nigdy głębiej';
+  return {
+    id:'E8', name:'Dipy na poręczach', sets:5, repsRange:'3–5 powt.', rest:180, tempo:null,
+    cue:'Barki wciśnięte w dół przez cały ruch. ' + (SETTINGS.dipsDepth==='100-110' ? 'Stop na 100–110° w łokciu.' : 'Stop na kącie prostym.'),
+    warn:'Ból z przodu barku po dipach → odstaw dipy na 2 tygodnie, pompki zostają. Dipów nie robi się też nigdy w ciągu doby po mocnym wspinaniu — przód barku dostaje wtedy podwójny bodziec.',
+    tech:[
+      {t:'Jak głęboko i dlaczego', h:'W tym tygodniu '+depthTxt+'. Powód: zejście poniżej przenosi obciążenie na przednią torebkę stawu ramiennego i przyczep mięśnia piersiowego. Twój przód barku i tak ciężko pracuje przy wspinaniu — sumowanie tych obciążeń to najczęstszy mechanizm bólu przedniego barku u wspinaczy, którzy dołożyli dipy. Ustawienie konserwatywne (100–110°) obowiązuje, dopóki nie porównasz szerokości swoich barków z rozstawem stacji (56 cm).'},
+      {t:'Wykonanie', h:'<ol><li>Wejdź do podporu: łokcie wyprostowane, <b>barki aktywnie wciśnięte w dół</b> — daleko od uszu.</li><li>Tułów lekko pochylony w przód, łokcie blisko ciała, nie na boki.</li><li>Schodź <b>2–3 sekundy</b> — zero swobodnego opadania.</li><li>Zatrzymaj się na ustalonym kącie i wyjdź w górę, bez „wyrzucania" barków do góry na końcu.</li></ol>'},
+      {t:'Najczęstsze błędy', h:'<ul><li><b>Bark „wjeżdża" do ucha w dolnej pozycji</b> — utrata wciśnięcia łopatek w dół. To najważniejszy błąd na tym ćwiczeniu; jeśli nie utrzymujesz barków nisko przez cały zakres, skróć zakres.</li><li>Kołysanie nogami dla rozpędu.</li><li>Schodzenie „na odczucie" zamiast do ustalonego kąta — zmęczenie zawsze pogłębia zejście, kontroluj kąt świadomie.</li></ul>'},
+      {t:'Przed pierwszą sesją', h:'Obciąż stację i sprawdź, czy nie przesuwa się na szczeblach drabinki. Poluzowanie mocowania w dolnej pozycji to uraz barku, nie potknięcie.'},
+    ]
+  };
+}
+
+/* ---- Protokoły chwytotablicy (A/B/C + własny) ---------------------------
+   Wspólne zasady bezpieczeństwa dopisywane są do każdego wariantu. */
+const HANGBOARD_SAFETY = [
+  {t:'Zasady wspólne dla każdego protokołu', h:'<ul><li><span class="warn"><b>Nigdy full crimp</b></span> (pełny zamknięty chwyt z kciukiem dociskającym palce) — bez wyjątków, niezależnie od protokołu.</li><li>Żadnych chwytów na jeden ani dwa palce, żadnego campusowania (puszczania i łapania w locie).</li><li>Wejście i zejście z tablicy <b>zawsze przez stopień lub szczebel</b> — nigdy zeskok, zwłaszcza na końcu ostatniej serii.</li><li>Tablica tylko <b>na początku treningu</b>, po pełnej rozgrzewce palców — nigdy na zmęczonych palcach po innych ćwiczeniach.</li><li>Rano sztywne lub bolące palce = dziś bez tablicy. Reszta treningu zostaje.</li></ul>'},
+];
+
+const HANGBOARD_PROTOCOLS = {
+  A: {
+    id:'hangboard', key:'A', kind:'hangboard',
+    name:'Protokół A — wytrzymałość tlenowa',
+    series:3, reps:8, hang:10, hangRest:5, seriesRest:240,
+    qualNote:'Trening z założenia LEKKI — budujesz ukrwienie i wytrzymałość, nie siłę.',
+    cue:'8 × (10 s zwisu / 5 s luzu) = 1 seria. Trening z założenia LEKKI — budujesz ukrwienie i wytrzymałość, nie siłę.',
+    warn:'Jeśli „pompa" w przedramionach utrzymuje się do następnego dnia — intensywność była za wysoka. Następnym razem mocniej odciąż stopą, nie skracaj serii.',
+    tech:[
+      {t:'Ustawienie', h:'Największa dostępna listwa albo szczebel (w planie: 25–30 mm). Chwyt <b>otwarty</b>: palce lekko zgięte, bez dociskania kciukiem. Odciążenie: stopa oparta na szczeblu drabinki. W 5-sekundowej przerwie <b>nie schodzisz</b> — tylko zdejmujesz ciężar z palców i zostajesz przy tablicy.'},
+      {t:'Kalibracja — najważniejsza rzecz w tym protokole', h:'Dobierz odciążenie stopą tak, żeby po ósmym zwisie pierwszej serii czuć, że <b>spokojnie zwisałbyś drugie tyle</b>. Kontrola po fakcie: jeśli w ostatniej serii palce zaczynają się otwierać — było za ciężko; następnym razem mocniej odciąż.'},
+      {t:'Po czym poznać, że było dobrze', h:'<ul><li>Lekka pompa na końcu serii, znikająca w czasie przerwy.</li><li>Po treningu przedramiona sprawne, bez uczucia „nabitych".</li><li>Pompa do następnego dnia = za ciężko (najczęstszy błąd w tym protokole).</li></ul>'},
+      ...HANGBOARD_SAFETY,
+    ]
+  },
+  B: {
+    id:'hangboard_B', key:'B', kind:'hangboard',
+    name:'Protokół B — repeatery',
+    series:4, reps:6, hang:7, hangRest:3, seriesRest:150,
+    qualNote:'Ostatnie powtórzenie ma być trudne, ale wykonane w pełni.',
+    cue:'6 × (7 s zwisu / 3 s przerwy) = 1 seria (60 s). Ostatnie powtórzenie ma być trudne, ale wykonane w pełni.',
+    warn:'Wg Twojego planu Protokół B wchodzi dopiero od 3. tygodnia (w skróconej formie, 3 serie). W tygodniach 1–2 robisz wyłącznie Protokół A.',
+    tech:[
+      {t:'Ustawienie', h:'Listwa 20–25 mm. Chwyt: <b>half-crimp i otwarty naprzemiennie</b> — zmieniasz między seriami, żeby nie obciążać w kółko tej samej struktury. Half-crimp = palce zgięte ok. 90° w środkowym stawie, kciuk swobodny (nie na palcach!).'},
+      {t:'Jak dobrać ciężar', h:'Intensywność wyższa niż w Protokole A: ostatnie powtórzenie serii ma być wyraźnie trudne, ale wykonane w pełnym czasie i bez otwierania się palców. Jeśli nie kończysz serii — odciąż. Jeśli kończysz z dużym zapasem — zmniejsz odciążenie.'},
+      {t:'Przerwy', h:'Między seriami 2–3 minuty. W 3-sekundowej przerwie wewnątrz serii zdejmujesz ciężar z palców, ale zostajesz przy tablicy.'},
+      ...HANGBOARD_SAFETY,
+    ]
+  },
+  C: {
+    id:'hangboard_C', key:'C', kind:'hangboard',
+    name:'Protokół C — max hangs (siła podtrzymująca)',
+    series:4, reps:1, hang:9, hangRest:0, seriesRest:240,
+    qualNote:'Dawka PODTRZYMUJĄCA — nie gonisz rekordów.',
+    cue:'4 pojedyncze zwisy po 8–10 s, przerwa 3–5 min. Dawka PODTRZYMUJĄCA — nie gonisz rekordów.',
+    warn:'Wg Twojego planu Protokół C wchodzi od 5. tygodnia, a z kamizelką nie wcześniej niż od 11. tygodnia (start 2,5% masy ciała). W tygodniach 1–2 robisz wyłącznie Protokół A.',
+    tech:[
+      {t:'Ustawienie', h:'Listwa 20 mm, chwyt <b>half-crimp</b> (palce zgięte ok. 90° w środkowym stawie, kciuk swobodny). Pojedyncze zwisy, pełna przerwa między nimi.'},
+      {t:'Dlaczego „nie gonisz rekordów"', h:'W Twoim planie siła maksymalna palców ma priorytet niski — to dawka <b>podtrzymująca</b>, która ma utrzymać poziom, a nie go budować. Cel główny to wytrzymałość (Protokół A). Ściganie się z sobą na tym protokole zjada zapas regeneracyjny potrzebny na wspinanie.'},
+      {t:'Kiedy przerwać', h:'Zwis kończysz, gdy palce zaczynają się otwierać — nie „na maksa". Ból lub trzask w podstawie palca = <span class="warn">natychmiastowy koniec pracy palców i konsultacja</span>.'},
+      ...HANGBOARD_SAFETY,
+    ]
+  },
+};
+
+function getProtocol(key){
+  return applyHangboardOverride(HANGBOARD_PROTOCOLS[key]);
+}
+
+function customHangboard(cfg, name){
+  return {
+    id:'hangboard_custom', key:'custom', kind:'hangboard',
+    name: name || 'Chwytotablica — ustawienie własne',
+    series:cfg.series, reps:cfg.reps, hang:cfg.hang, hangRest:cfg.hangRest, seriesRest:cfg.seriesRest,
+    cue:`${cfg.reps} × (${cfg.hang} s zwisu / ${cfg.hangRest} s przerwy) = 1 seria. Łącznie ${serie(cfg.series)}, przerwa między seriami ${fmtTime(cfg.seriesRest)}.`,
+    warn:'To ustawienie własne — nie pochodzi z Twojego planu. Zasady bezpieczeństwa poniżej obowiązują tak samo.',
+    tech: HANGBOARD_SAFETY,
+  };
+}
+
+function buildWeek(){
+  const EX_PISTOL = {
+    id:'E3', name:'Pistol squat z deficytu', sets:5, repsRange:'3–5 powt. na nogę', rest:180,
+    tempo:{label:'4-1-X', phases:[{l:'W dół',s:4},{l:'Pauza',s:1},{l:'W górę (X)',s:0}]},
+    cue:'4 s w dół · 1 s pauzy na dole · dynamicznie w górę. Pięta cały czas na podłożu.',
+    tech:[
+      {t:'Ustawienie', h:'Przysiad na jednej nodze. Stopa robocza stoi na dolnym szczeblu drabinki — dzięki temu noga wolna może swobodnie zejść niżej (to jest ten „deficyt"). Palce jednej ręki opierasz o drabinkę <b>wyłącznie dla równowagi</b> — jeśli łapiesz się mocno i podciągasz, to już nie jest pistol.'},
+      {t:'Wykonanie', h:'<ol><li>Noga wolna wyprostowana w przód, uniesiona.</li><li><b>4 sekundy</b> kontrolowanego schodzenia. Kolano prowadzone nad linią stopy — nie zapada się do środka.</li><li><b>1 sekunda pauzy</b> w najniższej pozycji, bez „odbicia" ze ścięgien.</li><li>Wyjście w górę z pełną intencją przyspieszenia, ale bez utraty kontroli. „X" w zapisie tempa nie znaczy „szarpnij" — znaczy „nie zwalniaj celowo".</li></ol>'},
+      {t:'Pięta — ważne przy Twoim Achillesie', h:'<b>Pięta zostaje na podłożu przez cały ruch.</b> Głęboki przysiad na jednej nodze wymaga dużego zgięcia stawu skokowego — jeśli pięta się odrywa, ogranicz głębokość zamiast kompensować.'},
+      {t:'Najczęstsze błędy', h:'<ul><li>Kolano ucieka do środka w dolnej fazie.</li><li>Zaokrąglenie odcinka lędźwiowego na dole — zatrzymuj się tuż nad tym punktem.</li><li>Ręka na drabince niepostrzeżenie przejmuje 20–30% ciężaru.</li></ul>'},
+      {t:'Za trudne / za łatwe?', h:'Regresja: przysiad jednonóż do podwyższenia (skrócony zakres) → pistol bez deficytu → pistol z deficytu. Progresja z obciążeniem wejdzie dopiero od 5. tygodnia.'},
+    ]
+  };
+  const EX_NORDIC = {
+    id:'E5', name:'Nordic curl', sets:4, repsRange:'3–5 powt.', rest:180, tempo:null,
+    cue:'Biodra w jednej linii z tułowiem. Opuszczanie w przód minimum 4 sekundy.',
+    tech:[
+      {t:'Ustawienie', h:'Klęk na macie, stopy zablokowane pod najniższym szczeblem drabinki. Pod rzepki podłóż coś miękkiego — to warunek utrzymania dobrej pozycji, nie kwestia wygody.'},
+      {t:'Wykonanie', h:'<ol><li>Tułów, biodra i uda ustawione w <b>jednej linii</b> — i ta linia nie łamie się przez cały ruch.</li><li>Opuszczaj się w przód <b>minimum 4 sekundy</b>, tak daleko, jak utrzymujesz kontrolę.</li><li>Wróć siłą tylnej strony ud; jeśli nie dasz rady — pomóż sobie rękami od podłogi albo taśmą przypiętą wyżej na drabince.</li></ol>'},
+      {t:'Najczęstsze błędy', h:'<ul><li><b>„Spadanie"</b> po przekroczeniu punktu granicznego — zakres, nad którym nie panujesz, jest bezwartościowy i ryzykowny. Użyj taśmy jako asysty.</li><li>Zginanie się w biodrach („kłanianie") — zamienia ćwiczenie w dużo łatwiejszy i bezcelowy ruch.</li></ul>'},
+    ]
+  };
+  const EX_PIKE = {
+    id:'E6', name:'Pompki pike (stopy na drabince)', sets:5, repsRange:'3–5 powt.', rest:180, tempo:null,
+    cue:'Biodra wysoko, tułów jak najbliżej pionu. Głowa schodzi przed linię dłoni.',
+    tech:[
+      {t:'Ustawienie', h:'Pozycja odwróconego „V": stopy na szczeblu drabinki, biodra wysoko nad barkami. To Twój główny trening pchania nad głowę (zastępuje wyciskanie). <b>Im wyżej stopy, tym trudniej</b> — i to jest zmienna, którą progresujesz, nie obciążenie.'},
+      {t:'Wykonanie', h:'<ol><li>Dłonie nieco szerzej niż barki, palce skierowane w przód.</li><li>Schodź tak, żeby <b>głowa wyszła przed linię dłoni</b> — nie między dłonie (wtedy robisz zwykłą pompkę i barki nie pracują).</li><li>Łokcie ok. 45° od tułowia, nie rozłożone na boki.</li><li>Wyjdź do pełnego wyprostu i na końcu aktywnie wypchnij barki w górę.</li></ol>'},
+      {t:'Najczęstsze błędy', h:'<ul><li>Głowa opuszczana między dłonie — obciążenie przechodzi z barków na klatkę.</li><li>Łokcie rozjeżdżające się na boki.</li><li>Zapadanie się w barkach w dolnej pozycji.</li></ul>'},
+    ]
+  };
+  const EX_ABWHEEL = {
+    id:'E9', name:'Ab wheel z kolan', sets:4, repsRange:'10–15 powt.', rest:90, tempo:null,
+    cue:'Miednica podwinięta ZANIM ruszysz. Koniec zakresu = moment, w którym lędźwie zaczynają się wyginać.',
+    warn:'Ból w lędźwiach przy tym ćwiczeniu → skróć zakres i sprawdź, czy miednica na pewno jest podwinięta przez cały ruch.',
+    tech:[
+      {t:'Wykonanie', h:'<ol><li>Klęk, kółko pod barkami. <b>Zanim ruszysz:</b> podwiń miednicę (ogon „schowany" pod siebie), żebra ściągnięte w dół.</li><li>Wysuwaj kółko w przód, utrzymując dokładnie tę samą pozycję miednicy i żeber.</li><li>Zakres kończy się w momencie, w którym czujesz, że lędźwie zaczynają się wyginać w łuk — <b>ani centymetra dalej</b>. To jest Twój limit, nie odległość od ściany.</li><li>Wróć ruchem z brzucha, nie z bioder.</li></ol>'},
+      {t:'Jak progresować', h:'Zwiększaj zakres wysunięcia, nie tempo. Gdy 15 powtórzeń w pełnym zakresie stanie się łatwe, następnym krokiem będzie wersja ze stania.'},
+      {t:'Najczęstsze błędy', h:'<ul><li>Wygięcie lędźwi w łuk w momencie maksymalnego wysunięcia — najczęstszy i najbardziej ryzykowny błąd.</li><li>Wypychanie bioder do tyłu przy powrocie — ruch zamienia się w składanie w biodrach zamiast pracy brzucha.</li></ul>'},
+    ]
+  };
+  const EX_ARCHER_PULL = {
+    id:'E2', name:'Podciąganie archer', sets:4, repsRange:'3–5 powt. na stronę', rest:210, tempo:null,
+    cue:'Podciągasz się skosem do jednej ręki. Druga ręka prosta — balansuje, nie ciągnie.',
+    warn:'Ból po wewnętrznej stronie łokcia utrzymujący się ponad 5 dni → odstaw chwytotablicę i zmniejsz o połowę objętość ćwiczeń ciągnących.',
+    tech:[
+      {t:'Ustawienie', h:'Chwyt nachwytem, <b>wyraźnie szerzej niż barki</b> — na tyle szeroko, żeby w górnej pozycji ręka nieciągnąca mogła być niemal wyprostowana w bok. W tygodniach 1–4 bez obciążenia; od 5. tygodnia głównym ćwiczeniem stanie się zwykłe podciąganie z kamizelką.'},
+      {t:'Wykonanie', h:'<ol><li>Zwis aktywny: zanim ugniesz łokcie, ściągnij łopatki w dół i lekko do siebie.</li><li>Podciągnij się <b>skośnie w stronę jednej ręki</b> — broda dochodzi nad drążek po stronie ręki pracującej.</li><li>Druga ręka zostaje wyprostowana (lub prawie) i przesuwa się po drążku w bok — ona tylko balansuje.</li><li>Opuszczaj się <b>2–3 sekundy</b>, kontrolowanie.</li><li>Zatrzymaj się tuż przed pełnym wyprostem łokci — nie zawisaj biernie na stawach.</li></ol>'},
+      {t:'Najczęstsze błędy', h:'<ul><li>Ręka „wolna" zgina się i zaczyna dociągać — ćwiczenie przestaje być jednostronne.</li><li>Skręcanie tułowia zamiast przesunięcia w bok.</li><li>Swobodne opadanie z góry — to główny mechanizm przeciążenia wewnętrznej strony łokcia.</li></ul>'},
+      {t:'Za trudne / za łatwe?', h:'Łatwiej: mniejszy skos (mniej ciężaru na stronie pracującej). Trudniej: większy skos, potem przejazdy z boku na bok w górnej pozycji (typewriter).'},
+    ]
+  };
+  const EX_FRONTLEVER = {
+    id:'E4', name:'Front lever — izometria', sets:5, holdRange:[5,8], rest:180, tempo:null, holdBased:true,
+    cue:'Wybierz wariant, w którym 8 sekund to Twoja granica. Ramiona proste, miednica podwinięta.',
+    tech:[
+      {t:'Dobór poziomu', h:'Poziomy od najłatwiejszego: kolana podciągnięte do klatki (tuck) → kolana dalej od klatki (advanced tuck) → jedna noga wyprostowana → obie nogi ugięte w linii ciała (half lay). Wybierz taki, w którym <b>8 sekund to granica</b> — nie 15 i nie 4.'},
+      {t:'Wykonanie', h:'<ol><li>Zwis nachwytem, ramiona <b>wyprostowane i takie pozostają</b> — zgięcie łokci to najczęstsze oszukiwanie.</li><li>Ściągnij łopatki w dół i do siebie, barki daleko od uszu.</li><li><b>Podwiń miednicę</b>, żebra ściągnięte w dół — bez wyginania lędźwi w łuk.</li><li>Unieś ciało do poziomu w wybranym wariancie, po zakończeniu zejdź z pozycji kontrolowanie.</li><li>Oddychaj płytko, ale oddychaj — nie wstrzymuj oddechu na całe 8 sekund.</li></ol>'},
+      {t:'Najczęstsze błędy', h:'<ul><li>Wygięcie w lędźwiach — pozycja wygląda na wyższą, ale to utrata napięcia brzucha i obciążenie kręgosłupa lędźwiowego.</li><li>Ugięte ramiona.</li><li>Wstrzymany oddech.</li></ul>'},
+      {t:'Uwaga', h:'Kamizelka obciążeniowa na tym ćwiczeniu jest wykluczona — progresujesz wyłącznie zmianą dźwigni (ustawienia nóg).'},
+    ]
+  };
+  const EX_ARCHER_PUSH = {
+    id:'E7', name:'Pompki archer, nogi wysoko', sets:4, repsRange:'3–5 powt. na stronę', rest:180, tempo:null,
+    cue:'Schodzisz do jednej ręki. Druga prosta w bok — podpiera, nie pcha.',
+    tech:[
+      {t:'Ustawienie', h:'Nogi na drabince na wysokości ok. 1 m, ręce rozstawione szeroko. Jeśli w czwartek zabraknie czasu — ta pozycja odpada jako pierwsza (a po niej ab wheel).'},
+      {t:'Wykonanie', h:'<ol><li>Przenieś ciężar na jedną rękę i schodź w jej kierunku.</li><li>Ręka „wolna" <b>prosta w bok</b>, dłoń na podłodze — pełni rolę podpory, nie pcha.</li><li>Ciało w jednej linii: bez skręcania miednicy i bez zapadania barku po stronie pracującej.</li></ol>'},
+      {t:'Najczęstsze błędy', h:'<ul><li>Zginanie ręki wolnej — wtedy to zwykła szeroka pompka.</li><li>Skręcanie tułowia zamiast przesunięcia bocznego.</li></ul>'},
+    ]
+  };
+  const EX_SCAP = {
+    id:'E11', name:'Scapular pull-ups + protrakcja', sets:3, repsRange:'10–12 powt.', rest:60, tempo:null,
+    cue:'Ramiona proste przez cały ruch — unosisz się wyłącznie pracą łopatek.',
+    tech:[
+      {t:'Scapular pull-ups (na drążku)', h:'<ol><li>Zwis na drążku, ramiona wyprostowane — <b>i takie pozostają</b>.</li><li>Unieś ciało o 3–5 cm wyłącznie ściągnięciem łopatek w dół — barki oddalają się od uszu, klatka lekko idzie do góry.</li><li>Wróć kontrolowanie do zwisu, ale bez całkowitego „rozklejenia się" na końcu.</li></ol><b>Test poprawności:</b> jeśli łokcie zginają się choćby o kilka stopni — robisz mikro-podciągnięcie, nie pracę łopatek.'},
+      {t:'Protrakcja (w podporze)', h:'<ol><li>Pozycja deski na wyprostowanych rękach.</li><li>„Wypchnij" plecy w górę między łopatkami — bez zginania łokci i bez ruchu bioder.</li><li>Wróć do pozycji ze ściągniętymi łopatkami — pełny zakres w obie strony.</li></ol>'},
+      {t:'Po co to jest', h:'Wspinanie i wszystkie ćwiczenia ciągnące obciążają obręcz barkową w jednym kierunku. Ta pozycja jest przeciwwagą — dlatego w planie ma status pełnoprawnego ćwiczenia (nigdy jej nie ucinaj), a nie rozgrzewki.'},
+    ]
+  };
+  const EX_EXT = {
+    id:'E12', name:'Prostowniki palców + rotacja zewnętrzna', sets:2, repsRange:'15–20 powt.', rest:30, tempo:null,
+    cue:'Lekko, powoli, pełny zakres. Nie do odmowy — to praca równoważąca, nie siłowa.',
+    tech:[
+      {t:'Prostowniki palców', h:'Gumka założona na palce (albo dłoń zanurzona w naczyniu z ryżem). Prostuj palce przeciw oporowi, powoli, w pełnym zakresie. Cel: równowaga dla zginaczy, które we wspinaniu pracują bez przerwy.'},
+      {t:'Rotacja zewnętrzna na taśmie', h:'Taśma przypięta do drabinki na wysokości łokcia. Łokieć przy tułowiu, zgięty 90°, obracaj przedramię na zewnątrz. Łokieć <b>nie odsuwa się od ciała</b> — ruch wychodzi z barku.'},
+      {t:'Dlaczego to nie jest opcjonalne', h:'Od 5. tygodnia, gdy wejdzie podciąganie z kamizelką, ta pozycja stanie się wbudowaną profilaktyką przeciążenia wewnętrznej strony łokcia (entezopatii). Plan mówi wprost: to nie ozdobnik.'},
+    ]
+  };
+
+  const DAY_MON = {
+    key:'mon', label:'Pon', type:'strength', title:'Blok nóg + core',
+    blocks:[
+      GENERAL_WARMUP,
+      { id:'block_main', name:'Ćwiczenia główne', kind:'exercises', items:[
+        {...EX_PISTOL, cue: EX_PISTOL.cue + ' Dziś seria 1 = pomiar: maks. powtórzeń na każdą nogę, bez deficytu.'},
+        EX_NORDIC,
+        EX_PIKE,
+        {...EX_ABWHEEL, cue: EX_ABWHEEL.cue + ' Dziś seria 1 = pomiar: maks. powtórzeń.'},
+        calfExercise(),
+      ]}
+    ]
+  };
+
+  const DAY_THU = {
+    key:'thu', label:'Czw', type:'strength', title:'Moduł A + chwytotablica',
+    blocks:[
+      GENERAL_WARMUP,
+      FINGER_WARMUP,
+      {...getProtocol('A'),
+        name:'Chwytotablica — Protokół A (wytrzymałość)',
+        warn:'Jeśli rano palce były sztywne lub bolały — dziś bez tablicy, reszta treningu zostaje. Jeśli „pompa" w przedramionach utrzymuje się do następnego dnia — intensywność była za wysoka, następnym razem mocniej odciąż.'},
+      { id:'measure_pullups', name:'Pomiar: maks. podciągnięć', kind:'measure',
+        cue:'Jednorazowy test przed podciąganiem archer.',
+        tech:[
+          {t:'Jak wykonać test', h:'Nachwyt na szerokość barków, pełny zakres, tempo spokojne, bez kiwania nogami. Ciągniesz do <b>odmowy technicznej</b> — kończysz przy pierwszym kiwnięciu albo niepełnym powtórzeniu, nie przy totalnym zmęczeniu. Po teście podciąganie archer robisz w <b>4 seriach zamiast 5</b>.'},
+        ]},
+      { id:'block_main', name:'Moduł A', kind:'exercises', items:[
+        EX_ARCHER_PULL,
+        EX_PISTOL,
+        EX_FRONTLEVER,
+        EX_NORDIC,
+        EX_PIKE,
+        EX_ARCHER_PUSH,
+        dipsExercise(),
+        EX_ABWHEEL,
+        calfExercise(),
+        EX_SCAP,
+        EX_EXT,
+      ]}
+    ]
+  };
+
+  [DAY_MON, DAY_THU].forEach(day=>{
+    day.blocks = day.blocks.map(block=>{
+      if(block.kind === 'exercises') return {...block, items: block.items.map(applyExerciseOverride)};
+      if(block.kind === 'hangboard') return applyHangboardOverride(block);
+      return block;
+    });
+  });
+
+  return [
+    DAY_MON,
+    { key:'tue', label:'Wt', type:'climb', title:'Wspinanie' },
+    { key:'wed', label:'Śr', type:'rest', title:'Pełny odpoczynek' },
+    DAY_THU,
+    { key:'fri', label:'Pt', type:'rest', title:'Odpoczynek / mobilność' },
+    { key:'sat', label:'Sob', type:'climb', title:'Wspinanie' },
+    { key:'sun', label:'Nd', type:'rest', title:'Pełny odpoczynek' },
+  ];
+}
+let WEEK = buildWeek();
+
+/* =========================================================================
+   POMOCNICZE: DATY
+   ========================================================================= */
+function isoOf(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function todayISO(){ return isoOf(new Date()); }
+function jsDayToKey(jsDay){ return {1:'mon',2:'tue',3:'wed',4:'thu',5:'fri',6:'sat',0:'sun'}[jsDay]; }
+function fmtTime(sec){
+  const m = Math.floor(sec/60), s = sec%60;
+  return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+/* Polska odmiana liczebników */
+function plural(n, one, few, many){
+  n = Number(n);
+  if(n === 1) return one;
+  const last = n % 10, lastTwo = n % 100;
+  if(last >= 2 && last <= 4 && !(lastTwo >= 12 && lastTwo <= 14)) return few;
+  return many;
+}
+const serie = n => n + ' ' + plural(n, 'seria', 'serie', 'serii');
+const kroki = n => n + ' ' + plural(n, 'krok', 'kroki', 'kroków');
+/* Tekst wpisany przez użytkownika nie może rozjechać HTML-a. */
+function esc(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function fmtRestWords(sec){
+  if(!sec) return '0 s';
+  const m = Math.floor(sec/60), s = sec%60;
+  return (m ? m+' min' : '') + (m && s ? ' ' : '') + (s ? s+' s' : '');
+}
+
+/* =========================================================================
+   LIMITY BEZPIECZEŃSTWA (twarde zasady planu)
+   Obciążenie palców = zalogowane wspinanie LUB ukończona/zalogowana tablica.
+   ========================================================================= */
+function fingerLoadInfo(){
+  const byDate = {};
+  for(const k of store.keys('entries:')){
+    const iso = k.replace('entries:','');
+    const e = store.get(k, {});
+    const info = {};
+    if(e.climb && e.climb.savedAt) info.climb = e.climb.savedAt;
+    // każdy wariant tablicy (A/B/C/własny) liczy się jako obciążenie palców
+    if(e.exercises){
+      for(const exId in e.exercises){
+        if(!exId.startsWith('hangboard')) continue;
+        const hb = e.exercises[exId];
+        const ts = hb && (hb.completedAt || hb.loggedAt);
+        if(ts && (!info.hangboard || ts > info.hangboard)) info.hangboard = ts;
+      }
+    }
+    if(info.climb || info.hangboard) byDate[iso] = info;
+  }
+  return byDate;
+}
+
+function checkFingerLimits(forWhat){ // 'hangboard' | 'climb'
+  const loads = fingerLoadInfo();
+  const today = todayISO();
+  const out = { blocks:[], warns:[] };
+
+  // Nigdy dwa dni pracy palców pod rząd
+  const y = new Date(); y.setDate(y.getDate()-1);
+  const yIso = isoOf(y);
+  if(loads[yIso] && !loads[today]){
+    out.blocks.push('<b>Wczoraj pracowały palce</b> (wspinanie albo tablica). Dwa dni obciążania palców pod rząd są w tym planie zabronione — ścięgna i troczki regenerują się wolniej niż mięśnie i potrzebują pełnej doby przerwy.');
+  }
+
+  // Maks. 3 obciążenia palców na 7 dni
+  if(!loads[today]){
+    let count = 0;
+    for(let i=1;i<=6;i++){
+      const d = new Date(); d.setDate(d.getDate()-i);
+      if(loads[isoOf(d)]) count++;
+    }
+    if(count >= 3){
+      out.blocks.push('<b>Palce pracowały już '+count+' razy w ostatnich 7 dniach</b> (wspinanie + tablica łącznie). Limit planu to 3 — dzisiejsza sesja byłaby czwarta. Ten limit nie rośnie niezależnie od samopoczucia.');
+    }
+  }
+
+  // Min. 48 h między tablicą a wspinaniem
+  const otherKind = forWhat === 'hangboard' ? 'climb' : 'hangboard';
+  const otherName = forWhat === 'hangboard' ? 'wspinania' : 'sesji na tablicy';
+  let lastOther = null;
+  for(const iso in loads){
+    const ts = loads[iso][otherKind];
+    if(ts && (!lastOther || ts > lastOther)) lastOther = ts;
+  }
+  if(lastOther){
+    const hours = (Date.now() - new Date(lastOther).getTime()) / 3600000;
+    if(hours < 48 && hours >= 0){
+      out.warns.push('Od ostatniego '+otherName+' minęło dopiero <b>'+Math.round(hours)+' godz.</b> — plan wymaga co najmniej 48 godz. odstępu między tablicą a wspinaniem. Jeśli się da, przesuń sesję na później.');
+    }
+  }
+
+  // Poranna sztywność palców blokuje tablicę
+  if(forWhat === 'hangboard'){
+    const st = loadEntry(today).stiffness;
+    if(st && Number(st.fingersScore) >= 3){
+      out.warns.push('Rano zgłosiłeś sztywność palców <b>'+st.fingersScore+'/10</b>. Jeśli jest większa niż zwykle u Ciebie — <b>dziś bez tablicy, reszta treningu zostaje</b>.');
+    }
+  }
+  return out;
+}
+
+function limitsBannerHTML(res){
+  let html = '';
+  for(const b of res.blocks) html += '<div class="banner block">⛔ '+b+'</div>';
+  for(const w of res.warns) html += '<div class="banner warn">⚠️ '+w+'</div>';
+  return html;
+}
+
+/* =========================================================================
+   AUDIO + WIBRACJE + WAKE LOCK
+   ========================================================================= */
+function vibrate(pattern){ if(navigator.vibrate){ try{ navigator.vibrate(pattern); }catch(e){} } }
+
+let audioCtx = null;
+function ensureAudio(){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+  }catch(e){}
+}
+function beep(freq=880, dur=0.12){
+  try{
+    if(!audioCtx) return;
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.frequency.value = freq; o.type = 'sine';
+    g.gain.setValueAtTime(0.22, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
+
+let wakeLock = null;
+async function acquireWakeLock(){
+  try{
+    if('wakeLock' in navigator){ wakeLock = await navigator.wakeLock.request('screen'); }
+  }catch(e){}
+}
+function releaseWakeLock(){
+  try{ if(wakeLock){ wakeLock.release(); wakeLock = null; } }catch(e){}
+}
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible'){
+    if(engine.running) acquireWakeLock();
+    if(engine.running) engineTick();
+  }
+});
+
+/* =========================================================================
+   SILNIK TIMERA — liczy od znaczników czasu (Date.now), nie od ticków.
+   Przeżywa zablokowanie ekranu: po powrocie dogania właściwą fazę.
+   ========================================================================= */
+const engine = {
+  phases:[], idx:0, running:false,
+  endAt:0, pausedRemainMs:null,
+  loop:false, repCount:0, onComplete:null,
+  timer:null, lastSignalSec:null,
+};
+
+function engineLoad(phases, opts){
+  engineStop();
+  engine.phases = phases || [];
+  engine.idx = 0;
+  engine.loop = !!(opts && opts.loop);
+  engine.onComplete = (opts && opts.onComplete) || null;
+  engine.repCount = 0;
+  renderTimerFace();
+}
+
+function engineStop(){
+  clearTimeout(engine.timer);
+  engine.phases = []; engine.idx = 0; engine.running = false;
+  engine.endAt = 0; engine.pausedRemainMs = null;
+  engine.loop = false; engine.repCount = 0; engine.onComplete = null;
+  engine.lastSignalSec = null;
+  releaseWakeLock();
+}
+
+function engineRemainingMs(){
+  const ph = engine.phases[engine.idx];
+  if(!ph) return 0;
+  if(engine.running) return Math.max(0, engine.endAt - Date.now());
+  if(engine.pausedRemainMs !== null) return engine.pausedRemainMs;
+  return (ph.seconds||0)*1000;
+}
+
+function engineToggle(){
+  ensureAudio();
+  const ph = engine.phases[engine.idx];
+  if(!ph) return;
+  if(ph.tap){
+    // po fazie "X" kolejna faza rusza od razu — bez dodatkowego "Wznów"
+    engine.running = true;
+    engine.pausedRemainMs = null;
+    acquireWakeLock();
+    engineAdvance(0);
+    return;
+  }
+  if(engine.running){
+    engine.pausedRemainMs = Math.max(0, engine.endAt - Date.now());
+    engine.running = false;
+    clearTimeout(engine.timer);
+    releaseWakeLock();
+  } else {
+    const remain = engine.pausedRemainMs !== null ? engine.pausedRemainMs : (ph.seconds||1)*1000;
+    engine.endAt = Date.now() + remain;
+    engine.pausedRemainMs = null;
+    engine.running = true;
+    acquireWakeLock();
+    engineTick();
+  }
+  renderTimerFace();
+}
+
+function engineTick(){
+  clearTimeout(engine.timer);
+  if(!engine.running) return;
+  const remainMs = engine.endAt - Date.now();
+  if(remainMs <= 0){ engineAdvance(-remainMs); return; }
+  const sec = Math.ceil(remainMs/1000);
+  if(sec <= 3 && sec !== engine.lastSignalSec){
+    engine.lastSignalSec = sec;
+    beep(420, 0.1); vibrate(15);
+  }
+  renderTimerFace();
+  engine.timer = setTimeout(engineTick, 200);
+}
+
+function engineAdvance(overshootMs){
+  clearTimeout(engine.timer);
+  engine.lastSignalSec = null;
+  let carry = Math.max(0, overshootMs||0);
+  let guard = 0;
+  while(true){
+    if(++guard > 500) { engineFinish(); return; }
+    engine.idx++;
+    if(engine.idx >= engine.phases.length){
+      if(engine.loop){ engine.idx = 0; engine.repCount++; }
+      else { engineFinish(); return; }
+    }
+    const ph = engine.phases[engine.idx];
+    if(ph.tap){
+      engine.running = false;
+      releaseWakeLock();
+      beep(880, 0.15); vibrate(40);
+      renderTimerFace();
+      return;
+    }
+    const durMs = (ph.seconds||1)*1000;
+    if(carry < durMs){
+      if(ph.kind === 'rest' || ph.kind === 'seriesRest') beep(520, 0.2);
+      else beep(880, 0.15);
+      vibrate(45);
+      if(engine.running){
+        engine.endAt = Date.now() + (durMs - carry);
+        renderTimerFace();
+        engine.timer = setTimeout(engineTick, 200);
+      } else {
+        engine.pausedRemainMs = durMs - carry;
+        renderTimerFace();
+      }
+      return;
+    }
+    carry -= durMs; // faza minęła w całości przy zgaszonym ekranie — pomiń
+  }
+}
+
+function engineFinish(){
+  engine.running = false;
+  releaseWakeLock();
+  beep(990, 0.3); setTimeout(()=>beep(990,0.3), 180);
+  vibrate([100,60,100]);
+  const cb = engine.onComplete;
+  engine.phases = []; engine.idx = 0; engine.pausedRemainMs = null;
+  const phaseEl = document.getElementById('timerPhaseLabel');
+  const timeEl = document.getElementById('timerTimeLabel');
+  if(phaseEl) phaseEl.textContent = 'GOTOWE';
+  if(timeEl) timeEl.textContent = '00:00';
+  const btn = document.getElementById('timerStartBtn');
+  if(btn) btn.textContent = 'Start';
+  if(cb) cb();
+}
+
+function skipPhase(){
+  if(!engine.phases.length) return;
+  engineAdvance(0);
+}
+
+/* ---- Rysowanie tarczy ---- */
+function timerRingHTML(){
+  return `<div class="timer-wrap">
+    <div class="timer-ring-holder">
+      <svg width="230" height="230" viewBox="0 0 230 230">
+        <circle cx="115" cy="115" r="100" fill="none" stroke="var(--stone-800)" stroke-width="10"/>
+        <circle id="timerArc" cx="115" cy="115" r="100" fill="none" stroke="var(--lichen-500)" stroke-width="10"
+          stroke-linecap="round" transform="rotate(-90 115 115)" stroke-dasharray="628" stroke-dashoffset="0"/>
+      </svg>
+      <div class="timer-center">
+        <div class="phase" id="timerPhaseLabel">GOTOWY</div>
+        <div class="time tabnum" id="timerTimeLabel">00:00</div>
+        <div class="rep" id="timerRepLabel"></div>
+      </div>
+    </div>
+    <div class="btn-row" style="width:100%;max-width:280px;">
+      <button class="btn btn-primary" id="timerStartBtn" onclick="engineToggle()">Start</button>
+      <button class="btn btn-ghost" onclick="skipPhase()">Pomiń</button>
+    </div>
+  </div>`;
+}
+
+function renderTimerFace(){
+  const ph = engine.phases[engine.idx];
+  const phaseEl = document.getElementById('timerPhaseLabel');
+  const timeEl = document.getElementById('timerTimeLabel');
+  const repEl = document.getElementById('timerRepLabel');
+  const arc = document.getElementById('timerArc');
+  const btn = document.getElementById('timerStartBtn');
+  if(!phaseEl || !timeEl || !arc || !btn) return;
+  if(!ph){
+    phaseEl.textContent = 'GOTOWY'; timeEl.textContent = '00:00';
+    if(repEl) repEl.textContent = '';
+    return;
+  }
+  const remainMs = engineRemainingMs();
+  const sec = Math.ceil(remainMs/1000);
+  phaseEl.textContent = ph.label.toUpperCase();
+  timeEl.textContent = ph.tap ? '—' : fmtTime(sec);
+  if(repEl) repEl.textContent = engine.loop && engine.repCount > 0 ? 'Powtórzenie '+(engine.repCount+1) : '';
+  const total = (ph.seconds||1);
+  const frac = ph.tap ? 1 : Math.min(1, sec/total);
+  arc.setAttribute('stroke-dashoffset', String(628*(1-frac)));
+  const color = (ph.kind==='rest'||ph.kind==='seriesRest') ? 'var(--rope-500)' : 'var(--lichen-500)';
+  arc.setAttribute('stroke', (sec<=3 && !ph.tap && engine.running) ? 'var(--alert-500)' : color);
+  btn.textContent = ph.tap ? 'Dalej (w górę!)' : engine.running ? 'Pauza' : (engine.pausedRemainMs!==null ? 'Wznów' : 'Start');
+}
+
+/* =========================================================================
+   STAN + NAWIGACJA
+   ========================================================================= */
+let state = {
+  selectedDate: todayISO(),
+  currentDay: null,
+  registry: {},     // pozycje wybranego dnia
+  returnTab: 'today',
+};
+
+/* Rejestr wszystkich pozycji planu — pozwala uruchomić dowolne ćwiczenie
+   z zakładki „Timery", niezależnie od tego, jaki jest dziś dzień. */
+let GLOBAL_REGISTRY = {};
+function rebuildRegistry(){
+  WEEK = buildWeek();
+  GLOBAL_REGISTRY = {};
+  WEEK.forEach(day=>{
+    if(!day.blocks) return;
+    day.blocks.forEach(block=>{
+      if(block.kind==='exercises') block.items.forEach(ex=>{ GLOBAL_REGISTRY[ex.id] = {type:'exercise', data:ex}; });
+      else GLOBAL_REGISTRY[block.id] = {type:block.kind, data:block};
+    });
+  });
+}
+function lookupExercise(id){
+  return state.registry[id] || GLOBAL_REGISTRY[id] || null;
+}
+
+const TYPE_META = {
+  strength:{icon:'💪', badge:'strength', label:'Trening'},
+  climb:{icon:'🧗', badge:'climb', label:'Wspinanie'},
+  rest:{icon:'😴', badge:'rest', label:'Odpoczynek'},
+};
+
+function switchTab(tab){
+  engineStop();
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('nav.bottomnav button').forEach(b=>b.classList.remove('active'));
+  const btn = document.querySelector('[data-tab="'+tab+'"]');
+  if(btn) btn.classList.add('active');
+  state.returnTab = tab;
+  if(tab==='today'){ document.getElementById('screen-today').classList.add('active'); renderAll(); }
+  else if(tab==='tools'){ document.getElementById('screen-tools').classList.add('active'); renderTools(); }
+  else if(tab==='stiff'){ document.getElementById('screen-stiff').classList.add('active'); loadStiffnessForm(); }
+  else if(tab==='history'){ document.getElementById('screen-history').classList.add('active'); renderHistory(); }
+  else if(tab==='settings'){ document.getElementById('screen-settings').classList.add('active'); loadSettingsForm(); }
+}
+function goToday(){ switchTab(state.returnTab === 'tools' ? 'tools' : 'today'); }
+
+function openClimb(){
+  engineStop();
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-climb').classList.add('active');
+  const e = loadEntry(state.selectedDate);
+  const c = e.climb || {};
+  document.getElementById('climbRoutes').value = c.routes || '';
+  document.getElementById('climbBoulders').value = c.boulders || '';
+  document.getElementById('climbFeel').value = c.feel || 'same';
+  document.getElementById('climbNote').value = c.note || '';
+  const res = checkFingerLimits('climb');
+  document.getElementById('climbLimitBanner').innerHTML = limitsBannerHTML(res);
+}
+
+/* =========================================================================
+   ZMIANA TYPU DNIA — gdy plan nie wchodzi w grę (np. odpoczynek zamiast
+   treningu albo wspinanie w dzień wolny). Zapis per data, w entry.dayOverride.
+   ========================================================================= */
+function resolveDay(iso){
+  const d = new Date(iso+'T00:00:00');
+  const planned = WEEK.find(w=>w.key===jsDayToKey(d.getDay()));
+  const ovr = loadEntry(iso).dayOverride;
+  if(!ovr) return {day:planned, planned, overridden:false};
+  // wybór pokrywający się z planem traktuj jak brak zmiany
+  if(ovr === planned.key ||
+     (ovr === 'climb' && planned.type === 'climb') ||
+     (ovr === 'rest' && planned.type === 'rest')){
+    return {day:planned, planned, overridden:false};
+  }
+  let day;
+  if(ovr === 'mon' || ovr === 'thu'){
+    day = {...WEEK.find(w=>w.key===ovr), label:planned.label};
+  } else if(ovr === 'climb'){
+    day = {key:'ovr_climb', label:planned.label, type:'climb', title:'Wspinanie'};
+  } else {
+    day = {key:'ovr_rest', label:planned.label, type:'rest', title:'Odpoczynek (pauza)'};
+  }
+  return {day, planned, overridden:true};
+}
+
+function setDayOverride(key){
+  const entry = loadEntry(state.selectedDate);
+  if(key === 'plan') delete entry.dayOverride;
+  else entry.dayOverride = key;
+  saveEntry(state.selectedDate, entry);
+  vibrate(25);
+  renderAll();
+}
+
+function dayPickerHTML(planned, overridden){
+  const opt = (key, icon, label) =>
+    `<button class="btn btn-secondary" style="margin-bottom:8px;text-align:left;" onclick="setDayOverride('${key}')">${icon} ${label}</button>`;
+  return `<details class="tech" style="margin-top:12px;">
+    <summary>Zmień typ dnia (gdy plan nie wchodzi w grę)</summary>
+    <div class="inner">
+      <div class="meta" style="margin-bottom:12px;">Według planu ten dzień to <b>${planned.title}</b>. Jeśli dziś nie możesz go zrealizować, wybierz, co robisz zamiast tego — aplikacja zapamięta to tylko dla tej daty:</div>
+      ${opt('mon','💪','Trening: Blok nóg + core')}
+      ${opt('thu','💪','Trening: Moduł A + chwytotablica')}
+      ${opt('climb','🧗','Wspinanie')}
+      ${opt('rest','😴','Odpoczynek (pauza)')}
+      ${overridden ? `<button class="btn btn-primary" style="margin-top:4px;" onclick="setDayOverride('plan')">✓ Wróć do planu (${planned.title})</button>` : ''}
+      <div class="meta" style="margin-top:10px;">Limity bezpieczeństwa palców (max 3 obciążenia / 7 dni, nie dwa dni pod rząd, 48 h tablica↔wspinanie) obowiązują niezależnie od tej zmiany.</div>
+    </div>
+  </details>`;
+}
+
+/* =========================================================================
+   RENDER: PASEK TYGODNIA + DZIEŃ
+   ========================================================================= */
+function renderWeekStrip(){
+  const strip = document.getElementById('weekStrip');
+  strip.innerHTML = '';
+  const base = new Date();
+  const baseDow = base.getDay();
+  const mondayOffset = (baseDow===0 ? -6 : 1-baseDow);
+  for(let i=0;i<7;i++){
+    const d = new Date(base);
+    d.setDate(base.getDate()+mondayOffset+i);
+    const iso = isoOf(d);
+    const resolved = resolveDay(iso);
+    const meta = TYPE_META[resolved.day.type];
+    const chip = document.createElement('div');
+    chip.className = 'day-chip' + (resolved.overridden?' ovr':'') + (iso===todayISO()?' today':'') + (iso===state.selectedDate?' selected':'');
+    chip.innerHTML = `<div class="dlabel">${resolved.day.label}</div><div class="dtype icon">${meta.icon}</div>`;
+    chip.onclick = ()=>{ state.selectedDate = iso; renderAll(); };
+    strip.appendChild(chip);
+  }
+}
+
+function renderToday(){
+  rebuildRegistry();
+  const iso = state.selectedDate;
+  const d = new Date(iso+'T00:00:00');
+  const {day, planned, overridden} = resolveDay(iso);
+  state.currentDay = day;
+  state.registry = {};
+  const entry = loadEntry(iso);
+
+  const meta = TYPE_META[day.type];
+  const cont = document.getElementById('todayContent');
+  const niceDate = d.toLocaleDateString('pl-PL', {weekday:'long', day:'numeric', month:'long'});
+
+  let html = `<div class="card">
+    <span class="badge ${meta.badge}">${meta.label}</span>
+    <h2 style="margin-top:8px;">${day.title}</h2>
+    <div class="meta" style="text-transform:capitalize;">${niceDate}</div>
+  </div>`;
+
+  if(overridden){
+    const extra = day.type === 'rest'
+      ? 'Pauza zamiast treningu jest zawsze w porządku — regeneracja też buduje formę.'
+      : 'Pamiętaj, że dzień odpoczynku w planie nie jest przypadkowy — traktuj tę zmianę jako wyjątek, nie regułę.';
+    html += `<div class="banner warn">📅 <b>Modyfikacja planu.</b> Według planu ten dzień to „${planned.title}", a Ty wybrałeś „${day.title}". ${extra}</div>`;
+  }
+  html += dayPickerHTML(planned, overridden);
+
+  if(iso === todayISO() && !loadEntry(todayISO()).stiffness){
+    html += `<div class="banner warn">🌅 <b>Brak dzisiejszego wpisu porannego.</b> Zapisz sztywność Achillesa i palców w zakładce „Poranek" — od tego wpisu zależy m.in., czy dziś bezpiecznie robić chwytotablicę.</div>`;
+  }
+
+  if(day.type==='climb'){
+    const res = checkFingerLimits('climb');
+    html += limitsBannerHTML(res);
+    html += `<div class="notes-box"><b>Plan na sesję:</b> długie łatwe wspinanie ciągiem (20–30 min), powtarzane przewiązki, trening odpoczywania na drodze. <span class="warn">Z bulderów schodź po chwytach — nigdy nie zeskakuj.</span></div>`;
+    html += `<div style="margin-top:12px;"><button class="btn btn-primary" onclick="openClimb()">Otwórz zapis sesji</button></div>`;
+    if(entry.climb) html += `<div class="meta" style="margin-top:10px;text-align:center;">✓ Sesja zapisana: ${entry.climb.routes||0} dróg, ${entry.climb.boulders||0} bulderów</div>`;
+  } else if(day.type==='rest'){
+    html += `<div class="notes-box">Dziś nic nie trenujesz — regeneracja jest częścią planu, nie przerwą w nim. Pamiętaj tylko o porannym wpisie sztywności.</div>`;
+    html += `<div style="margin-top:12px;"><button class="btn btn-secondary" onclick="switchTab('stiff')">Przejdź do porannego wpisu</button></div>`;
+  } else {
+    day.blocks.forEach((block, bi)=>{
+      html += `<div class="block-title"><div class="idx">${bi+1}</div><h3>${block.name}</h3></div>`;
+      if(block.kind==='warmup'){
+        state.registry[block.id] = {type:'warmup', data:block};
+        const isDone = !!(entry.warmups && entry.warmups[block.id]);
+        html += rowHTML(block.id, block.name, kroki(block.steps.length), isDone);
+      } else if(block.kind==='hangboard'){
+        state.registry[block.id] = {type:'hangboard', data:block};
+        const done = !!(entry.exercises && entry.exercises[block.id] && entry.exercises[block.id].completedAt);
+        html += rowHTML(block.id, block.name, `${serie(block.series)} po ${block.reps} zwisów (${block.hang} s / ${block.hangRest} s)`, done);
+      } else if(block.kind==='measure'){
+        state.registry[block.id] = {type:'measure', data:block};
+        const done = !!(entry.exercises && entry.exercises[block.id]);
+        html += rowHTML(block.id, block.name, 'pomiar jednorazowy', done);
+      } else if(block.kind==='exercises'){
+        block.items.forEach(ex=>{
+          state.registry[ex.id] = {type:'exercise', data:ex};
+          const log = entry.exercises && entry.exercises[ex.id];
+          const done = !!(log && log.sets && log.sets.length >= ex.sets);
+          const partial = !!(log && log.sets && log.sets.length > 0 && log.sets.length < ex.sets);
+          const sub = ex.holdBased
+            ? `${serie(ex.sets)} × utrzymanie ${ex.holdRange[0]}–${ex.holdRange[1]} s`
+            : `${serie(ex.sets)} × ${esc(ex.repsRange)}`;
+          html += rowHTML(ex.id, ex.name, sub + (partial ? ` · zrobione ${log.sets.length}/${ex.sets}` : ''), done);
+        });
+      }
+    });
+    html += `<div class="meta" style="margin-top:14px;">Kolejność na liście jest celowa: rozgrzewki → palce (na świeżo) → reszta. Jeśli zabraknie czasu, jako pierwsze odpuszczasz pompki archer, potem ab wheel — nigdy chwytotablicy, podciągania, dipów ani pracy łopatek.</div>`;
+  }
+  cont.innerHTML = html;
+  document.getElementById('headerSub').textContent = 'Cykl 1 · Tydzień 1 · ' + day.title;
+}
+
+function rowHTML(id, name, sub, done){
+  return `<div class="exercise-row ${done?'done':''}" onclick="openExercise('${id}')">
+    <div class="left"><div class="exname">${name}</div><div class="exsub">${sub}</div></div>
+    <div class="checkmark">${done?'✓':''}</div>
+  </div>`;
+}
+
+function renderAll(){
+  renderWeekStrip();
+  renderToday();
+}
+
+/* =========================================================================
+   EKRAN ĆWICZENIA
+   ========================================================================= */
+/* Skąd otwarto bieżące ćwiczenie — potrzebne, żeby po zapisaniu edycji
+   ponownie otworzyć ten sam ekran z odświeżonymi (nadpisanymi) liczbami. */
+let editContext = null;
+
+function openExercise(id){
+  const found = lookupExercise(id);
+  if(found){ editContext = {kind:'registry', id}; openExerciseData(found); }
+}
+
+/* Uruchomienie pozycji z zakładki „Timery" — wyniki trafiają na dzisiejszy dzień. */
+function openFromTools(id){
+  state.selectedDate = todayISO();
+  const found = lookupExercise(id);
+  if(found){ editContext = {kind:'registry', id}; openExerciseData(found); }
+}
+function openProtocol(key){
+  state.selectedDate = todayISO();
+  editContext = {kind:'protocol', key};
+  openExerciseData({type:'hangboard', data:getProtocol(key)});
+}
+function openCustomProtocol(){
+  state.selectedDate = todayISO();
+  editContext = null;
+  const cfg = readCustomForm();
+  store.set('customHangboard', cfg);
+  openExerciseData({type:'hangboard', data:customHangboard(cfg)});
+}
+
+function openExerciseData(found){
+  engineStop();
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-exercise').classList.add('active');
+  document.getElementById('exBreadcrumb').textContent =
+    found.type==='hangboard' ? 'CHWYTOTABLICA' :
+    found.type==='warmup' ? 'ROZGRZEWKA' :
+    found.type==='measure' ? 'POMIAR' : 'ĆWICZENIE';
+  document.getElementById('exTitle').textContent = found.data.name;
+
+  const body = document.getElementById('exerciseBody');
+  if(found.type==='warmup') body.innerHTML = renderWarmupBody(found.data);
+  else if(found.type==='hangboard') body.innerHTML = renderHangboardBody(found.data);
+  else if(found.type==='measure') body.innerHTML = renderMeasureBody(found.data);
+  else body.innerHTML = renderExerciseBody(found.data);
+
+  const editBtn = document.getElementById('exEditBtn');
+  const canEdit = editContext && (found.type==='exercise' || found.type==='hangboard') && found.data.id !== 'hangboard_custom';
+  editBtn.style.display = canEdit ? 'flex' : 'none';
+  editBtn.onclick = canEdit ? toggleEditPanel : null;
+}
+
+function toggleEditPanel(){
+  const panel = document.getElementById('editPanel');
+  if(!panel) return;
+  panel.open = !panel.open;
+  if(panel.open) panel.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+/* Ponowne otwarcie tego samego ekranu po zapisaniu/skasowaniu edycji —
+   z ekranu Dziś bierze świeże dane z rejestru, z Timerów odtwarza właściwy
+   protokół (A/B/C), żeby liczby i tytuł od razu były aktualne. */
+function reopenExercise(){
+  if(!editContext) return;
+  if(editContext.kind === 'protocol'){
+    openExerciseData({type:'hangboard', data:getProtocol(editContext.key)});
+  } else {
+    rebuildRegistry();
+    const fresh = GLOBAL_REGISTRY[editContext.id];
+    if(fresh) openExerciseData(fresh);
+  }
+}
+
+/* Dla chwytotablicy odtwarza tekst opisu na podstawie AKTUALNYCH liczb
+   (po ewentualnej edycji) zamiast pokazywać nieaktualne liczby z planu. */
+function hangboardLiveCue(data){
+  const base = data.reps > 1
+    ? `${data.reps} × (${data.hang} s zwisu / ${data.hangRest} s przerwy) = 1 seria. ${serie(data.series)}, między seriami przerwa ${fmtTime(data.seriesRest)}.`
+    : `${serie(data.series)} pojedynczych zwisów po ${data.hang} s, przerwa między nimi ${fmtTime(data.seriesRest)}.`;
+  return data.qualNote ? base + ' ' + data.qualNote : base;
+}
+
+function cueBlock(data){
+  const cueText = (data.kind === 'hangboard' && data.modified) ? hangboardLiveCue(data) : (data.cue || '');
+  let html = `<div class="notes-box" style="margin-top:0;">`;
+  if(data.modified) html += `<span class="badge strength" style="margin-bottom:8px;display:inline-block;">✎ Zmienione ustawienie</span><br>`;
+  html += cueText;
+  if(data.warn) html += `<br><br><span class="warn"><b>Uważaj:</b> ${data.warn}</span>`;
+  html += `</div>`;
+  return html;
+}
+
+function techBlock(data, openFirst){
+  if(!data.tech || !data.tech.length) return '';
+  let html = `<div class="tech-head">Technika — przeczytaj przed pierwszym razem</div>`;
+  data.tech.forEach((sec, i)=>{
+    html += `<details class="tech"${openFirst && i===0?' open':''}><summary>${sec.t}</summary><div class="inner">${sec.h}</div></details>`;
+  });
+  return html;
+}
+
+/* ---- Rozgrzewka: checklista z opisami + timer na krokach czasowych ---- */
+function renderWarmupBody(data){
+  let html = '';
+  if(data.intro) html += `<div class="notes-box" style="margin-top:0;">${data.intro}</div>`;
+  html += `<div style="margin-top:12px;">`;
+  data.steps.forEach((step)=>{
+    const dur = step.seconds ? fmtTime(step.seconds*(step.sets||1)) : (step.reps || '');
+    const safeLabel = step.label.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+    html += `<div class="exercise-row" style="cursor:${step.seconds?'pointer':'default'};align-items:flex-start;" ${step.seconds?`onclick="startSimpleTimer(${step.seconds*(step.sets||1)}, '${safeLabel}')"`:''}>
+      <div class="left">
+        <div class="exname">${step.label}</div>
+        ${step.desc?`<div class="exdesc">${step.desc}</div>`:''}
+        ${step.seconds?`<div class="exsub" style="margin-top:4px;color:var(--lichen-400);">▶ dotknij, aby odliczać</div>`:''}
+      </div>
+      <div class="exsub tabnum" style="flex-shrink:0;margin-left:10px;">${dur}</div>
+    </div>`;
+  });
+  html += `</div>`;
+  html += `<div id="simpleTimerHost"></div>`;
+  html += `<button class="btn btn-primary" onclick="markWarmupDone('${data.id}')">Oznacz rozgrzewkę jako zrobioną</button>`;
+  return html;
+}
+function startSimpleTimer(seconds, label){
+  ensureAudio();
+  const host = document.getElementById('simpleTimerHost');
+  host.innerHTML = `<div class="card">` + timerRingHTML() + `</div>`;
+  engineLoad([{label:label, seconds:seconds, kind:'work'}], {});
+  host.scrollIntoView({behavior:'smooth', block:'center'});
+}
+function markWarmupDone(blockId){
+  const entry = loadEntry(state.selectedDate);
+  const warmups = entry.warmups || {};
+  warmups[blockId] = {completedAt:new Date().toISOString()};
+  mergeEntry(state.selectedDate, {warmups});
+  vibrate(40);
+  goToday();
+}
+
+/* ---- Chwytotablica — Protokół A ---- */
+/* ---- Panel edycji: dowolna sekcja treningu, na bieżąco ---- */
+function hangboardEditPanel(data){
+  return `<details class="tech" id="editPanel">
+    <summary>Zmień liczby dla tego protokołu</summary>
+    <div class="inner">
+      <div class="log-row" style="margin-top:0;">
+        <div><label>Czas zwisu (s)</label><input type="number" id="ed_hang" value="${data.hang}"></div>
+        <div><label>Przerwa między zwisami (s)</label><input type="number" id="ed_hangRest" value="${data.hangRest}"></div>
+      </div>
+      <div class="log-row">
+        <div><label>Zwisów w serii</label><input type="number" id="ed_reps" value="${data.reps}"></div>
+        <div><label>Liczba serii</label><input type="number" id="ed_series" value="${data.series}"></div>
+      </div>
+      <div class="log-row">
+        <div><label>Przerwa między seriami (s)</label><input type="number" id="ed_seriesRest" value="${data.seriesRest}"></div>
+      </div>
+      <div class="btn-row" style="margin-top:14px;">
+        <button class="btn btn-primary" onclick="saveHangboardOverride('${data.id}')">Zapisz</button>
+        ${data.modified ? `<button class="btn btn-ghost" onclick="resetOverride('${data.id}')">Przywróć domyślne</button>` : ''}
+      </div>
+      <div class="meta" style="margin-top:8px;">Zmiana dotyczy tego protokołu wszędzie, gdzie się pojawia — w planie dnia i w zakładce Timery.</div>
+    </div>
+  </details>`;
+}
+function saveHangboardOverride(id){
+  setOverride(id, {
+    hang: Math.max(1, numOr('ed_hang', 1)),
+    hangRest: Math.max(0, numOr('ed_hangRest', 0)),
+    reps: Math.max(1, numOr('ed_reps', 1)),
+    series: Math.max(1, numOr('ed_series', 1)),
+    seriesRest: Math.max(0, numOr('ed_seriesRest', 0)),
+  });
+  vibrate(30);
+  reopenExercise();
+}
+function exerciseEditPanel(ex){
+  const repsField = ex.holdBased
+    ? `<div class="log-row" style="margin-top:0;">
+        <div><label>Utrzymanie od (s)</label><input type="number" id="ed_hold_min" value="${ex.holdRange[0]}"></div>
+        <div><label>Utrzymanie do (s)</label><input type="number" id="ed_hold_max" value="${ex.holdRange[1]}"></div>
+      </div>`
+    : `<div class="log-row" style="margin-top:0;">
+        <div><label>Zakres powtórzeń (tekst)</label><input type="text" id="ed_reps" value="${esc(ex.repsRange)}"></div>
+      </div>`;
+  return `<details class="tech" id="editPanel">
+    <summary>Zmień liczby dla tego ćwiczenia</summary>
+    <div class="inner">
+      ${repsField}
+      <div class="log-row">
+        <div><label>Liczba serii</label><input type="number" id="ed_sets" value="${ex.sets}"></div>
+        <div><label>Przerwa między seriami (s)</label><input type="number" id="ed_rest" value="${ex.rest}"></div>
+      </div>
+      <div class="btn-row" style="margin-top:14px;">
+        <button class="btn btn-primary" onclick="saveExerciseOverride('${ex.id}')">Zapisz</button>
+        ${ex.modified ? `<button class="btn btn-ghost" onclick="resetOverride('${ex.id}')">Przywróć domyślne</button>` : ''}
+      </div>
+      <div class="meta" style="margin-top:8px;">Zmiana dotyczy tego ćwiczenia wszędzie, gdzie występuje w planie (np. też w poniedziałek i czwartek naraz).</div>
+    </div>
+  </details>`;
+}
+function saveExerciseOverride(id){
+  const ex = GLOBAL_REGISTRY[id] && GLOBAL_REGISTRY[id].data;
+  if(!ex) return;
+  const patch = {
+    sets: Math.max(1, numOr('ed_sets', ex.sets)),
+    rest: Math.max(0, numOr('ed_rest', ex.rest)),
+  };
+  if(ex.holdBased){
+    const mn = Math.max(1, numOr('ed_hold_min', ex.holdRange[0]));
+    const mx = Math.max(mn, numOr('ed_hold_max', ex.holdRange[1]));
+    patch.holdMin = mn; patch.holdMax = mx;
+  } else {
+    const rr = (document.getElementById('ed_reps').value || '').trim();
+    if(rr) patch.repsRange = rr;
+  }
+  setOverride(id, patch);
+  vibrate(30);
+  reopenExercise();
+}
+function resetOverride(id){
+  clearOverride(id);
+  vibrate(20);
+  reopenExercise();
+}
+
+function renderHangboardBody(data){
+  const res = checkFingerLimits('hangboard');
+  const blocked = res.blocks.length > 0;
+
+  let html = limitsBannerHTML(res);
+  if(blocked) html += `<button class="btn btn-ghost" style="margin-bottom:12px;" onclick="unlockHangboard(this)">Przeczytałem ostrzeżenie — odblokuj timer</button>`;
+  html += cueBlock(data);
+  html += hangboardEditPanel(data);
+  html += `<div class="card">` + timerRingHTML() + `</div>`;
+  html += `<div class="log-row">
+    <div><label>Listwa (mm albo „szczebel")</label><input type="text" id="log_edge" placeholder="np. szczebel"></div>
+    <div><label>Odciążenie stopą</label><input type="text" id="log_assist" placeholder="np. mocne"></div>
+  </div>`;
+  html += `<div class="log-row"><div><label>Zapas po 1. serii — czy zwisałbyś drugie tyle?</label><input type="text" id="log_reserve" placeholder="np. tak, spory zapas"></div></div>`;
+  html += `<button class="btn btn-secondary" style="margin-top:12px;" onclick="saveHangboardLog('${data.id}')">Zapisz parametry sesji</button>`;
+  html += techBlock(data, true);
+
+  const single = data.reps === 1;   // pojedyncze zwisy (np. Protokół C)
+  const phases = [];
+  for(let s=1;s<=data.series;s++){
+    for(let r=1;r<=data.reps;r++){
+      phases.push({
+        label: single ? `Zwis ${s}/${data.series}` : `Seria ${s}/${data.series} · Zwis ${r}/${data.reps}`,
+        seconds:data.hang, kind:'work'});
+      if(r < data.reps) phases.push({label:`Seria ${s}/${data.series} · Luz`, seconds:data.hangRest, kind:'rest'});
+    }
+    if(s < data.series) phases.push({label: single ? 'Przerwa' : 'Przerwa między seriami', seconds:data.seriesRest, kind:'seriesRest'});
+  }
+  setTimeout(()=>{
+    engineLoad(phases, {onComplete: ()=>completeHangboard(data.id)});
+    if(blocked){
+      const btn = document.getElementById('timerStartBtn');
+      if(btn){ btn.disabled = true; btn.textContent = 'Zablokowane'; }
+    }
+  }, 0);
+  return html;
+}
+function unlockHangboard(btn){
+  const s = document.getElementById('timerStartBtn');
+  if(s){ s.disabled = false; s.textContent = 'Start'; }
+  btn.remove();
+}
+function completeHangboard(id){
+  const entry = loadEntry(state.selectedDate);
+  const exercises = entry.exercises || {};
+  exercises[id] = {...(exercises[id]||{}), completedAt:new Date().toISOString(), kind:'hangboard'};
+  mergeEntry(state.selectedDate, {exercises});
+}
+function saveHangboardLog(id){
+  const entry = loadEntry(state.selectedDate);
+  const exercises = entry.exercises || {};
+  exercises[id] = {...(exercises[id]||{}),
+    edge: document.getElementById('log_edge').value,
+    assist: document.getElementById('log_assist').value,
+    reserve: document.getElementById('log_reserve').value,
+    loggedAt: new Date().toISOString()};
+  mergeEntry(state.selectedDate, {exercises});
+  vibrate(30);
+}
+
+/* ---- Pomiar ---- */
+function renderMeasureBody(data){
+  let html = cueBlock(data);
+  html += techBlock(data, true);
+  html += `<div class="card">
+    <label style="font-size:0.78rem;color:var(--chalk-500);">Wynik (powtórzenia)</label>
+    <input type="number" id="measureResult" placeholder="np. 8" style="margin-top:6px;">
+    <button class="btn btn-primary" style="margin-top:14px;" onclick="saveMeasure('${data.id}')">Zapisz pomiar</button>
+  </div>`;
+  return html;
+}
+function saveMeasure(id){
+  const val = document.getElementById('measureResult').value;
+  if(!val) return;
+  const entry = loadEntry(state.selectedDate);
+  const exercises = entry.exercises || {};
+  exercises[id] = {result:val, loggedAt:new Date().toISOString()};
+  mergeEntry(state.selectedDate, {exercises});
+  const baselines = store.get('baselines', []);
+  baselines.push({metric:id, value:val, measuredAt:new Date().toISOString()});
+  store.set('baselines', baselines);
+  vibrate(40);
+  goToday();
+}
+
+/* ---- Zwykłe ćwiczenie: serie + tempo/izometria + przerwa ---- */
+let exState = { setIndex:0, totalSets:0, logs:[] };
+
+function renderExerciseBody(ex){
+  const prior = loadEntry(state.selectedDate).exercises;
+  const priorLog = prior && prior[ex.id] && prior[ex.id].sets ? prior[ex.id].sets : [];
+  exState = { setIndex: priorLog.length, totalSets: ex.sets, logs: [...priorLog] };
+
+  let html = cueBlock(ex);
+  html += exerciseEditPanel(ex);
+  html += `<div class="card">`;
+  html += `<div class="set-tracker" id="setTracker"></div>`;
+  html += `<div style="text-align:center;color:var(--chalk-500);font-size:0.85rem;margin-bottom:10px;" id="setLabel"></div>`;
+  if(ex.tempo) html += `<div style="text-align:center;margin-bottom:6px;"><span class="badge strength">Tempo ${ex.tempo.label}</span></div>`;
+  if(ex.holdBased) html += `<div style="text-align:center;margin-bottom:6px;"><span class="badge strength">Utrzymanie ${ex.holdRange[0]}–${ex.holdRange[1]} s</span></div>`;
+  html += timerRingHTML();
+  if(ex.tempo) html += `<div class="meta" style="text-align:center;margin-top:6px;">Timer prowadzi rytm ruchu i zapętla się — jedna pętla to jedno powtórzenie. Rób powtórzenia w jego takcie.</div>`;
+  html += `</div>`;
+  html += `<div class="log-row">
+    <div><label>${ex.holdBased?'Utrzymane sekundy (najlepsza seria)':'Zrobione powtórzenia'}</label><input type="number" id="log_reps" placeholder="${ex.holdBased?ex.holdRange[1]:''}"></div>
+    <div><label>Dociążenie / asysta</label><input type="text" id="log_load" placeholder="bez"></div>
+  </div>`;
+  html += `<div class="btn-row" style="margin-top:14px;">
+    <button class="btn btn-secondary" id="logSetBtn" onclick="logCurrentSet('${ex.id}')">Zaliczona seria</button>
+  </div>`;
+  html += `<div class="meta" style="margin-top:8px;">Po zaliczeniu serii przerwa odlicza się sama (${fmtRestWords(ex.rest)}).</div>`;
+  html += techBlock(ex, false);
+
+  setTimeout(()=>setupExerciseTimer(ex), 0);
+  return html;
+}
+
+function updateSetTracker(){
+  const tracker = document.getElementById('setTracker');
+  if(!tracker) return;
+  let html = '';
+  for(let i=0;i<exState.totalSets;i++){
+    let cls = 'set-pip';
+    if(i < exState.setIndex) cls += ' filled';
+    else if(i === exState.setIndex) cls += ' current';
+    html += `<div class="${cls}"></div>`;
+  }
+  tracker.innerHTML = html;
+  const lbl = document.getElementById('setLabel');
+  if(lbl) lbl.textContent = exState.setIndex >= exState.totalSets
+    ? 'Wszystkie serie zaliczone'
+    : `Seria ${exState.setIndex+1} / ${exState.totalSets}`;
+  const btn = document.getElementById('logSetBtn');
+  if(btn && exState.setIndex >= exState.totalSets){
+    btn.textContent = 'Wszystkie serie zaliczone ✓';
+    btn.disabled = true;
+  }
+}
+
+function setupExerciseTimer(ex){
+  updateSetTracker();
+  if(ex.tempo){
+    const phases = ex.tempo.phases.map(p=>({label:p.l, seconds:p.s||1, kind:'work', tap:p.s===0}));
+    engineLoad(phases, {loop:true});
+  } else if(ex.holdBased){
+    engineLoad([{label:'Utrzymanie', seconds:ex.holdRange[1], kind:'work'}],
+      {onComplete: ()=>startRestTimer(ex)});
+  } else {
+    engineLoad([{label:'Przerwa', seconds:ex.rest, kind:'rest'}], {});
+  }
+}
+
+function startRestTimer(ex){
+  engineLoad([{label:'Przerwa', seconds:ex.rest, kind:'rest'}], {});
+  engineToggle();
+}
+
+function logCurrentSet(exId){
+  if(exState.setIndex >= exState.totalSets) return;
+  const reps = document.getElementById('log_reps').value;
+  const load = document.getElementById('log_load').value;
+  exState.logs.push({set:exState.setIndex+1, reps, load, at:new Date().toISOString()});
+  exState.setIndex++;
+  document.getElementById('log_reps').value = '';
+  vibrate(25);
+
+  const entry = loadEntry(state.selectedDate);
+  const exercises = entry.exercises || {};
+  exercises[exId] = {sets:exState.logs, updatedAt:new Date().toISOString()};
+  mergeEntry(state.selectedDate, {exercises});
+
+  updateSetTracker();
+  if(exState.setIndex >= exState.totalSets){
+    beep(990,0.3); setTimeout(()=>beep(990,0.3), 180);
+  } else {
+    const found = lookupExercise(exId);
+    if(found && found.data.rest) startRestTimer(found.data);
+  }
+}
+
+/* =========================================================================
+   PORANNY DZIENNIK — z porównaniem do Twojej normy
+   ========================================================================= */
+function stiffnessBaseline(){
+  const today = todayISO();
+  const entries = [];
+  for(const k of store.keys('entries:')){
+    const iso = k.replace('entries:','');
+    if(iso >= today) continue;
+    const e = store.get(k, {});
+    if(e.stiffness) entries.push({iso, s:e.stiffness});
+  }
+  entries.sort((a,b)=>a.iso<b.iso?1:-1);
+  const last = entries.slice(0,10);
+  if(last.length < 3) return null;
+  const avg = arr => arr.reduce((s,x)=>s+x,0)/arr.length;
+  return {
+    n: last.length,
+    achMin: avg(last.map(x=>Number(x.s.achillesMinutes)||0)),
+    finMin: avg(last.map(x=>Number(x.s.fingersMinutes)||0)),
+  };
+}
+
+function loadStiffnessForm(){
+  const e = loadEntry(todayISO());
+  const s = e.stiffness || {};
+  document.getElementById('achScore').value = s.achillesScore ?? 0;
+  document.getElementById('achVal').textContent = s.achillesScore ?? 0;
+  document.getElementById('achMin').value = s.achillesMinutes ?? '';
+  document.getElementById('finScore').value = s.fingersScore ?? 0;
+  document.getElementById('finVal').textContent = s.fingersScore ?? 0;
+  document.getElementById('finMin').value = s.fingersMinutes ?? '';
+  // przy pierwszych wejściach rozwiń wyjaśnienie
+  if(store.keys('entries:').length < 3) document.getElementById('stiffInfo').open = true;
+  if(e.stiffness) checkStiffFlag(s);
+}
+
+function saveStiffness(){
+  const data = {
+    achillesScore: Number(document.getElementById('achScore').value),
+    achillesMinutes: document.getElementById('achMin').value,
+    fingersScore: Number(document.getElementById('finScore').value),
+    fingersMinutes: document.getElementById('finMin').value,
+    savedAt: new Date().toISOString(),
+  };
+  mergeEntry(todayISO(), {stiffness:data});
+  checkStiffFlag(data);
+  vibrate(30);
+}
+
+function checkStiffFlag(s){
+  const box = document.getElementById('stiffFlag');
+  const base = stiffnessBaseline();
+  const msgs = [];
+
+  if(base){
+    const achMin = Number(s.achillesMinutes)||0;
+    const finMin = Number(s.fingersMinutes)||0;
+    if(achMin > base.achMin*1.5 && achMin - base.achMin >= 3){
+      msgs.push(`<span class="warn"><b>Achilles: dziś sztywniejszy niż zwykle.</b></span> Sztywność ustępowała ${achMin} min, a Twoja norma z ostatnich ${base.n} dni to ${base.achMin.toFixed(0)} min. To najwcześniejszy sygnał przeciążenia — jeśli powtórzy się jutro, wróć do łatwiejszej wersji wspięć (np. bez pauzy w dole, mniej serii), zanim pojawi się ból.`);
+    }
+    if(finMin > base.finMin*1.5 && finMin - base.finMin >= 3){
+      msgs.push(`<span class="warn"><b>Palce: dziś sztywniejsze niż zwykle.</b></span> Dziś ${finMin} min vs. norma ${base.finMin.toFixed(0)} min. Dziś nie rób chwytotablicy. Jeśli to samo będzie jutro — cały tydzień bez tablicy.`);
+    }
+  } else {
+    msgs.push(`Zapisano. Aplikacja buduje teraz Twoją normę — po 3 wpisach zacznie porównywać każdy poranek z Twoją średnią i ostrzegać, gdy coś odbiega.`);
+  }
+  if(s.achillesScore>=6 || s.fingersScore>=6){
+    msgs.push(`<span class="warn"><b>Wysoka sztywność (≥6/10).</b></span> Nie trenuj dziś obciążająco tej okolicy. Sztywność wyprzedza ból o tygodnie — zareagowanie teraz to najtańszy moment.`);
+  }
+  if(msgs.length === 0) msgs.push('✓ Zapisano. Wartości w Twojej normie.');
+  box.style.display = 'block';
+  box.innerHTML = msgs.join('<br><br>');
+}
+
+/* =========================================================================
+   ZAPIS WSPINANIA
+   ========================================================================= */
+function saveClimb(){
+  const data = {
+    routes: document.getElementById('climbRoutes').value,
+    boulders: document.getElementById('climbBoulders').value,
+    feel: document.getElementById('climbFeel').value,
+    note: document.getElementById('climbNote').value,
+    savedAt: new Date().toISOString(),
+  };
+  mergeEntry(state.selectedDate, {climb:data});
+  vibrate(30);
+  goToday();
+}
+
+/* =========================================================================
+   ZAKŁADKA TIMERY — dowolne ćwiczenie / protokół poza planem dnia
+   ========================================================================= */
+/* ---- Ulubione: tokeny 'proto:A', 'custom:<id>', 'ex:<id>' ---- */
+function getFavs(){ return store.get('favorites', ['proto:A']); }
+function isFav(token){ return getFavs().indexOf(token) !== -1; }
+function toggleFav(token){
+  const favs = getFavs();
+  const i = favs.indexOf(token);
+  if(i === -1) favs.push(token); else favs.splice(i,1);
+  store.set('favorites', favs);
+  vibrate(20);
+  renderTools();
+}
+function getPresets(){ return store.get('customPresets', []); }
+function findPreset(id){ return getPresets().find(p=>p.id===id) || null; }
+
+function protoSummary(p){
+  return p.reps > 1
+    ? `${serie(p.series)} po ${p.reps} × (${p.hang} s / ${p.hangRest} s) · przerwa ${fmtTime(p.seriesRest)}`
+    : `${p.series} zwisy po ${p.hang} s · przerwa ${fmtTime(p.seriesRest)}`;
+}
+function exSummary(ex){
+  if(ex.steps) return kroki(ex.steps.length);
+  return ex.holdBased
+    ? `${serie(ex.sets)} × utrzymanie ${ex.holdRange[0]}–${ex.holdRange[1]} s`
+    : `${serie(ex.sets)} × ${esc(ex.repsRange)}`;
+}
+/* Zamiana tokenu ulubionego na dane do wyświetlenia i uruchomienia. */
+function favResolve(token){
+  const sep = token.indexOf(':');
+  const kind = token.slice(0, sep), key = token.slice(sep+1);
+  if(kind === 'proto'){
+    const p = getProtocol(key);
+    return p ? {name:p.name, sub:protoSummary(p), run:`openProtocol('${key}')`} : null;
+  }
+  if(kind === 'custom'){
+    const pr = findPreset(key);
+    return pr ? {name:pr.name, sub:protoSummary(pr), run:`openPreset('${key}')`} : null;
+  }
+  if(kind === 'ex'){
+    const r = GLOBAL_REGISTRY[key];
+    return r ? {name:r.data.name, sub:exSummary(r.data), run:`openFromTools('${key}')`} : null;
+  }
+  return null;
+}
+function starHTML(token){
+  return `<button class="fav-btn ${isFav(token)?'on':''}" title="Ulubione"
+    onclick="event.stopPropagation(); toggleFav('${token}')">${isFav(token)?'★':'☆'}</button>`;
+}
+function launchRow(token, name, sub, runJs){
+  return `<div class="exercise-row" onclick="${runJs}">
+    <div class="left"><div class="exname">${name}</div><div class="exsub">${sub}</div></div>
+    <div style="display:flex;align-items:center;gap:2px;flex-shrink:0;">
+      ${starHTML(token)}
+      <span style="color:var(--lichen-400);font-size:1.05rem;padding-left:4px;">▶</span>
+    </div>
+  </div>`;
+}
+
+function openPreset(id){
+  const pr = findPreset(id);
+  if(!pr) return;
+  state.selectedDate = todayISO();
+  editContext = null;
+  openExerciseData({type:'hangboard', data:customHangboard(pr, pr.name)});
+}
+function readCustomForm(){
+  return {
+    hang: Math.max(1, Number(document.getElementById('cst_hang').value)||7),
+    hangRest: Math.max(0, Number(document.getElementById('cst_rest').value)||3),
+    reps: Math.max(1, Number(document.getElementById('cst_reps').value)||6),
+    series: Math.max(1, Number(document.getElementById('cst_series').value)||5),
+    seriesRest: Math.max(0, Number(document.getElementById('cst_seriesRest').value)||180),
+  };
+}
+function saveCustomAsFav(){
+  const cfg = readCustomForm();
+  const presets = getPresets();
+  const id = 'p' + Date.now();
+  const name = cfg.reps > 1
+    ? `Tablica ${cfg.hang} s / ${cfg.hangRest} s × ${cfg.reps}`
+    : `Tablica ${cfg.hang} s × ${cfg.series}`;
+  presets.push({id, name, ...cfg});
+  store.set('customPresets', presets);
+  const favs = getFavs();
+  favs.push('custom:'+id);
+  store.set('favorites', favs);
+  store.set('customHangboard', cfg);
+  vibrate(40);
+  renderTools();
+  document.getElementById('toolsContent').scrollIntoView({behavior:'smooth', block:'start'});
+}
+function deletePreset(id){
+  store.set('customPresets', getPresets().filter(p=>p.id!==id));
+  store.set('favorites', getFavs().filter(t=>t!=='custom:'+id));
+  renderTools();
+}
+
+function renderTools(){
+  rebuildRegistry();
+  const cfg = store.get('customHangboard', {hang:7, hangRest:3, reps:6, series:5, seriesRest:180});
+  const res = checkFingerLimits('hangboard');
+
+  let html = limitsBannerHTML(res);
+
+  /* ---------- 1. Ulubione — zawsze na samej górze ---------- */
+  const favs = getFavs().map(t=>({token:t, data:favResolve(t)})).filter(f=>f.data);
+  html += `<div class="block-title"><div class="idx">★</div><h3>Ulubione</h3></div>`;
+  if(favs.length){
+    favs.forEach(f=>{
+      html += `<div class="fav-card" onclick="${f.data.run}">
+        <div class="play">▶</div>
+        <div class="txt"><div class="favname">${f.data.name}</div><div class="favsub">${f.data.sub}</div></div>
+        ${starHTML(f.token)}
+      </div>`;
+    });
+  } else {
+    html += `<div class="fav-empty">Nic tu jeszcze nie ma. Dotknij gwiazdki ☆ przy dowolnej pozycji poniżej, a wskoczy tutaj — na samą górę, do uruchomienia jednym dotknięciem.</div>`;
+  }
+
+  /* ---------- 2. Chwytotablica ---------- */
+  html += `<div class="block-title"><div class="idx">1</div><h3>Chwytotablica</h3></div>`;
+  ['A','B','C'].forEach(k=>{
+    const p = getProtocol(k);
+    html += launchRow('proto:'+k, p.name, protoSummary(p), `openProtocol('${k}')`);
+  });
+
+  const presets = getPresets();
+  if(presets.length){
+    html += `<div class="meta" style="margin:14px 0 8px;">Twoje zapisane ustawienia</div>`;
+    presets.forEach(pr=>{
+      html += `<div class="preset-row">
+        <div style="flex:1;min-width:0;cursor:pointer;" onclick="openPreset('${pr.id}')">
+          <div class="exname">${pr.name}</div>
+          <div class="exsub">${protoSummary(pr)}</div>
+        </div>
+        ${starHTML('custom:'+pr.id)}
+        <button class="del" title="Usuń" onclick="deletePreset('${pr.id}')">🗑</button>
+      </div>`;
+    });
+  }
+
+  html += `<details class="tech" style="margin-top:10px;"><summary>Ustawienie własne (dowolne czasy)</summary><div class="inner">
+    <div class="log-row" style="margin-top:0;">
+      <div><label>Zwis (s)</label><input type="number" id="cst_hang" value="${cfg.hang}"></div>
+      <div><label>Przerwa (s)</label><input type="number" id="cst_rest" value="${cfg.hangRest}"></div>
+    </div>
+    <div class="log-row">
+      <div><label>Powtórzeń w serii</label><input type="number" id="cst_reps" value="${cfg.reps}"></div>
+      <div><label>Liczba serii</label><input type="number" id="cst_series" value="${cfg.series}"></div>
+    </div>
+    <div class="log-row">
+      <div><label>Przerwa między seriami (s)</label><input type="number" id="cst_seriesRest" value="${cfg.seriesRest}"></div>
+    </div>
+    <div class="btn-row" style="margin-top:14px;">
+      <button class="btn btn-primary" onclick="openCustomProtocol()">Uruchom</button>
+      <button class="btn btn-secondary" onclick="saveCustomAsFav()">Zapisz do ulubionych</button>
+    </div>
+    <div class="meta" style="margin-top:8px;">Działa też jako zwykły timer interwałowy do czegokolwiek innego.</div>
+  </div></details>`;
+
+  /* ---------- 3. Pozostałe ćwiczenia ---------- */
+  const warmups = [], exercises = [];
+  for(const id in GLOBAL_REGISTRY){
+    const r = GLOBAL_REGISTRY[id];
+    if(r.type === 'warmup') warmups.push(r);
+    else if(r.type === 'exercise') exercises.push(r);
+  }
+
+  html += `<div class="block-title"><div class="idx">2</div><h3>Pojedyncze ćwiczenia</h3></div>`;
+  html += `<div class="meta" style="margin-bottom:10px;">Każde z opisem techniki, timerem tempa i odliczaniem przerw — możesz odpalić o dowolnej porze.</div>`;
+  exercises.forEach(r=>{
+    html += launchRow('ex:'+r.data.id, r.data.name, exSummary(r.data), `openFromTools('${r.data.id}')`);
+  });
+
+  html += `<div class="block-title"><div class="idx">3</div><h3>Rozgrzewki</h3></div>`;
+  warmups.forEach(r=>{
+    html += launchRow('ex:'+r.data.id, r.data.name, exSummary(r.data), `openFromTools('${r.data.id}')`);
+  });
+
+  document.getElementById('toolsContent').innerHTML = html;
+}
+
+/* =========================================================================
+   HISTORIA
+   ========================================================================= */
+function renderHistory(){
+  const list = document.getElementById('historyList');
+  const keys = store.keys('entries:').sort().reverse().slice(0,14);
+  if(!keys.length){
+    list.innerHTML = '<div class="empty-hint">Brak zapisanych dni. Zacznij od dzisiejszego wpisu porannego.</div>';
+    return;
+  }
+  let html = '';
+  for(const k of keys){
+    const iso = k.replace('entries:','');
+    const entry = store.get(k, {});
+    const tags = [];
+    if(entry.stiffness) tags.push(`<span class="pill">Achilles ${entry.stiffness.achillesScore}/10 · palce ${entry.stiffness.fingersScore}/10</span>`);
+    if(entry.climb) tags.push(`<span class="pill">🧗 ${entry.climb.routes||0} dróg / ${entry.climb.boulders||0} buld.</span>`);
+    if(entry.exercises){
+      const n = Object.keys(entry.exercises).length;
+      if(n) tags.push(`<span class="pill">✓ ${n} poz.</span>`);
+    }
+    html += `<div class="hist-item"><span class="date">${iso}</span><div class="tags">${tags.join('')}</div></div>`;
+  }
+  list.innerHTML = html || '<div class="empty-hint">Brak danych.</div>';
+}
+
+/* =========================================================================
+   USTAWIENIA + BACKUP
+   ========================================================================= */
+function loadSettingsForm(){
+  document.getElementById('setAchilles').value = SETTINGS.achillesTrack;
+  document.getElementById('setDips').value = SETTINGS.dipsDepth;
+  document.getElementById('versionInfo').textContent = 'Trener FBW v'+APP_VERSION;
+  const n = Object.keys(getOverrides()).length;
+  document.getElementById('overridesInfo').textContent = n
+    ? `Masz zmienione liczby w ${n} ${plural(n,'pozycji','pozycjach','pozycjach')}.`
+    : 'Wszystko jeszcze na wartościach z planu.';
+}
+function resetAllOverridesConfirm(){
+  const n = Object.keys(getOverrides()).length;
+  if(!n) return;
+  if(!confirm(`Przywrócić wszystkie ${n} zmienione pozycje do wartości z planu? Tej operacji nie da się cofnąć.`)) return;
+  clearAllOverrides();
+  loadSettingsForm();
+  vibrate(30);
+}
+
+function exportData(){
+  const dump = {};
+  for(const k of store.keys('')) dump[k] = store.get(k, null);
+  const blob = new Blob([JSON.stringify({app:'trener-fbw', version:APP_VERSION, exportedAt:new Date().toISOString(), data:dump}, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'trener-fbw-backup-'+todayISO()+'.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importData(input){
+  const file = input.files && input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const parsed = JSON.parse(reader.result);
+      if(!parsed.data) throw new Error('bad format');
+      for(const k in parsed.data) store.set(k, parsed.data[k]);
+      SETTINGS = store.get('settings', SETTINGS);
+      alert('Zaimportowano dane z kopii.');
+      renderAll();
+    }catch(e){ alert('Nie udało się wczytać pliku — to nie jest kopia Trenera FBW.'); }
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+/* =========================================================================
+   INIT + SERVICE WORKER
+   ========================================================================= */
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+
+/* Wykrycie trybu bez możliwości zapisu (np. plik otwarty z menedżera plików
+   na Androidzie) — użytkownik musi wiedzieć, że dziennik się nie zapisze. */
+(function(){
+  let ok = true;
+  try{
+    localStorage.setItem('fbw:__test','1');
+    localStorage.removeItem('fbw:__test');
+  }catch(e){ ok = false; }
+  if(!ok){
+    const b = document.createElement('div');
+    b.className = 'banner block';
+    b.style.margin = '12px 16px 0';
+    b.innerHTML = '⚠️ <b>Ten sposób otwarcia aplikacji nie pozwala zapisywać danych.</b> Timery działają, ale dziennik, ustawienia i ulubione ZNIKNĄ po zamknięciu. Żeby wszystko się zapisywało, aplikacja musi być zainstalowana z adresu internetowego (https).';
+    document.querySelector('main').prepend(b);
+  }
+})();
+renderAll();
+</script>
+</body>
+</html>
