@@ -463,7 +463,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.7.1';
+const APP_VERSION = '1.7.2';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -486,6 +486,9 @@ const store = {
       if(k && k.startsWith('fbw:'+prefix)) out.push(k.slice(4));
     }
     return out;
+  },
+  remove(key){
+    try{ localStorage.removeItem('fbw:'+key); }catch(e){}
   }
 };
 
@@ -543,9 +546,10 @@ function applyExerciseOverride(ex){
   return next;
 }
 /* Tekst ciężaru dla ćwiczeń z parametrem obciążenia (0 = bez obciążenia). */
+const fmtKg = n => String(n).replace('.', ',');   // 7.5 → „7,5" (polski zapis)
 function loadTxt(ex){
   if(ex.loadKg == null) return '';
-  return ' · ' + (ex.loadKg > 0 ? 'ciężar ' + ex.loadKg + ' kg' : 'bez obciążenia');
+  return ' · ' + (ex.loadKg > 0 ? 'ciężar ' + fmtKg(ex.loadKg) + ' kg' : 'bez obciążenia');
 }
 function applyHangboardOverride(block){
   const o = getOverride(block.id);
@@ -1234,6 +1238,7 @@ let state = {
   currentDay: null,
   registry: {},     // pozycje wybranego dnia
   returnTab: 'today',
+  extraPickerOpen: false,   // panel „Dołóż pojedyncze ćwiczenie" — czy rozwinięty
 };
 
 /* Rejestr wszystkich pozycji planu — pozwala uruchomić dowolne ćwiczenie
@@ -1372,7 +1377,17 @@ function removeExtraExercise(id){
   const entry = loadEntry(state.selectedDate);
   const list = (entry.extraExercises || []).filter(x=>x!==id);
   if(list.length) entry.extraExercises = list; else delete entry.extraExercises;
-  saveEntry(state.selectedDate, entry);
+  // nie zostawiaj niewidocznych, osieroconych logów tego ćwiczenia
+  const log = entry.exercises && entry.exercises[id];
+  if(log){
+    const hasResults = (log.sets && log.sets.length) || log.completedAt;
+    if(!hasResults || confirm('To ćwiczenie ma dziś zapisane serie. Usunąć też jego wyniki?\n(Anuluj = wyniki zostają w dzienniku)')){
+      delete entry.exercises[id];
+      if(!Object.keys(entry.exercises).length) delete entry.exercises;
+    }
+  }
+  if(Object.keys(entry).length) saveEntry(state.selectedDate, entry);
+  else store.remove('entries:'+state.selectedDate);
   vibrate(25);
   renderAll();
 }
@@ -1386,13 +1401,35 @@ function extraExercisesHTML(units, entry){
       if(b.kind === 'exercises') b.items.forEach(i=>inPlan.add(i.id));
     });
   });
+  // Dodatek pokryty przez plan dnia chowamy (jeden wiersz, jeden log) —
+  // wróci, gdy zmienisz typ dnia z powrotem.
+  const visible = extras.filter(id=>!inPlan.has(id));
 
   let html = '';
-  if(extras.length){
+
+  // Dipy dołożone w dzień wspinania albo dobę po nim → to samo twarde
+  // ostrzeżenie, które dostaje druga jednostka (nie tylko tekst w pickerze).
+  if(extras.indexOf('E8') !== -1 && !inPlan.has('E8')){
+    const y = new Date(state.selectedDate+'T00:00:00'); y.setDate(y.getDate()-1);
+    const climbedYesterday = !!(loadEntry(isoOf(y)).climb);
+    const climbToday = units.some(u=>u.type==='climb') || !!entry.climb;
+    if(climbToday || climbedYesterday){
+      html += `<div class="banner warn">⚠️ <b>Dołożyłeś dipy ${climbToday ? 'w dzień wspinania' : 'dobę po wspinaniu'}.</b> Plan zabrania dipów w ciągu doby po mocnym wspinaniu — przód barku dostaje wtedy podwójny bodziec i to najczęstszy mechanizm bólu przedniego barku. Jeśli sesja była (albo będzie) mocna, dziś je odpuść — pompki zostają.</div>`;
+    }
+  }
+
+  if(visible.length){
     html += `<div class="block-title"><div class="idx">＋</div><h3>Dodatkowe ćwiczenia</h3></div>`;
-    extras.forEach(id=>{
+    visible.forEach(id=>{
       const ex = catalogExercise(id);
-      if(!ex) return;
+      if(!ex){
+        // id z nowszej wersji aplikacji (np. import kopii) — pokaż i pozwól usunąć
+        html += `<div class="exercise-row">
+          <div class="left"><div class="exname">Nieznane ćwiczenie (${esc(id)})</div><div class="exsub">pochodzi z nowszej wersji aplikacji — możesz je usunąć</div></div>
+          <button class="del" title="Usuń z tego dnia" onclick="event.stopPropagation();removeExtraExercise('${esc(id)}')">🗑</button>
+        </div>`;
+        return;
+      }
       state.registry[ex.id] = {type:'exercise', data:ex};
       const log = entry.exercises && entry.exercises[ex.id];
       const done = !!(log && log.sets && log.sets.length >= ex.sets);
@@ -1412,11 +1449,13 @@ function extraExercisesHTML(units, entry){
 
   let opts = '';
   EXERCISE_CATALOG.forEach(ex=>{
-    if(extras.indexOf(ex.id) !== -1) return; // już dołożone do tego dnia
     const planned = inPlan.has(ex.id);
+    if(extras.indexOf(ex.id) !== -1 && !planned) return; // już widoczne jako dodatek
     opts += `<button class="btn btn-secondary" style="margin-bottom:8px;text-align:left;" ${planned?'disabled':''} onclick="addExtraExercise('${ex.id}')">➕ ${ex.name}${planned?' — jest już w planie dnia':''}</button>`;
   });
-  html += `<details class="tech" style="margin-top:12px;">
+  // Panel pamięta, czy był rozwinięty — dokładanie kilku ćwiczeń pod rząd
+  // nie wymaga otwierania go za każdym razem od nowa.
+  html += `<details class="tech" id="extraPicker" style="margin-top:12px;"${state.extraPickerOpen?' open':''} ontoggle="state.extraPickerOpen=this.open">
     <summary>Dołóż pojedyncze ćwiczenie do tego dnia</summary>
     <div class="inner">
       <div class="meta" style="margin-bottom:12px;">Dokładasz <b>dowolną liczbę</b> pojedynczych ćwiczeń — bez zmieniania całej jednostki. Wyniki zapisują się tak samo jak przy ćwiczeniach z planu. Zasady bezpieczeństwa planu obowiązują nadal (np. dipy nigdy w dobie po mocnym wspinaniu, palce maks. 3 obciążenia na 7 dni).</div>
@@ -1458,7 +1497,7 @@ function dayPickerHTML(planned, day, overridden, extras){
   // Co można DOŁOŻYĆ zależy od tego, co jest główną jednostką dnia
   let addSection = '';
   if(day.type === 'rest'){
-    addSection = `<div class="meta" style="margin-top:14px;">W dzień odpoczynku nie ma czego łączyć — jeśli chcesz dziś trenować, wybierz to powyżej jako zamiennik.</div>`;
+    addSection = `<div class="meta" style="margin-top:14px;">W dzień odpoczynku nie ma jednostki, do której dałoby się dołożyć drugą. Jeśli chcesz dziś trenować: wybierz powyżej zamiennik całego dnia albo dołóż pojedyncze ćwiczenia w panelu „Dołóż pojedyncze ćwiczenie" poniżej.</div>`;
   } else if(extras.length){
     addSection = `<div class="meta" style="margin:16px 0 8px;"><b>Druga jednostka:</b> ${extras[0].title}</div>
       <button class="btn btn-ghost" onclick="setDayExtra('none')">✕ Usuń drugą jednostkę</button>`;
@@ -1682,8 +1721,11 @@ function reopenExercise(){
   if(editContext.kind === 'protocol'){
     openExerciseData({type:'hangboard', data:getProtocol(editContext.key)});
   } else {
-    rebuildRegistry();
-    const fresh = GLOBAL_REGISTRY[editContext.id];
+    // Odśwież widok dnia W TLE: state.registry dostaje świeże obiekty
+    // (z nadpisaniami I dziennymi dopiskami typu „seria 1 = pomiar"),
+    // więc ponowne otwarcie i licznik przerwy widzą aktualne liczby.
+    renderToday();
+    const fresh = lookupExercise(editContext.id);
     if(fresh) openExerciseData(fresh);
   }
 }
@@ -1944,13 +1986,13 @@ function renderExerciseBody(ex){
   html += `<div style="text-align:center;color:var(--chalk-500);font-size:0.85rem;margin-bottom:10px;" id="setLabel"></div>`;
   if(ex.tempo) html += `<div style="text-align:center;margin-bottom:6px;"><span class="badge strength">Tempo ${ex.tempo.label}</span></div>`;
   if(ex.holdBased) html += `<div style="text-align:center;margin-bottom:6px;"><span class="badge strength">Utrzymanie ${ex.holdRange[0]}–${ex.holdRange[1]} s</span></div>`;
-  if(ex.loadKg != null) html += `<div style="text-align:center;margin-bottom:6px;"><span class="badge strength">${ex.loadKg > 0 ? 'Ciężar '+ex.loadKg+' kg' : 'Bez obciążenia'}</span></div>`;
+  if(ex.loadKg != null) html += `<div style="text-align:center;margin-bottom:6px;"><span class="badge strength">${ex.loadKg > 0 ? 'Ciężar '+fmtKg(ex.loadKg)+' kg' : 'Bez obciążenia'}</span></div>`;
   html += timerRingHTML();
   if(ex.tempo) html += `<div class="meta" style="text-align:center;margin-top:6px;">Timer prowadzi rytm ruchu i zapętla się — jedna pętla to jedno powtórzenie. Rób powtórzenia w jego takcie.</div>`;
   html += `</div>`;
   html += `<div class="log-row">
     <div><label>${ex.holdBased?'Utrzymane sekundy (najlepsza seria)':'Zrobione powtórzenia'}</label><input type="number" id="log_reps" placeholder="${ex.holdBased?ex.holdRange[1]:''}"></div>
-    <div><label>Dociążenie / asysta</label><input type="text" id="log_load" placeholder="bez"${ex.loadKg > 0 ? ` value="${ex.loadKg} kg"` : ''}></div>
+    <div><label>Dociążenie / asysta</label><input type="text" id="log_load" placeholder="bez"${ex.loadKg > 0 ? ` value="${fmtKg(ex.loadKg)} kg"` : ''}></div>
   </div>`;
   html += `<div class="btn-row" style="margin-top:14px;">
     <button class="btn btn-secondary" id="logSetBtn" onclick="logCurrentSet('${ex.id}')">Zaliczona seria</button>
@@ -2321,6 +2363,7 @@ function renderHistory(){
       const n = Object.keys(entry.exercises).length;
       if(n) tags.push(`<span class="pill">✓ ${n} poz.</span>`);
     }
+    if(!tags.length) continue;   // wpis bez treści (np. sama zmiana typu dnia) — nie pokazuj pustego wiersza
     html += `<div class="hist-item"><span class="date">${iso}</span><div class="tags">${tags.join('')}</div></div>`;
   }
   list.innerHTML = html || '<div class="empty-hint">Brak danych.</div>';
