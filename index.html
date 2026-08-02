@@ -463,7 +463,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.7.0';
+const APP_VERSION = '1.7.1';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -539,7 +539,13 @@ function applyExerciseOverride(ex){
   } else if(o.repsRange){
     next.repsRange = o.repsRange;
   }
+  if(ex.loadKg != null && o.loadKg != null) next.loadKg = o.loadKg;
   return next;
+}
+/* Tekst ciężaru dla ćwiczeń z parametrem obciążenia (0 = bez obciążenia). */
+function loadTxt(ex){
+  if(ex.loadKg == null) return '';
+  return ' · ' + (ex.loadKg > 0 ? 'ciężar ' + ex.loadKg + ' kg' : 'bez obciążenia');
 }
 function applyHangboardOverride(block){
   const o = getOverride(block.id);
@@ -793,14 +799,14 @@ function buildWeek(){
   };
 
   const EX_BACK_EXT = {
-    id:'E13', name:'Prostowanie grzbietu na ławce rzymskiej (z obciążeniem)', sets:3, repsRange:'8–12 powt.', rest:120,
+    id:'E13', name:'Prostowanie grzbietu na ławce rzymskiej (z obciążeniem)', sets:3, repsRange:'8–12 powt.', rest:120, loadKg:5,
     tempo:{label:'2-1-2', phases:[{l:'W górę',s:2},{l:'Pauza',s:1},{l:'W dół',s:2}]},
     cue:'Obciążenie przytulone do klatki. Prostujesz tułów tylko do jednej linii z nogami — nigdy wyżej. 2 s w górę · 1 s pauzy · 2 s w dół.',
     warn:'Ból lędźwi w trakcie lub po ćwiczeniu → odłóż obciążenie i wróć do wersji bez ciężaru. Jeśli ból wraca także bez obciążenia — odstaw ćwiczenie i skonsultuj.',
     tech:[
       {t:'Ustawienie', h:'Ławka rzymska (skośna lub pozioma): poduszka oparta o biodra <b>poniżej kolców biodrowych</b> — miednica musi móc swobodnie się zginać, poduszka nie blokuje ruchu. Stopy pewnie zablokowane. Obciążenie (talerz lub hantla) trzymasz <b>przytulone do klatki</b>, rękami skrzyżowanymi na nim — nie za głową: za głową rośnie dźwignia i najczęściej kończy się to szarpaniem karku.'},
       {t:'Wykonanie', h:'<ol><li>Start w pozycji opuszczonej: tułów swobodnie w dół; lekkie zaokrąglenie pleców w tej fazie jest naturalne.</li><li><b>2 sekundy w górę</b> — prostujesz tułów pracą prostowników grzbietu i pośladków, do momentu, w którym tułów tworzy <b>jedną linię z nogami</b>.</li><li><b>1 sekunda pauzy</b> w linii — bez przeprostu.</li><li><b>2 sekundy w dół</b>, kontrolowanie — faza opuszczania jest tak samo ważna jak unoszenie.</li><li>Głowa przedłużeniem kręgosłupa przez cały ruch — wzrok w podłogę, nie przed siebie.</li></ol>'},
-      {t:'Jak dobrać obciążenie', h:'Pierwsze sesje <b>bez dodatkowego ciężaru</b> — sam tułów, dopracowana technika. Potem dokładaj małymi krokami (talerz 2,5–5 kg), gdy 12 powtórzeń w pełnej kontroli staje się łatwe. Ostatnie powtórzenie serii ma być trudne, ale wykonane w tym samym tempie co pierwsze.'},
+      {t:'Jak dobrać obciążenie', h:'Aktualny ciężar widzisz na tym ekranie i zmieniasz go przyciskiem edycji (✎) u góry — zapisuje się na stałe, do kolejnej zmiany. Jeśli technika jeszcze siada, ustaw <b>0 kg</b> (sam tułów). Potem dokładaj małymi krokami (talerz 2,5–5 kg), gdy 12 powtórzeń w pełnej kontroli staje się łatwe. Ostatnie powtórzenie serii ma być trudne, ale wykonane w tym samym tempie co pierwsze.'},
       {t:'Po co to w Twoim planie', h:'Prostowniki grzbietu to przeciwwaga dla wspinaczkowej pozycji zgięciowej i dla pracy brzucha (ab wheel, front lever), która trzyma Cię w podwinięciu miednicy. Silny, wytrzymały grzbiet stabilizuje też pozycje z odchyleniem na ścianie i odciąża lędźwie przy dźwiganiu w życiu codziennym.'},
       {t:'Najczęstsze błędy', h:'<ul><li><b>Przeprost w górze</b> — wychodzenie tułowia powyżej linii nóg. Obciążenie przenosi się wtedy na stawy łuków kręgowych zamiast na mięśnie; jedna linia ciała to koniec zakresu.</li><li>Szarpnięcie z dołu zamiast płynnego narastania siły.</li><li>Obciążenie trzymane daleko od klatki albo za głową.</li><li>Zadzieranie głowy w górnej fazie ruchu.</li></ul>'},
     ]
@@ -1393,7 +1399,7 @@ function extraExercisesHTML(units, entry){
       const partial = !!(log && log.sets && log.sets.length > 0 && log.sets.length < ex.sets);
       const sub = (ex.holdBased
         ? `${serie(ex.sets)} × utrzymanie ${ex.holdRange[0]}–${ex.holdRange[1]} s`
-        : `${serie(ex.sets)} × ${esc(ex.repsRange)}`) + (partial ? ` · zrobione ${log.sets.length}/${ex.sets}` : '');
+        : `${serie(ex.sets)} × ${esc(ex.repsRange)}`) + loadTxt(ex) + (partial ? ` · zrobione ${log.sets.length}/${ex.sets}` : '');
       html += `<div class="exercise-row ${done?'done':''}" onclick="openExercise('${ex.id}')">
         <div class="left"><div class="exname">${ex.name}</div><div class="exsub">${sub}</div></div>
         <div style="display:flex;align-items:center;gap:2px;flex-shrink:0;">
@@ -1542,7 +1548,7 @@ function dayComponentHTML(dayObj, entry){
         const sub = ex.holdBased
           ? `${serie(ex.sets)} × utrzymanie ${ex.holdRange[0]}–${ex.holdRange[1]} s`
           : `${serie(ex.sets)} × ${esc(ex.repsRange)}`;
-        html += rowHTML(ex.id, ex.name, sub + (partial ? ` · zrobione ${log.sets.length}/${ex.sets}` : ''), done);
+        html += rowHTML(ex.id, ex.name, sub + loadTxt(ex) + (partial ? ` · zrobione ${log.sets.length}/${ex.sets}` : ''), done);
       });
     }
   });
@@ -1801,6 +1807,9 @@ function exerciseEditPanel(ex){
         <div><label>Liczba serii</label><input type="number" id="ed_sets" value="${ex.sets}"></div>
         <div><label>Przerwa między seriami (s)</label><input type="number" id="ed_rest" value="${ex.rest}"></div>
       </div>
+      ${ex.loadKg != null ? `<div class="log-row">
+        <div><label>Ciężar (kg) — 0 = bez obciążenia</label><input type="number" id="ed_load" step="0.5" value="${ex.loadKg}"></div>
+      </div>` : ''}
       <div class="btn-row" style="margin-top:14px;">
         <button class="btn btn-primary" onclick="saveExerciseOverride('${ex.id}')">Zapisz</button>
         ${ex.modified ? `<button class="btn btn-ghost" onclick="resetOverride('${ex.id}')">Przywróć domyślne</button>` : ''}
@@ -1824,6 +1833,7 @@ function saveExerciseOverride(id){
     const rr = (document.getElementById('ed_reps').value || '').trim();
     if(rr) patch.repsRange = rr;
   }
+  if(ex.loadKg != null) patch.loadKg = Math.max(0, numOr('ed_load', ex.loadKg));
   setOverride(id, patch);
   vibrate(30);
   reopenExercise();
@@ -1934,12 +1944,13 @@ function renderExerciseBody(ex){
   html += `<div style="text-align:center;color:var(--chalk-500);font-size:0.85rem;margin-bottom:10px;" id="setLabel"></div>`;
   if(ex.tempo) html += `<div style="text-align:center;margin-bottom:6px;"><span class="badge strength">Tempo ${ex.tempo.label}</span></div>`;
   if(ex.holdBased) html += `<div style="text-align:center;margin-bottom:6px;"><span class="badge strength">Utrzymanie ${ex.holdRange[0]}–${ex.holdRange[1]} s</span></div>`;
+  if(ex.loadKg != null) html += `<div style="text-align:center;margin-bottom:6px;"><span class="badge strength">${ex.loadKg > 0 ? 'Ciężar '+ex.loadKg+' kg' : 'Bez obciążenia'}</span></div>`;
   html += timerRingHTML();
   if(ex.tempo) html += `<div class="meta" style="text-align:center;margin-top:6px;">Timer prowadzi rytm ruchu i zapętla się — jedna pętla to jedno powtórzenie. Rób powtórzenia w jego takcie.</div>`;
   html += `</div>`;
   html += `<div class="log-row">
     <div><label>${ex.holdBased?'Utrzymane sekundy (najlepsza seria)':'Zrobione powtórzenia'}</label><input type="number" id="log_reps" placeholder="${ex.holdBased?ex.holdRange[1]:''}"></div>
-    <div><label>Dociążenie / asysta</label><input type="text" id="log_load" placeholder="bez"></div>
+    <div><label>Dociążenie / asysta</label><input type="text" id="log_load" placeholder="bez"${ex.loadKg > 0 ? ` value="${ex.loadKg} kg"` : ''}></div>
   </div>`;
   html += `<div class="btn-row" style="margin-top:14px;">
     <button class="btn btn-secondary" id="logSetBtn" onclick="logCurrentSet('${ex.id}')">Zaliczona seria</button>
@@ -2129,9 +2140,9 @@ function protoSummary(p){
 }
 function exSummary(ex){
   if(ex.steps) return kroki(ex.steps.length);
-  return ex.holdBased
+  return (ex.holdBased
     ? `${serie(ex.sets)} × utrzymanie ${ex.holdRange[0]}–${ex.holdRange[1]} s`
-    : `${serie(ex.sets)} × ${esc(ex.repsRange)}`;
+    : `${serie(ex.sets)} × ${esc(ex.repsRange)}`) + loadTxt(ex);
 }
 /* Zamiana tokenu ulubionego na dane do wyświetlenia i uruchomienia. */
 function favResolve(token){
