@@ -86,6 +86,13 @@
     padding:9px 4px; text-align:center; cursor:pointer; position:relative;
   }
   .day-chip.ovr{ border-color:var(--rope-500); }
+  .day-chip .icon.combo{ font-size:0.78rem; letter-spacing:-1px; }
+  /* Nagłówek jednostki, gdy w jednym dniu są dwie (np. wspinanie + siłownia) */
+  .unit-head{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    margin:26px 0 4px; padding-top:16px; border-top:2px solid var(--stone-700);
+  }
+  .unit-head h3{ font-size:1.02rem; }
   .day-chip.today{ border-color:var(--lichen-500); }
   .day-chip .dlabel{ font-size:0.62rem; color:var(--chalk-500); text-transform:uppercase; letter-spacing:0.06em; }
   .day-chip .dtype{ margin-top:4px; }
@@ -456,7 +463,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.5.1';
+const APP_VERSION = '1.6.0';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -1257,50 +1264,117 @@ function openClimb(){
    ZMIANA TYPU DNIA — gdy plan nie wchodzi w grę (np. odpoczynek zamiast
    treningu albo wspinanie w dzień wolny). Zapis per data, w entry.dayOverride.
    ========================================================================= */
+function dayFromKey(key, label){
+  if(key === 'mon' || key === 'thu') return {...WEEK.find(w=>w.key===key), label};
+  if(key === 'climb') return {key:'ovr_climb', label, type:'climb', title:'Wspinanie'};
+  return {key:'ovr_rest', label, type:'rest', title:'Odpoczynek (pauza)'};
+}
+
 function resolveDay(iso){
   const d = new Date(iso+'T00:00:00');
   const planned = WEEK.find(w=>w.key===jsDayToKey(d.getDay()));
-  const ovr = loadEntry(iso).dayOverride;
-  if(!ovr) return {day:planned, planned, overridden:false};
+  const entry = loadEntry(iso);
+  const ovr = entry.dayOverride;
+
+  let day = planned, overridden = false;
   // wybór pokrywający się z planem traktuj jak brak zmiany
-  if(ovr === planned.key ||
-     (ovr === 'climb' && planned.type === 'climb') ||
-     (ovr === 'rest' && planned.type === 'rest')){
-    return {day:planned, planned, overridden:false};
+  const sameAsPlan = ovr && (ovr === planned.key ||
+    (ovr === 'climb' && planned.type === 'climb') ||
+    (ovr === 'rest' && planned.type === 'rest'));
+  if(ovr && !sameAsPlan){
+    day = dayFromKey(ovr, planned.label);
+    overridden = true;
   }
-  let day;
-  if(ovr === 'mon' || ovr === 'thu'){
-    day = {...WEEK.find(w=>w.key===ovr), label:planned.label};
-  } else if(ovr === 'climb'){
-    day = {key:'ovr_climb', label:planned.label, type:'climb', title:'Wspinanie'};
-  } else {
-    day = {key:'ovr_rest', label:planned.label, type:'rest', title:'Odpoczynek (pauza)'};
+
+  // druga jednostka tego samego dnia (np. wspinanie + blok siłowy)
+  const extras = [];
+  if(entry.dayExtra && day.type !== 'rest'){
+    const cand = dayFromKey(entry.dayExtra, planned.label);
+    if(cand.type !== 'rest' && cand.type !== day.type) extras.push(cand);
   }
-  return {day, planned, overridden:true};
+  return {day, planned, overridden, extras};
 }
 
 function setDayOverride(key){
   const entry = loadEntry(state.selectedDate);
-  if(key === 'plan') delete entry.dayOverride;
-  else entry.dayOverride = key;
+  if(key === 'plan'){ delete entry.dayOverride; delete entry.dayExtra; }
+  else {
+    entry.dayOverride = key;
+    // zmiana typu dnia unieważnia dotychczasowy dodatek, jeśli się dubluje
+    const nd = dayFromKey(key, '');
+    if(entry.dayExtra){
+      const ne = dayFromKey(entry.dayExtra, '');
+      if(nd.type === 'rest' || ne.type === nd.type) delete entry.dayExtra;
+    }
+  }
   saveEntry(state.selectedDate, entry);
   vibrate(25);
   renderAll();
 }
 
-function dayPickerHTML(planned, overridden){
-  const opt = (key, icon, label) =>
-    `<button class="btn btn-secondary" style="margin-bottom:8px;text-align:left;" onclick="setDayOverride('${key}')">${icon} ${label}</button>`;
+function setDayExtra(key){
+  const entry = loadEntry(state.selectedDate);
+  if(key === 'none') delete entry.dayExtra;
+  else entry.dayExtra = key;
+  saveEntry(state.selectedDate, entry);
+  vibrate(25);
+  renderAll();
+}
+
+/* Ostrzeżenie zależne od TEGO, co konkretnie łączysz — nie ogólnikowe. */
+function comboWarningHTML(day, extra){
+  const parts = [day, extra];
+  const strength = parts.find(p=>p.type==='strength');
+  const climb = parts.find(p=>p.type==='climb');
+  if(!strength || !climb) return '';
+  const blocks = strength.blocks || [];
+  const hasHangboard = blocks.some(b=>b.kind==='hangboard');
+  const hasDips = blocks.some(b=>b.kind==='exercises' && b.items.some(i=>i.id==='E8'));
+
+  if(hasHangboard){
+    return `<div class="banner block">⛔ <b>Uwaga: chwytotablica i wspinanie tego samego dnia.</b>
+      Plan wymaga co najmniej <b>48 godzin odstępu</b> między tablicą a wspinaniem — ten sam dzień to najostrzejsze możliwe naruszenie tej zasady.
+      Do tego tablicę robi się wyłącznie <b>na początku jednostki, na świeżych palcach</b>, więc po wspinaniu i tak nie miałaby sensu.
+      <b>Rozwiązanie:</b> zrób dziś moduł siłowy bez tablicy (odpuść ją tylko dzisiaj), a tablicę przenieś na inny dzień.
+      ${hasDips ? ' Dodatkowo dipy: plan zabrania ich w dobie po mocnym wspinaniu — jeśli wspinasz się dziś mocno, dipy odpuść.' : ''}</div>`;
+  }
+  let html = `<div class="banner warn">⚠️ <b>Dwie jednostki tego samego dnia.</b>
+    Ten blok nie obciąża palców, więc <b>nie koliduje ze wspinaniem</b> — to bezpieczne połączenie.
+    Pilnuj tylko kolejności: zmęczone nogi pogarszają pracę stóp na ścianie, więc albo wspinaj się najpierw, albo rozdziel obie jednostki o kilka godzin.
+    Pamiętaj też o limicie <b>5 jednostek siłowych na 14 dni</b>.`;
+  if(hasDips) html += ` Dipy pomiń, jeśli wspinanie było mocne — plan zabrania ich w dobie po ciężkiej sesji.`;
+  return html + `</div>`;
+}
+
+function dayPickerHTML(planned, day, overridden, extras){
+  const opt = (fn, key, icon, label) =>
+    `<button class="btn btn-secondary" style="margin-bottom:8px;text-align:left;" onclick="${fn}('${key}')">${icon} ${label}</button>`;
+
+  // Co można DOŁOŻYĆ zależy od tego, co jest główną jednostką dnia
+  let addSection = '';
+  if(day.type === 'rest'){
+    addSection = `<div class="meta" style="margin-top:14px;">W dzień odpoczynku nie ma czego łączyć — jeśli chcesz dziś trenować, wybierz to powyżej jako zamiennik.</div>`;
+  } else if(extras.length){
+    addSection = `<div class="meta" style="margin:16px 0 8px;"><b>Druga jednostka:</b> ${extras[0].title}</div>
+      <button class="btn btn-ghost" onclick="setDayExtra('none')">✕ Usuń drugą jednostkę</button>`;
+  } else {
+    const adds = day.type === 'climb'
+      ? opt('setDayExtra','mon','💪','Dołóż: Blok nóg + core') + opt('setDayExtra','thu','💪','Dołóż: Moduł A + chwytotablica')
+      : opt('setDayExtra','climb','🧗','Dołóż: Wspinanie');
+    addSection = `<div class="meta" style="margin:16px 0 8px;">Albo <b>zrób dziś dwie rzeczy naraz</b> — dołóż drugą jednostkę do tego dnia:</div>${adds}`;
+  }
+
   return `<details class="tech" style="margin-top:12px;">
-    <summary>Zmień typ dnia (gdy plan nie wchodzi w grę)</summary>
+    <summary>Zmień lub dołóż jednostkę do tego dnia</summary>
     <div class="inner">
-      <div class="meta" style="margin-bottom:12px;">Według planu ten dzień to <b>${planned.title}</b>. Jeśli dziś nie możesz go zrealizować, wybierz, co robisz zamiast tego — aplikacja zapamięta to tylko dla tej daty:</div>
-      ${opt('mon','💪','Trening: Blok nóg + core')}
-      ${opt('thu','💪','Trening: Moduł A + chwytotablica')}
-      ${opt('climb','🧗','Wspinanie')}
-      ${opt('rest','😴','Odpoczynek (pauza)')}
-      ${overridden ? `<button class="btn btn-primary" style="margin-top:4px;" onclick="setDayOverride('plan')">✓ Wróć do planu (${planned.title})</button>` : ''}
-      <div class="meta" style="margin-top:10px;">Limity bezpieczeństwa palców (max 3 obciążenia / 7 dni, nie dwa dni pod rząd, 48 h tablica↔wspinanie) obowiązują niezależnie od tej zmiany.</div>
+      <div class="meta" style="margin-bottom:12px;">Według planu ten dzień to <b>${planned.title}</b>. Jeśli dziś nie możesz go zrealizować, wybierz, co robisz <b>zamiast</b> tego:</div>
+      ${opt('setDayOverride','mon','💪','Trening: Blok nóg + core')}
+      ${opt('setDayOverride','thu','💪','Trening: Moduł A + chwytotablica')}
+      ${opt('setDayOverride','climb','🧗','Wspinanie')}
+      ${opt('setDayOverride','rest','😴','Odpoczynek (pauza)')}
+      ${(overridden || extras.length) ? `<button class="btn btn-primary" style="margin-top:4px;" onclick="setDayOverride('plan')">✓ Wróć do planu (${planned.title})</button>` : ''}
+      ${addSection}
+      <div class="meta" style="margin-top:10px;">Limity bezpieczeństwa palców (max 3 obciążenia / 7 dni, nie dwa dni pod rząd, 48 h tablica↔wspinanie) obowiązują niezależnie od tych zmian.</div>
     </div>
   </details>`;
 }
@@ -1319,20 +1393,69 @@ function renderWeekStrip(){
     d.setDate(base.getDate()+mondayOffset+i);
     const iso = isoOf(d);
     const resolved = resolveDay(iso);
-    const meta = TYPE_META[resolved.day.type];
+    const icons = [TYPE_META[resolved.day.type].icon, ...resolved.extras.map(x=>TYPE_META[x.type].icon)];
+    const modified = resolved.overridden || resolved.extras.length > 0;
     const chip = document.createElement('div');
-    chip.className = 'day-chip' + (resolved.overridden?' ovr':'') + (iso===todayISO()?' today':'') + (iso===state.selectedDate?' selected':'');
-    chip.innerHTML = `<div class="dlabel">${resolved.day.label}</div><div class="dtype icon">${meta.icon}</div>`;
+    chip.className = 'day-chip' + (modified?' ovr':'') + (iso===todayISO()?' today':'') + (iso===state.selectedDate?' selected':'');
+    chip.innerHTML = `<div class="dlabel">${resolved.day.label}</div><div class="dtype icon${icons.length>1?' combo':''}">${icons.join('')}</div>`;
     chip.onclick = ()=>{ state.selectedDate = iso; renderAll(); };
     strip.appendChild(chip);
   }
+}
+
+/* Zawartość jednej jednostki (treningu albo wspinania). Rejestruje też jej
+   pozycje w state.registry, żeby dało się je otworzyć z listy. */
+function dayComponentHTML(dayObj, entry){
+  let html = '';
+  if(dayObj.type==='climb'){
+    const res = checkFingerLimits('climb');
+    html += limitsBannerHTML(res);
+    html += `<div class="notes-box"><b>Plan na sesję:</b> długie łatwe wspinanie ciągiem (20–30 min), powtarzane przewiązki, trening odpoczywania na drodze. <span class="warn">Z bulderów schodź po chwytach — nigdy nie zeskakuj.</span></div>`;
+    html += `<div style="margin-top:12px;"><button class="btn btn-primary" onclick="openClimb()">Otwórz zapis sesji</button></div>`;
+    if(entry.climb) html += `<div class="meta" style="margin-top:10px;text-align:center;">✓ Sesja zapisana: ${entry.climb.routes||0} dróg, ${entry.climb.boulders||0} bulderów</div>`;
+    return html;
+  }
+  if(dayObj.type==='rest'){
+    html += `<div class="notes-box">Dziś nic nie trenujesz — regeneracja jest częścią planu, nie przerwą w nim. Pamiętaj tylko o porannym wpisie sztywności.</div>`;
+    html += `<div style="margin-top:12px;"><button class="btn btn-secondary" onclick="switchTab('stiff')">Przejdź do porannego wpisu</button></div>`;
+    return html;
+  }
+  dayObj.blocks.forEach((block, bi)=>{
+    html += `<div class="block-title"><div class="idx">${bi+1}</div><h3>${block.name}</h3></div>`;
+    if(block.kind==='warmup'){
+      state.registry[block.id] = {type:'warmup', data:block};
+      const isDone = !!(entry.warmups && entry.warmups[block.id]);
+      html += rowHTML(block.id, block.name, kroki(block.steps.length), isDone);
+    } else if(block.kind==='hangboard'){
+      state.registry[block.id] = {type:'hangboard', data:block};
+      const done = !!(entry.exercises && entry.exercises[block.id] && entry.exercises[block.id].completedAt);
+      html += rowHTML(block.id, block.name, `${serie(block.series)} po ${block.reps} zwisów (${block.hang} s / ${block.hangRest} s)`, done);
+    } else if(block.kind==='measure'){
+      state.registry[block.id] = {type:'measure', data:block};
+      const done = !!(entry.exercises && entry.exercises[block.id]);
+      html += rowHTML(block.id, block.name, 'pomiar jednorazowy', done);
+    } else if(block.kind==='exercises'){
+      block.items.forEach(ex=>{
+        state.registry[ex.id] = {type:'exercise', data:ex};
+        const log = entry.exercises && entry.exercises[ex.id];
+        const done = !!(log && log.sets && log.sets.length >= ex.sets);
+        const partial = !!(log && log.sets && log.sets.length > 0 && log.sets.length < ex.sets);
+        const sub = ex.holdBased
+          ? `${serie(ex.sets)} × utrzymanie ${ex.holdRange[0]}–${ex.holdRange[1]} s`
+          : `${serie(ex.sets)} × ${esc(ex.repsRange)}`;
+        html += rowHTML(ex.id, ex.name, sub + (partial ? ` · zrobione ${log.sets.length}/${ex.sets}` : ''), done);
+      });
+    }
+  });
+  html += `<div class="meta" style="margin-top:14px;">Kolejność na liście jest celowa: rozgrzewki → palce (na świeżo) → reszta. Jeśli zabraknie czasu, jako pierwsze odpuszczasz pompki archer, potem ab wheel — nigdy chwytotablicy, podciągania, dipów ani pracy łopatek.</div>`;
+  return html;
 }
 
 function renderToday(){
   rebuildRegistry();
   const iso = state.selectedDate;
   const d = new Date(iso+'T00:00:00');
-  const {day, planned, overridden} = resolveDay(iso);
+  const {day, planned, overridden, extras} = resolveDay(iso);
   state.currentDay = day;
   state.registry = {};
   const entry = loadEntry(iso);
@@ -1340,66 +1463,37 @@ function renderToday(){
   const meta = TYPE_META[day.type];
   const cont = document.getElementById('todayContent');
   const niceDate = d.toLocaleDateString('pl-PL', {weekday:'long', day:'numeric', month:'long'});
+  const allTitles = [day.title, ...extras.map(x=>x.title)];
 
   let html = `<div class="card">
-    <span class="badge ${meta.badge}">${meta.label}</span>
-    <h2 style="margin-top:8px;">${day.title}</h2>
+    <span class="badge ${meta.badge}">${meta.label}</span>${extras.map(x=>` <span class="badge ${TYPE_META[x.type].badge}">${TYPE_META[x.type].label}</span>`).join('')}
+    <h2 style="margin-top:8px;">${allTitles.join(' + ')}</h2>
     <div class="meta" style="text-transform:capitalize;">${niceDate}</div>
   </div>`;
 
   if(overridden){
-    const extra = day.type === 'rest'
+    const tail = day.type === 'rest'
       ? 'Pauza zamiast treningu jest zawsze w porządku — regeneracja też buduje formę.'
       : 'Pamiętaj, że dzień odpoczynku w planie nie jest przypadkowy — traktuj tę zmianę jako wyjątek, nie regułę.';
-    html += `<div class="banner warn">📅 <b>Modyfikacja planu.</b> Według planu ten dzień to „${planned.title}", a Ty wybrałeś „${day.title}". ${extra}</div>`;
+    html += `<div class="banner warn">📅 <b>Modyfikacja planu.</b> Według planu ten dzień to „${planned.title}", a Ty wybrałeś „${day.title}". ${tail}</div>`;
   }
-  html += dayPickerHTML(planned, overridden);
+  extras.forEach(x=>{ html += comboWarningHTML(day, x); });
+  html += dayPickerHTML(planned, day, overridden, extras);
 
   if(iso === todayISO() && !loadEntry(todayISO()).stiffness){
     html += `<div class="banner warn">🌅 <b>Brak dzisiejszego wpisu porannego.</b> Zapisz sztywność Achillesa i palców w zakładce „Poranek" — od tego wpisu zależy m.in., czy dziś bezpiecznie robić chwytotablicę.</div>`;
   }
 
-  if(day.type==='climb'){
-    const res = checkFingerLimits('climb');
-    html += limitsBannerHTML(res);
-    html += `<div class="notes-box"><b>Plan na sesję:</b> długie łatwe wspinanie ciągiem (20–30 min), powtarzane przewiązki, trening odpoczywania na drodze. <span class="warn">Z bulderów schodź po chwytach — nigdy nie zeskakuj.</span></div>`;
-    html += `<div style="margin-top:12px;"><button class="btn btn-primary" onclick="openClimb()">Otwórz zapis sesji</button></div>`;
-    if(entry.climb) html += `<div class="meta" style="margin-top:10px;text-align:center;">✓ Sesja zapisana: ${entry.climb.routes||0} dróg, ${entry.climb.boulders||0} bulderów</div>`;
-  } else if(day.type==='rest'){
-    html += `<div class="notes-box">Dziś nic nie trenujesz — regeneracja jest częścią planu, nie przerwą w nim. Pamiętaj tylko o porannym wpisie sztywności.</div>`;
-    html += `<div style="margin-top:12px;"><button class="btn btn-secondary" onclick="switchTab('stiff')">Przejdź do porannego wpisu</button></div>`;
-  } else {
-    day.blocks.forEach((block, bi)=>{
-      html += `<div class="block-title"><div class="idx">${bi+1}</div><h3>${block.name}</h3></div>`;
-      if(block.kind==='warmup'){
-        state.registry[block.id] = {type:'warmup', data:block};
-        const isDone = !!(entry.warmups && entry.warmups[block.id]);
-        html += rowHTML(block.id, block.name, kroki(block.steps.length), isDone);
-      } else if(block.kind==='hangboard'){
-        state.registry[block.id] = {type:'hangboard', data:block};
-        const done = !!(entry.exercises && entry.exercises[block.id] && entry.exercises[block.id].completedAt);
-        html += rowHTML(block.id, block.name, `${serie(block.series)} po ${block.reps} zwisów (${block.hang} s / ${block.hangRest} s)`, done);
-      } else if(block.kind==='measure'){
-        state.registry[block.id] = {type:'measure', data:block};
-        const done = !!(entry.exercises && entry.exercises[block.id]);
-        html += rowHTML(block.id, block.name, 'pomiar jednorazowy', done);
-      } else if(block.kind==='exercises'){
-        block.items.forEach(ex=>{
-          state.registry[ex.id] = {type:'exercise', data:ex};
-          const log = entry.exercises && entry.exercises[ex.id];
-          const done = !!(log && log.sets && log.sets.length >= ex.sets);
-          const partial = !!(log && log.sets && log.sets.length > 0 && log.sets.length < ex.sets);
-          const sub = ex.holdBased
-            ? `${serie(ex.sets)} × utrzymanie ${ex.holdRange[0]}–${ex.holdRange[1]} s`
-            : `${serie(ex.sets)} × ${esc(ex.repsRange)}`;
-          html += rowHTML(ex.id, ex.name, sub + (partial ? ` · zrobione ${log.sets.length}/${ex.sets}` : ''), done);
-        });
-      }
-    });
-    html += `<div class="meta" style="margin-top:14px;">Kolejność na liście jest celowa: rozgrzewki → palce (na świeżo) → reszta. Jeśli zabraknie czasu, jako pierwsze odpuszczasz pompki archer, potem ab wheel — nigdy chwytotablicy, podciągania, dipów ani pracy łopatek.</div>`;
-  }
+  const units = [day, ...extras];
+  units.forEach((u, i)=>{
+    if(units.length > 1){
+      html += `<div class="unit-head"><span class="badge ${TYPE_META[u.type].badge}">Jednostka ${i+1} z ${units.length}</span><h3>${u.title}</h3></div>`;
+    }
+    html += dayComponentHTML(u, entry);
+  });
+
   cont.innerHTML = html;
-  document.getElementById('headerSub').textContent = 'Cykl 1 · Tydzień 1 · ' + day.title;
+  document.getElementById('headerSub').textContent = 'Cykl 1 · Tydzień 1 · ' + allTitles.join(' + ');
 }
 
 function rowHTML(id, name, sub, done){
