@@ -286,7 +286,7 @@
     background:var(--stone-900); border:1px solid var(--stone-800);
     border-radius:12px; padding:11px 12px; margin-bottom:8px;
   }
-  .preset-row .del{
+  .preset-row .del, .exercise-row .del{
     background:none; border:none; color:var(--chalk-500); font-size:1.05rem; cursor:pointer; padding:6px;
   }
 
@@ -463,7 +463,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.6.0';
+const APP_VERSION = '1.7.0';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -792,6 +792,28 @@ function buildWeek(){
     ]
   };
 
+  const EX_BACK_EXT = {
+    id:'E13', name:'Prostowanie grzbietu na ławce rzymskiej (z obciążeniem)', sets:3, repsRange:'8–12 powt.', rest:120,
+    tempo:{label:'2-1-2', phases:[{l:'W górę',s:2},{l:'Pauza',s:1},{l:'W dół',s:2}]},
+    cue:'Obciążenie przytulone do klatki. Prostujesz tułów tylko do jednej linii z nogami — nigdy wyżej. 2 s w górę · 1 s pauzy · 2 s w dół.',
+    warn:'Ból lędźwi w trakcie lub po ćwiczeniu → odłóż obciążenie i wróć do wersji bez ciężaru. Jeśli ból wraca także bez obciążenia — odstaw ćwiczenie i skonsultuj.',
+    tech:[
+      {t:'Ustawienie', h:'Ławka rzymska (skośna lub pozioma): poduszka oparta o biodra <b>poniżej kolców biodrowych</b> — miednica musi móc swobodnie się zginać, poduszka nie blokuje ruchu. Stopy pewnie zablokowane. Obciążenie (talerz lub hantla) trzymasz <b>przytulone do klatki</b>, rękami skrzyżowanymi na nim — nie za głową: za głową rośnie dźwignia i najczęściej kończy się to szarpaniem karku.'},
+      {t:'Wykonanie', h:'<ol><li>Start w pozycji opuszczonej: tułów swobodnie w dół; lekkie zaokrąglenie pleców w tej fazie jest naturalne.</li><li><b>2 sekundy w górę</b> — prostujesz tułów pracą prostowników grzbietu i pośladków, do momentu, w którym tułów tworzy <b>jedną linię z nogami</b>.</li><li><b>1 sekunda pauzy</b> w linii — bez przeprostu.</li><li><b>2 sekundy w dół</b>, kontrolowanie — faza opuszczania jest tak samo ważna jak unoszenie.</li><li>Głowa przedłużeniem kręgosłupa przez cały ruch — wzrok w podłogę, nie przed siebie.</li></ol>'},
+      {t:'Jak dobrać obciążenie', h:'Pierwsze sesje <b>bez dodatkowego ciężaru</b> — sam tułów, dopracowana technika. Potem dokładaj małymi krokami (talerz 2,5–5 kg), gdy 12 powtórzeń w pełnej kontroli staje się łatwe. Ostatnie powtórzenie serii ma być trudne, ale wykonane w tym samym tempie co pierwsze.'},
+      {t:'Po co to w Twoim planie', h:'Prostowniki grzbietu to przeciwwaga dla wspinaczkowej pozycji zgięciowej i dla pracy brzucha (ab wheel, front lever), która trzyma Cię w podwinięciu miednicy. Silny, wytrzymały grzbiet stabilizuje też pozycje z odchyleniem na ścianie i odciąża lędźwie przy dźwiganiu w życiu codziennym.'},
+      {t:'Najczęstsze błędy', h:'<ul><li><b>Przeprost w górze</b> — wychodzenie tułowia powyżej linii nóg. Obciążenie przenosi się wtedy na stawy łuków kręgowych zamiast na mięśnie; jedna linia ciała to koniec zakresu.</li><li>Szarpnięcie z dołu zamiast płynnego narastania siły.</li><li>Obciążenie trzymane daleko od klatki albo za głową.</li><li>Zadzieranie głowy w górnej fazie ruchu.</li></ul>'},
+    ]
+  };
+
+  /* Katalog pojedynczych ćwiczeń — do dokładania do dowolnego dnia
+     (dowolna liczba, bez zmieniania całej jednostki). */
+  EXERCISE_CATALOG = [
+    EX_ARCHER_PULL, EX_PISTOL, EX_FRONTLEVER, EX_NORDIC, EX_PIKE,
+    EX_ARCHER_PUSH, dipsExercise(), EX_ABWHEEL, calfExercise(),
+    EX_SCAP, EX_EXT, EX_BACK_EXT,
+  ].map(applyExerciseOverride);
+
   const DAY_MON = {
     key:'mon', label:'Pon', type:'strength', title:'Blok nóg + core',
     blocks:[
@@ -853,6 +875,7 @@ function buildWeek(){
     { key:'sun', label:'Nd', type:'rest', title:'Pełny odpoczynek' },
   ];
 }
+let EXERCISE_CATALOG = [];
 let WEEK = buildWeek();
 
 /* =========================================================================
@@ -1220,6 +1243,8 @@ function rebuildRegistry(){
       else GLOBAL_REGISTRY[block.id] = {type:block.kind, data:block};
     });
   });
+  // Katalog pojedynczych ćwiczeń — także te, których nie ma w planie tygodnia (np. ławka rzymska)
+  EXERCISE_CATALOG.forEach(ex=>{ GLOBAL_REGISTRY[ex.id] = {type:'exercise', data:ex}; });
 }
 function lookupExercise(id){
   return state.registry[id] || GLOBAL_REGISTRY[id] || null;
@@ -1292,7 +1317,7 @@ function resolveDay(iso){
     const cand = dayFromKey(entry.dayExtra, planned.label);
     if(cand.type !== 'rest' && cand.type !== day.type) extras.push(cand);
   }
-  return {day, planned, overridden, extras};
+  return {day, planned, overridden, extras, extraExercises: entry.extraExercises || []};
 }
 
 function setDayOverride(key){
@@ -1319,6 +1344,80 @@ function setDayExtra(key){
   saveEntry(state.selectedDate, entry);
   vibrate(25);
   renderAll();
+}
+
+/* =========================================================================
+   POJEDYNCZE ĆWICZENIA DOKŁADANE DO DNIA — dowolna liczba, bez zmieniania
+   całej jednostki. Zapis per data, w entry.extraExercises (lista id).
+   ========================================================================= */
+function catalogExercise(id){ return EXERCISE_CATALOG.find(e=>e.id===id) || null; }
+
+function addExtraExercise(id){
+  const entry = loadEntry(state.selectedDate);
+  const list = entry.extraExercises || [];
+  if(list.indexOf(id) === -1) list.push(id);
+  entry.extraExercises = list;
+  saveEntry(state.selectedDate, entry);
+  vibrate(25);
+  renderAll();
+}
+
+function removeExtraExercise(id){
+  const entry = loadEntry(state.selectedDate);
+  const list = (entry.extraExercises || []).filter(x=>x!==id);
+  if(list.length) entry.extraExercises = list; else delete entry.extraExercises;
+  saveEntry(state.selectedDate, entry);
+  vibrate(25);
+  renderAll();
+}
+
+function extraExercisesHTML(units, entry){
+  const extras = entry.extraExercises || [];
+  // co już jest w planie tego dnia — żeby nie dublować pozycji na liście
+  const inPlan = new Set();
+  units.forEach(u=>{
+    (u.blocks || []).forEach(b=>{
+      if(b.kind === 'exercises') b.items.forEach(i=>inPlan.add(i.id));
+    });
+  });
+
+  let html = '';
+  if(extras.length){
+    html += `<div class="block-title"><div class="idx">＋</div><h3>Dodatkowe ćwiczenia</h3></div>`;
+    extras.forEach(id=>{
+      const ex = catalogExercise(id);
+      if(!ex) return;
+      state.registry[ex.id] = {type:'exercise', data:ex};
+      const log = entry.exercises && entry.exercises[ex.id];
+      const done = !!(log && log.sets && log.sets.length >= ex.sets);
+      const partial = !!(log && log.sets && log.sets.length > 0 && log.sets.length < ex.sets);
+      const sub = (ex.holdBased
+        ? `${serie(ex.sets)} × utrzymanie ${ex.holdRange[0]}–${ex.holdRange[1]} s`
+        : `${serie(ex.sets)} × ${esc(ex.repsRange)}`) + (partial ? ` · zrobione ${log.sets.length}/${ex.sets}` : '');
+      html += `<div class="exercise-row ${done?'done':''}" onclick="openExercise('${ex.id}')">
+        <div class="left"><div class="exname">${ex.name}</div><div class="exsub">${sub}</div></div>
+        <div style="display:flex;align-items:center;gap:2px;flex-shrink:0;">
+          <button class="del" title="Usuń z tego dnia" onclick="event.stopPropagation();removeExtraExercise('${ex.id}')">🗑</button>
+          <div class="checkmark">${done?'✓':''}</div>
+        </div>
+      </div>`;
+    });
+  }
+
+  let opts = '';
+  EXERCISE_CATALOG.forEach(ex=>{
+    if(extras.indexOf(ex.id) !== -1) return; // już dołożone do tego dnia
+    const planned = inPlan.has(ex.id);
+    opts += `<button class="btn btn-secondary" style="margin-bottom:8px;text-align:left;" ${planned?'disabled':''} onclick="addExtraExercise('${ex.id}')">➕ ${ex.name}${planned?' — jest już w planie dnia':''}</button>`;
+  });
+  html += `<details class="tech" style="margin-top:12px;">
+    <summary>Dołóż pojedyncze ćwiczenie do tego dnia</summary>
+    <div class="inner">
+      <div class="meta" style="margin-bottom:12px;">Dokładasz <b>dowolną liczbę</b> pojedynczych ćwiczeń — bez zmieniania całej jednostki. Wyniki zapisują się tak samo jak przy ćwiczeniach z planu. Zasady bezpieczeństwa planu obowiązują nadal (np. dipy nigdy w dobie po mocnym wspinaniu, palce maks. 3 obciążenia na 7 dni).</div>
+      ${opts}
+    </div>
+  </details>`;
+  return html;
 }
 
 /* Ostrzeżenie zależne od TEGO, co konkretnie łączysz — nie ogólnikowe. */
@@ -1394,7 +1493,7 @@ function renderWeekStrip(){
     const iso = isoOf(d);
     const resolved = resolveDay(iso);
     const icons = [TYPE_META[resolved.day.type].icon, ...resolved.extras.map(x=>TYPE_META[x.type].icon)];
-    const modified = resolved.overridden || resolved.extras.length > 0;
+    const modified = resolved.overridden || resolved.extras.length > 0 || resolved.extraExercises.length > 0;
     const chip = document.createElement('div');
     chip.className = 'day-chip' + (modified?' ovr':'') + (iso===todayISO()?' today':'') + (iso===state.selectedDate?' selected':'');
     chip.innerHTML = `<div class="dlabel">${resolved.day.label}</div><div class="dtype icon${icons.length>1?' combo':''}">${icons.join('')}</div>`;
@@ -1491,6 +1590,7 @@ function renderToday(){
     }
     html += dayComponentHTML(u, entry);
   });
+  html += extraExercisesHTML(units, entry);
 
   cont.innerHTML = html;
   document.getElementById('headerSub').textContent = 'Cykl 1 · Tydzień 1 · ' + allTitles.join(' + ');
