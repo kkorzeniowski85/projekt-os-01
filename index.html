@@ -444,6 +444,15 @@
       <div class="meta">Wersja obunóż obowiązuje, dopóki nie potwierdzisz, ile epizodów zapalenia Achillesa przeszedłeś (jeden czy więcej, jedna noga czy obie). Dipy płycej, dopóki nie zmierzysz szerokości barków i nie porównasz z rozstawem stacji (56 cm).</div>
     </div>
     <div class="card">
+      <h2 style="margin-bottom:10px;">Makrocykl</h2>
+      <div class="setting-row">
+        <label>Start planu (poniedziałek)</label>
+        <input type="date" id="setCycleStart" onchange="saveCycleStart(this.value)" style="width:auto;">
+      </div>
+      <div class="meta" id="cycleInfo"></div>
+      <div class="meta" style="margin-top:8px;">Od tej daty aplikacja liczy cykle 14-dniowe: tydzień wspinaczkowy → tydzień modułowy (pon/śr/pt), rotacja modułów A→B→C i deload co trzeci cykl. Zmiana daty przelicza cały kalendarz.</div>
+    </div>
+    <div class="card">
       <h2 style="margin-bottom:10px;">Test sprawności i poziomy</h2>
       <div class="meta" style="margin-bottom:10px;" id="testInfo"></div>
       <button class="btn btn-primary" onclick="openTest()">Zrób test i dobierz poziomy</button>
@@ -478,7 +487,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.8.0';
+const APP_VERSION = '1.9.0';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -604,6 +613,25 @@ const GENERAL_WARMUP = {
      desc:'Przysiady bez obciążenia, pełny zakres, pięty cały czas na podłodze. Wykroki: krok w przód, kolano tylnej nogi w stronę podłogi, tułów pionowo.'},
     {label:'Cat-cow + dead bug', reps:'2 × 8',
      desc:'Cat-cow: w klęku podpartym powolne wyginanie i zaokrąglanie kręgosłupa. Dead bug: na plecach, lędźwie dociśnięte do podłogi przez cały czas, naprzemienne prostowanie przeciwnej ręki i nogi. Jeśli lędźwie odrywają się od podłogi — skróć zakres.'},
+    {label:'Mobilność bioder — gołąb + głęboki przysiad', seconds:300,
+     desc:'Gołąb: z klęku podpartego jedna noga zgięta z przodu, druga wyprostowana w tył, biodra równo — 45–60 s na stronę, spokojny oddech. Potem głęboki przysiad (tzw. słowiański): pięty na podłodze, łokcie rozpychają kolana od środka — 2 × 45–60 s. Otwarte biodra to wyższe podciąganie nóg na ścianie i mniejsze kompensacje w lędźwiach.'},
+  ]
+};
+
+const COOLDOWN = {
+  id:'cooldown', name:'Wyciszenie (rozciąganie)', kind:'warmup',
+  intro:'3–5 minut na koniec treningu lub wspinania. Rozciąganie pasywne: wchodzisz w pozycję do uczucia ciągnięcia (nie bólu), spokojny oddech, bez sprężynowania. To moment, w którym układ nerwowy dostaje sygnał „koniec pracy".',
+  steps:[
+    {label:'Zginacze przedramion', seconds:60,
+     desc:'Ramię wyprostowane przed sobą, dłoń palcami w dół, drugą ręką delikatnie dociągasz palce do siebie. 30 s na stronę. Po wspinaniu i tablicy — najważniejszy punkt tej listy.'},
+    {label:'Prostowniki przedramion', seconds:60,
+     desc:'Jak wyżej, ale dłoń palcami w dół i grzbietem do góry — dociągasz grzbiet dłoni do siebie. 30 s na stronę.'},
+    {label:'Klatka piersiowa przy framudze', seconds:60,
+     desc:'Przedramię oparte o framugę drzwi, łokieć na wysokości barku, krok w przód i delikatny obrót tułowia od ręki. 30 s na stronę. Przeciwwaga dla wspinaczkowego zamknięcia klatki.'},
+    {label:'Najszerszy grzbietu', seconds:60,
+     desc:'W klęku podpartym ręce wysuwasz daleko w przód, biodra cofasz do pięt, klatka do podłogi; możesz przesunąć obie dłonie w bok, żeby mocniej poczuć bok tułowia. 30 s na stronę.'},
+    {label:'Spokojny oddech', seconds:60,
+     desc:'Na koniec 6–8 wolnych oddechów przeponą: wdech nosem 4 s, wydech 6–8 s. Obniża napięcie po sesji.'},
   ]
 };
 
@@ -1095,11 +1123,12 @@ function buildWeek(){
     ]
   };
   const EX_EXT = {
-    id:'E12', name:'Prostowniki palców + rotacja zewnętrzna', sets:2, repsRange:'15–20 powt.', rest:30, tempo:null,
+    id:'E12', name:'Prostowniki palców + rotacja + pro/supinacja', sets:2, repsRange:'15–20 powt.', rest:30, tempo:null,
     cue:'Lekko, powoli, pełny zakres. Nie do odmowy — to praca równoważąca, nie siłowa.',
     tech:[
       {t:'Prostowniki palców', h:'Gumka założona na palce (albo dłoń zanurzona w naczyniu z ryżem). Prostuj palce przeciw oporowi, powoli, w pełnym zakresie. Cel: równowaga dla zginaczy, które we wspinaniu pracują bez przerwy.'},
       {t:'Rotacja zewnętrzna na taśmie', h:'Taśma przypięta do drabinki na wysokości łokcia. Łokieć przy tułowiu, zgięty 90°, obracaj przedramię na zewnątrz. Łokieć <b>nie odsuwa się od ciała</b> — ruch wychodzi z barku.'},
+      {t:'Pronacja i supinacja z dźwignią', h:'Weź przedmiot z długim trzonkiem i ciężarem na końcu (młotek, patelnia, klucz francuski) — chwyt za koniec trzonka, łokieć oparty o udo lub szczebel, zgięty 90°. <b>Powoli</b> obracaj przedramię dłonią w dół (pronacja) i w górę (supinacja), 2 × 10–12 w każdą stronę. Dźwignię regulujesz miejscem chwytu: bliżej ciężaru = łatwiej. To bezpośrednia profilaktyka nadkłykcia przyśrodkowego („łokcia golfisty") — najczęstszego problemu łokcia u wspinaczy.'},
       {t:'Dlaczego to nie jest opcjonalne', h:'Od 5. tygodnia, gdy wejdzie podciąganie z kamizelką, ta pozycja stanie się wbudowaną profilaktyką przeciążenia wewnętrznej strony łokcia (entezopatii). Plan mówi wprost: to nie ozdobnik.'},
     ]
   };
@@ -1118,12 +1147,217 @@ function buildWeek(){
     ]
   };
 
+  /* =======================================================================
+     MODUŁY B i C — PROPOZYCJA TRENERSKA (nie treść z Twojego projektu).
+     Zaprojektowane wg założeń planu: te same wzorce ruchowe co Moduł A w
+     innych wariantach, zakresy siłowe 3–8 powt. (anty-hipertrofia; wyjątek:
+     brzuch i łydki), zero pracy palców poza tablicą, soleus obowiązkowo
+     (Achilles), sprzęt wyłącznie z Twojej listy.
+     ======================================================================= */
+  const EX_PAUSE_PULL = {
+    id:'E14', name:'Podciąganie z pauzą u góry', sets:5, repsRange:'3–5 powt.', rest:180, tempo:null,
+    cue:'Nachwyt na szerokość barków. U góry pauza 2 s, opuszczanie 3 s.',
+    warn:'Ból po wewnętrznej stronie łokcia utrzymujący się ponad 5 dni → odstaw chwytotablicę i zmniejsz o połowę objętość ćwiczeń ciągnących.',
+    tech:[
+      {t:'Ustawienie', h:'Nachwyt na szerokość barków. Zwis aktywny na starcie: łopatki ściągnięte w dół, zanim ugniesz łokcie.'},
+      {t:'Wykonanie', h:'<ol><li>Podciągnij się do brody nad drążkiem.</li><li><b>Pauza 2 sekundy</b> u góry — bez skracania zakresu, broda zostaje nad drążkiem, łopatki nisko.</li><li>Opuszczanie <b>3 sekundy</b>, do zatrzymania tuż przed pełnym wyprostem łokci.</li></ol>'},
+      {t:'Po co pauza', h:'Izometria w najtrudniejszym punkcie buduje siłę „zamknięcia" — dokładnie ten zakres, w którym na ścianie dociągasz chwyt do klatki. To inny bodziec niż archer z Modułu A, przy tym samym wzorcu ciągnięcia.'},
+      {t:'Najczęstsze błędy', h:'<ul><li>Pauza z brodą zadartą do sufitu zamiast pełnej wysokości.</li><li>Opadanie zamiast opuszczania.</li><li>Kiwanie nogami przy ostatnich powtórzeniach.</li></ul>'},
+    ]
+  };
+  const EX_BULGARIAN = {
+    id:'E15', name:'Przysiad bułgarski (tylna stopa na szczeblu)', sets:5, repsRange:'4–6 powt. na nogę', rest:180,
+    tempo:{label:'3-1-X', phases:[{l:'W dół',s:3},{l:'Pauza',s:1},{l:'W górę (X)',s:0}]},
+    cue:'3 s w dół, 1 s pauzy, dynamicznie w górę. Kolano przedniej nogi nad linią stopy.',
+    tech:[
+      {t:'Ustawienie', h:'Stopa tylnej nogi grzbietem na niskim szczeblu drabinki, przednia noga na tyle daleko, żeby w dolnej pozycji piszczel była mniej więcej pionowa. Ciężar na całej stopie przedniej nogi, pięta cały czas na podłożu.'},
+      {t:'Wykonanie', h:'<ol><li>Schodź <b>3 sekundy</b>: kolano tylnej nogi w stronę podłogi, tułów lekko pochylony w przód (to angażuje pośladek).</li><li><b>1 sekunda pauzy</b> w najniższym punkcie, bez odbicia.</li><li>Wyjście dynamiczne siłą przedniej nogi — bez odpychania się tylną stopą od szczebla.</li></ol>'},
+      {t:'Po co obok pistola', h:'Ten sam cel (siła jednostronna nóg), ale mniejsze wymaganie równowagi i mobilności — pozwala pracować ciężej mięśniowo, a pistol z Modułu A dokłada komponent kontroli. Razem pokrywają cel nr 2 Twojego planu.'},
+      {t:'Najczęstsze błędy', h:'<ul><li>Kolano przedniej nogi zapada się do środka.</li><li>Za krótki wykrok — kolano ucieka daleko przed palce, a pięta się unosi.</li><li>Odpychanie się tylną nogą.</li></ul>'},
+    ]
+  };
+  const EX_HIPTHRUST = {
+    id:'E16', name:'Mostek biodrowy jednonóż', sets:4, repsRange:'5–8 powt. na nogę', rest:120,
+    tempo:{label:'2-1-2', phases:[{l:'W górę',s:2},{l:'Pauza',s:1},{l:'W dół',s:2}]},
+    cue:'Biodra do pełnego wyprostu, pauza 1 s u góry. Lędźwie neutralne — ruch kończy pośladek, nie przeprost.',
+    tech:[
+      {t:'Ustawienie', h:'Leżenie tyłem, jedna stopa płasko na podłodze (albo na najniższym szczeblu — trudniej), druga noga zgięta, przyciągnięta do klatki lub uniesiona.'},
+      {t:'Wykonanie', h:'<ol><li>Dociśnij piętę i unieś biodra <b>2 sekundy</b> do pełnego wyprostu biodra — ciało od barków do kolana w jednej linii.</li><li><b>1 sekunda pauzy</b> u góry ze świadomym napięciem pośladka.</li><li>Opuszczanie <b>2 sekundy</b>, bez odkładania bioder na podłogę między powtórzeniami.</li></ol>'},
+      {t:'Po co to w planie', h:'Wyprost biodra to wzorzec, którego Moduł A prawie nie ma (nordic to kolano). Silny pośladek stabilizuje miednicę przy wysokich stopniach i odciąża lędźwie — a nie rośnie od tego zakresu jak od pracy 15+.'},
+      {t:'Najczęstsze błędy', h:'<ul><li>Przeprost w lędźwiach zamiast wyprostu biodra — żebra ściągnięte w dół.</li><li>Pchanie z palców zamiast z pięty.</li><li>Skracanie pauzy.</li></ul>'},
+    ]
+  };
+  const EX_WALL_HS = {
+    id:'E17', name:'Wspieranie przy ścianie — izometria', sets:4, holdRange:[15,25], rest:180, tempo:null, holdBased:true,
+    cue:'Brzuchem do ściany, ręce na szerokość barków, barki wypchnięte — „długie" ramiona.',
+    warn:'Ból przedniej strony barku albo nadgarstka → wróć do pompek pike (poziom niżej). Nigdy nie schodź ze ściany zeskokiem — odejdź nogami po ścianie.',
+    tech:[
+      {t:'Ustawienie', h:'Wejście tyłem: dłonie na podłodze ok. 30 cm od ściany, stopy wchodzą po ścianie, aż ciało będzie blisko pionu (brzuchem do ściany). Im bliżej ściany dłonie, tym pionowiej i trudniej. Palce dłoni szeroko, ciężar na całej dłoni.'},
+      {t:'Wykonanie', h:'<ol><li>Barki aktywnie wypchnięte w górę (uszy daleko od barków) przez cały czas.</li><li>Miednica podwinięta, żebra ściągnięte — ciało w jednej linii, bez banana.</li><li>Oddychaj płytko, licz sekundy. Zejście kontrolowane: stopy schodzą po ścianie.</li></ol>'},
+      {t:'Regresja', h:'Jeśli 15 s to za dużo: większy kąt (dłonie dalej od ściany) albo pike hold ze stopami na drabince. Progresja: dłonie bliżej ściany, dłuższy czas.'},
+      {t:'Po co to w planie', h:'Izometria nad głową buduje siłę i stabilność obręczy (cel nr 4) bez ani jednego powtórzenia w zakresie hipertrofii. To docelowy szczyt progresji pchania z Twojego planu (pike → deficyt → wspieranie).'},
+    ]
+  };
+  const EX_PSEUDO_PLANCHE = {
+    id:'E18', name:'Pompki pseudo-planche', sets:4, repsRange:'4–6 powt.', rest:180, tempo:null,
+    cue:'Dłonie na wysokości bioder, palce skierowane w tył lub na boki, mocne pochylenie w przód.',
+    warn:'Ostry ból nadgarstka lub przedniej strony łokcia → zmniejsz pochylenie albo wróć do zwykłych pompek. Nie ćwicz przez ból.',
+    tech:[
+      {t:'Ustawienie', h:'Pozycja pompki, ale dłonie cofnięte do wysokości bioder, palce w tył lub na boki (co wygodniejsze dla nadgarstków). Barki wychylone daleko przed dłonie — im większe pochylenie, tym trudniej.'},
+      {t:'Wykonanie', h:'<ol><li>Utrzymując pochylenie, schodź kontrolowanie do zgięcia łokci.</li><li>Wyjście do pełnego wyprostu z aktywną protrakcją na końcu (plecy „wypchnięte" między łopatkami).</li><li>Ciało sztywne jak deska — miednica podwinięta.</li></ol>'},
+      {t:'Po co to w planie', h:'Praca na prostych/nisko ustawionych barkach z mocnym udziałem zębatego przedniego — najbliżej wspinaczkowego „dociskania" ze wszystkich pompek. Uzupełnia pchanie poziome, którego w Module A jest mało.'},
+      {t:'Najczęstsze błędy', h:'<ul><li>Utrata pochylenia przy zmęczeniu (barki wracają nad dłonie) — wtedy to zwykła pompka.</li><li>Zwis w barkach zamiast aktywnego wypchnięcia.</li><li>Biodra wiszą — brak napięcia core.</li></ul>'},
+    ]
+  };
+  const EX_LEGRAISE = {
+    id:'E19', name:'Wznosy nóg w zwisie', sets:4, repsRange:'6–8 powt.', rest:120, tempo:null,
+    cue:'Zwis aktywny. Nogi do poziomu (L) bez bujania; opuszczanie wolniejsze niż unoszenie.',
+    tech:[
+      {t:'Ustawienie', h:'Zwis na drążku, chwyt na szerokość barków, <b>łopatki lekko ściągnięte w dół</b> (zwis aktywny) — nie wisisz biernie na stawach.'},
+      {t:'Wykonanie', h:'<ol><li>Podwiń miednicę i unieś proste (lub lekko ugięte) nogi do poziomu — pozycja „L".</li><li>Krótkie zatrzymanie bez bujania.</li><li>Opuszczanie <b>wolniejsze niż unoszenie</b> (2–3 s), do pionu, bez rozpędu na kolejne powtórzenie.</li></ol>'},
+      {t:'Regresja / progresja', h:'Łatwiej: kolana podciągane do klatki. Trudniej: palce stóp do drążka (toes-to-bar) z kontrolą. To dynamiczne dopełnienie izometrii front levera z Modułu A.'},
+      {t:'Najczęstsze błędy', h:'<ul><li>Bujanie i praca rozpędem.</li><li>Unoszenie nóg bez podwinięcia miednicy — pracują głównie zginacze bioder, nie brzuch.</li><li>Zwis bierny na wyciągniętych barkach.</li></ul>'},
+    ]
+  };
+  const EX_PALLOF = {
+    id:'E20', name:'Pallof press na taśmie', sets:3, repsRange:'8–10 powt. na stronę', rest:60, tempo:null,
+    cue:'Taśma ciągnie w bok — Ty nie pozwalasz się obrócić. Wyciskasz ręce przed klatkę i wracasz, tułów nieruchomy.',
+    tech:[
+      {t:'Ustawienie', h:'Taśma przypięta do drabinki na wysokości mostka. Stań bokiem do drabinki, chwyt oburącz przy klatce, odejdź na tyle, żeby taśma była wyraźnie napięta. Stopy na szerokość bioder, kolana miękkie.'},
+      {t:'Wykonanie', h:'<ol><li>Wyciśnij ręce powoli przed klatkę — taśma próbuje obrócić tułów w stronę drabinki.</li><li>Zatrzymaj 2 s z rękami wyprostowanymi — biodra i barki cały czas w linii, zero rotacji.</li><li>Wróć powoli do klatki. Po serii zmień stronę.</li></ol>'},
+      {t:'Po co to w planie', h:'Anty-rotacja — jedyny wzorzec core, którego nie ma ani front lever, ani ab wheel. Na ścianie to dokładnie ta praca, która trzyma biodra przy ścianie, gdy sięgasz daleko w bok.'},
+      {t:'Najczęstsze błędy', h:'<ul><li>Obrót barków w stronę drabinki przy wyproście.</li><li>Za mały naciąg taśmy — brak bodźca.</li><li>Wstrzymywanie oddechu.</li></ul>'},
+    ]
+  };
+  const EX_SOLEUS = {
+    id:'E21', name:'Soleus — wspięcia ze zgiętym kolanem', sets:3, repsRange:'15–20 powt.', rest:90,
+    tempo:{label:'2-1-2', phases:[{l:'W górę',s:2},{l:'Pauza',s:1},{l:'W dół',s:2}]},
+    cue:'Kolana zgięte ok. 90° przez cały czas (np. w półprzysiadzie z oparciem pleców o ścianę). 2 s w górę, 1 s pauzy, 2 s w dół.',
+    warn:'Jeśli poranna sztywność Achillesa jest dłuższa niż zwykle — zmniejsz zakres albo odpuść tę pozycję, zanim pojawi się ból.',
+    tech:[
+      {t:'Ustawienie', h:'Plecy oparte o ścianę, biodra i kolana zgięte ok. 90° (jak siad na niewidzialnym krześle) albo pozycja stojąca z dłońmi na szczeblu i kolanami wyraźnie ugiętymi. Zgięte kolano wyłącza mięsień brzuchaty i kieruje całą pracę w <b>płaszczkowaty (soleus)</b> — główny mięsień odciążający ścięgno Achillesa przy zgiętym kolanie, czyli w pozycjach wspinaczkowych.'},
+      {t:'Wykonanie', h:'<ol><li>Wspięcie na palce <b>2 sekundy</b>, pełny zakres.</li><li><b>1 sekunda</b> pauzy u góry.</li><li>Opuszczanie <b>2 sekundy</b> do neutralnej pozycji stopy.</li><li>Kolana pozostają zgięte przez całą serię — jeśli się prostują, pracę przejmuje niewłaściwy mięsień.</li></ol>'},
+      {t:'Dlaczego wysokie powtórzenia', h:'Łydki to jedno z dwóch miejsc, gdzie Twój plan hipertrofię wprost dopuszcza — a soleus najlepiej odpowiada na dłuższe serie. To element protokołu ochrony Achillesa, obowiązkowy w modułach B i C.'},
+    ]
+  };
+  const EX_BANDPULL = {
+    id:'E22', name:'Ściąganie taśmy (pull-apart + face pull)', sets:3, repsRange:'12–15 powt.', rest:45, tempo:null,
+    cue:'Lekka taśma, pełna kontrola. Łopatki kończą ruch ściągnięte w dół i do siebie.',
+    tech:[
+      {t:'Pull-apart', h:'Taśma trzymana oburącz przed klatką na wyprostowanych rękach. Rozciągnij ją na boki, aż dotknie mostka, łopatki ściągnięte — i powoli wróć. Ramiona cały czas na wysokości barków.'},
+      {t:'Face pull na taśmie', h:'Taśma przypięta do drabinki na wysokości twarzy. Ciągnij końce do czoła, łokcie wysoko i szeroko, na końcu rotacja przedramion w górę (kciuki w tył). Powrót powoli.'},
+      {t:'Po co to w planie', h:'Tylna taśma barków i dolne stabilizatory łopatki — przeciwwaga dla całego wspinaczkowego ciągnięcia „do siebie". Wyższe powtórzenia są tu celowe: to praca zdrowotna małych mięśni, nie budowanie masy.'},
+    ]
+  };
+  const EX_WIDE_PULL = {
+    id:'E23', name:'Podciąganie szerokim chwytem', sets:5, repsRange:'3–5 powt.', rest:210, tempo:null,
+    cue:'Chwyt wyraźnie szerzej niż barki. Klatka do drążka, ekscentryk 2–3 s.',
+    warn:'Ból po wewnętrznej stronie łokcia utrzymujący się ponad 5 dni → odstaw chwytotablicę i zmniejsz o połowę objętość ćwiczeń ciągnących.',
+    tech:[
+      {t:'Ustawienie', h:'Nachwyt szeroki — mniej więcej tak, jak w archerze z Modułu A, ale ciągniesz symetrycznie obiema rękami. Zwis aktywny na starcie.'},
+      {t:'Wykonanie', h:'<ol><li>Ciągnij łokcie w dół i na zewnątrz, klatka idzie do drążka.</li><li>Góra: broda nad drążkiem, łopatki nisko.</li><li>Opuszczanie 2–3 s, stop przed pełnym wyprostem łokci.</li></ol>'},
+      {t:'Po co to w planie', h:'Szeroki chwyt przenosi akcent na najszerszy grzbietu w rozciągnięciu — pozycja „daleki zasięg" ze wspinania. Symetryczna siła, która podpiera asymetryczny archer z Modułu A.'},
+      {t:'Najczęstsze błędy', h:'<ul><li>Skracanie zakresu u góry.</li><li>Wzruszanie barkami do uszu.</li><li>Opadanie bez kontroli.</li></ul>'},
+    ]
+  };
+  const EX_STEPDOWN = {
+    id:'E24', name:'Step-down ze szczebla', sets:5, repsRange:'4–6 powt. na nogę', rest:180,
+    tempo:{label:'4-1-X', phases:[{l:'W dół',s:4},{l:'Pauza',s:1},{l:'W górę (X)',s:0}]},
+    cue:'Stoisz jednonóż na niskim szczeblu, druga noga schodzi powoli do dotknięcia piętą podłogi. 4 s w dół.',
+    tech:[
+      {t:'Ustawienie', h:'Stań jedną nogą na najniższym szczeblu drabinki (albo stabilnym podwyższeniu 15–25 cm), bokiem lub przodem, palce ręki na drabince tylko dla równowagi. Wolna noga wyprostowana przed krawędzią.'},
+      {t:'Wykonanie', h:'<ol><li>Schodź <b>4 sekundy</b>, zginając nogę na podwyższeniu — kolano nad linią stopy, pięta dociążona.</li><li>Delikatnie dotknij piętą wolnej nogi podłogi (<b>bez</b> przenoszenia na nią ciężaru), 1 s pauzy.</li><li>Wyjdź w górę dynamicznie tą samą nogą.</li></ol>'},
+      {t:'Po co to w planie', h:'Kontrolowana ekscentryka jednonóż w zakresie zbliżonym do wysokiego stopnia na ścianie. Mniejszy zakres niż pistol, więc można pracować bliżej pełnego obciążenia bez walki o równowagę.'},
+      {t:'Najczęstsze błędy', h:'<ul><li>„Spadanie" na dolną nogę zamiast dotknięcia.</li><li>Kolano ucieka do środka.</li><li>Pomaganie ręką na drabince.</li></ul>'},
+    ]
+  };
+  const EX_SL_RDL = {
+    id:'E25', name:'Martwy ciąg jednonóż (bez obciążenia)', sets:4, repsRange:'6–8 powt. na nogę', rest:120,
+    tempo:{label:'3-1-1', phases:[{l:'W dół',s:3},{l:'Pauza',s:1},{l:'W górę',s:1}]},
+    cue:'Zawias w biodrze: tułów i tylna noga w jednej linii, plecy proste. 3 s w dół.',
+    tech:[
+      {t:'Ustawienie', h:'Stojąc na jednej nodze (kolano miękkie), ręce swobodnie przed sobą. Możesz opuszkami palców dotykać szczebla dla równowagi — bez podpierania się.'},
+      {t:'Wykonanie', h:'<ol><li>Pochylaj tułów w przód <b>3 sekundy</b>, unosząc tylną nogę — tułów i noga tworzą jedną linię, biodra pozostają równo (kolce biodrowe „patrzą" w podłogę).</li><li>Zejdź do momentu wyraźnego napięcia z tyłu uda, pauza 1 s.</li><li>Wróć pracą pośladka i tylnej strony uda.</li></ol>'},
+      {t:'Po co to w planie', h:'Zawias biodrowy — wzorzec, który uzupełnia nordic (kolano) i mostek (wyprost). Do tego trening czucia głębokiego stawu skokowego — bezpośrednio istotny dla Twojego Achillesa.'},
+      {t:'Najczęstsze błędy', h:'<ul><li>Otwieranie biodra (rotacja miednicy) przy schodzeniu.</li><li>Zaokrąglanie pleców.</li><li>Zamiana zawiasu na przysiad (kolano zgina się za mocno).</li></ul>'},
+    ]
+  };
+  const EX_PIKE_DEF = {
+    id:'E26', name:'Pompki pike z deficytu', sets:5, repsRange:'3–5 powt.', rest:180, tempo:null,
+    cue:'Stopy wysoko, dłonie na podporach — głowa schodzi PONIŻEJ linii dłoni.',
+    warn:'Ból przedniej strony barku → wróć do zwykłych pompek pike i sprawdź ustawienie łokci (~45° od tułowia).',
+    tech:[
+      {t:'Ustawienie', h:'Jak pompki pike z Modułu A (stopy na szczeblu, biodra wysoko), ale dłonie na dwóch stabilnych podporach (grube książki, kostki, niskie stopnie), żeby głowa mogła zejść niżej niż dłonie.'},
+      {t:'Wykonanie', h:'<ol><li>Schodź z głową przed linię dłoni, aż czubek głowy znajdzie się poniżej ich poziomu.</li><li>Łokcie ~45° od tułowia.</li><li>Wyjście do pełnego wyprostu z wypchnięciem barków na końcu.</li></ol>'},
+      {t:'Po co to w planie', h:'Pełniejszy zakres pracy nad głowę — pomost między pompkami pike a wspieraniem. W rotacji modułów: A ma wersję podstawową, C — deficyt, B — izometrię wspierania.'},
+    ]
+  };
+  const EX_DIPS_PAUSE = {
+    id:'E27', name:'Dipy z pauzą w dole', sets:5, repsRange:'3–5 powt.', rest:180, tempo:null,
+    cue:'Jak zwykłe dipy, ale w dolnym punkcie 1 s pauzy przy barkach wciśniętych w dół.',
+    warn:'Ból z przodu barku → odstaw dipy na 2 tygodnie, pompki zostają. Nigdy w dobie po mocnym wspinaniu.',
+    tech:[
+      {t:'Ustawienie', h:'Identyczne jak dipy z Modułu A: barki wciśnięte w dół, tułów lekko pochylony, zejście do ustalonego kąta (100–110°, dopóki nie potwierdzisz szerokości barków).'},
+      {t:'Wykonanie', h:'<ol><li>Schodź 2–3 s do ustalonego kąta.</li><li><b>1 sekunda pauzy</b> — bark nie może „wjechać" do ucha, łopatki cały czas w depresji.</li><li>Wyjście w górę bez wyrzutu barków.</li></ol>'},
+      {t:'Po co pauza', h:'Zatrzymanie w najtrudniejszym punkcie odbiera rozpęd i uczciwie sprawdza kontrolę pozycji barku — dokładnie tam, gdzie dipy bywają ryzykowne. Siła rośnie, ryzyko nie.'},
+    ]
+  };
+  const EX_LSIT = {
+    id:'E28', name:'L-sit na stacji (tuck → pełny)', sets:5, holdRange:[8,12], rest:150, tempo:null, holdBased:true,
+    cue:'Podpór na poręczach, barki wciśnięte w dół, nogi uniesione. Zacznij od kolan podciągniętych (tuck).',
+    warn:'Ból lędźwi → wróć do tucka i sprawdź podwinięcie miednicy. Jeśli stacja jest za nisko na proste nogi — tuck jest wersją docelową, nie gorszą.',
+    tech:[
+      {t:'Ustawienie', h:'Podpór na poręczach stacji: łokcie wyprostowane, <b>barki mocno wciśnięte w dół</b>. Miednica podwinięta.'},
+      {t:'Wykonanie', h:'<ol><li>Unieś kolana do klatki (tuck) — utrzymaj 8–12 s.</li><li>Progresja: kolana dalej od klatki → jedna noga prosta → obie nogi proste do poziomu (jeśli wysokość stacji pozwala).</li><li>Oddychaj płytko, nie zatrzymuj oddechu.</li></ol>'},
+      {t:'Po co to w planie', h:'Izometria zgięciowa core w podporze — lustrzane dopełnienie front levera (który jest w zwisie). Bezpośrednio przenosi się na podnoszenie stóp wysoko przy dociskanych barkach.'},
+      {t:'Najczęstsze błędy', h:'<ul><li>Barki uciekają do uszu.</li><li>Przeprost lędźwi przy prostowaniu nóg.</li><li>Zbyt ambitny wariant — 8 s ma być trudne, ale czyste.</li></ul>'},
+    ]
+  };
+  const EX_ROLLOUT_ST = {
+    id:'E29', name:'Rollout ze stania (do ściany)', sets:4, repsRange:'5–8 powt.', rest:120, tempo:null,
+    cue:'Start ze stania, kółko toczy się do ściany, która wyznacza bezpieczny zakres.',
+    warn:'Ból w lędźwiach → wróć do wersji z kolan i zweryfikuj podwinięcie miednicy.',
+    tech:[
+      {t:'Ustawienie', h:'Stań w lekkim rozkroku twarzą do ściany, kółko na podłodze przed stopami. Ścianę ustaw tak, żeby zatrzymywała kółko <b>przed</b> punktem, w którym tracisz podwinięcie miednicy — to Twój regulator trudności.'},
+      {t:'Wykonanie', h:'<ol><li>Zawiąś biodra, połóż dłonie na kółku, podwiń miednicę.</li><li>Wytocz kółko do ściany, utrzymując żebra ściągnięte.</li><li>Wróć siłą brzucha i najszerszych — bez „łamania" bioder w górę na starcie powrotu.</li></ol>'},
+      {t:'Po co to w planie', h:'Progresja ab wheel z Modułu A o wyraźnie większym ramieniu dźwigni. Odsuwając się od ściany o kilka centymetrów tygodniowo, masz progresję na wiele miesięcy — bez grama obciążenia.'},
+    ]
+  };
+  const EX_PUSHUP_PLUS = {
+    id:'E30', name:'Push-up plus (protrakcja obciążona)', sets:3, repsRange:'10–12 powt.', rest:60, tempo:null,
+    cue:'Deska na prostych rękach: na górze każdego powtórzenia „wypchnij" plecy między łopatkami maksymalnie w górę.',
+    tech:[
+      {t:'Wykonanie', h:'<ol><li>Pozycja deski na wyprostowanych rękach (możesz też robić pełne pompki).</li><li>Na górze ruchu dodaj „plus": protrakcja łopatek — plecy wypychasz w górę, łokcie cały czas proste.</li><li>Powolny powrót do ściągniętych łopatek i kolejne powtórzenie.</li></ol>'},
+      {t:'Po co to w planie', h:'Zębaty przedni pod obciążeniem — mięsień, który trzyma łopatkę przy klatce w każdej pozycji dociskania na ścianie. Wyższe powtórzenia celowe: praca stabilizacyjna, nie masa.'},
+    ]
+  };
+
+  /* Moduły jako kompletne listy pozycji (rotacja A→B→C przez cykle). */
+  MODULES = {
+    A: { title:'Moduł A', items:[
+      EX_ARCHER_PULL, EX_PISTOL, EX_FRONTLEVER, EX_NORDIC, EX_PIKE,
+      EX_ARCHER_PUSH, dipsExercise(), EX_ABWHEEL, calfExercise(), EX_SCAP, EX_EXT,
+    ].map(prepEx)},
+    B: { title:'Moduł B', proposed:true, items:[
+      EX_PAUSE_PULL, EX_BULGARIAN, EX_HIPTHRUST, EX_WALL_HS, EX_PSEUDO_PLANCHE,
+      EX_LEGRAISE, EX_PALLOF, EX_SOLEUS, EX_SCAP, EX_BANDPULL, EX_EXT,
+    ].map(prepEx)},
+    C: { title:'Moduł C', proposed:true, items:[
+      EX_WIDE_PULL, EX_STEPDOWN, EX_SL_RDL, EX_PIKE_DEF, EX_DIPS_PAUSE,
+      EX_LSIT, EX_ROLLOUT_ST, EX_SOLEUS, EX_PUSHUP_PLUS, EX_EXT,
+    ].map(prepEx)},
+  };
+
   /* Katalog pojedynczych ćwiczeń — do dokładania do dowolnego dnia
      (dowolna liczba, bez zmieniania całej jednostki). */
   EXERCISE_CATALOG = [
     EX_ARCHER_PULL, EX_PISTOL, EX_FRONTLEVER, EX_NORDIC, EX_PIKE,
     EX_ARCHER_PUSH, dipsExercise(), EX_ABWHEEL, calfExercise(),
     EX_SCAP, EX_EXT, EX_BACK_EXT,
+    EX_PAUSE_PULL, EX_BULGARIAN, EX_HIPTHRUST, EX_WALL_HS, EX_PSEUDO_PLANCHE,
+    EX_LEGRAISE, EX_PALLOF, EX_SOLEUS, EX_BANDPULL,
+    EX_WIDE_PULL, EX_STEPDOWN, EX_SL_RDL, EX_PIKE_DEF, EX_DIPS_PAUSE,
+    EX_LSIT, EX_ROLLOUT_ST, EX_PUSHUP_PLUS,
   ].map(prepEx);
 
   const DAY_MON = {
@@ -1136,7 +1370,8 @@ function buildWeek(){
         EX_PIKE,
         {...EX_ABWHEEL, cue: EX_ABWHEEL.cue + ' Dziś seria 1 = pomiar: maks. powtórzeń.'},
         calfExercise(),
-      ]}
+      ]},
+      COOLDOWN,
     ]
   };
 
@@ -1165,7 +1400,8 @@ function buildWeek(){
         calfExercise(),
         EX_SCAP,
         EX_EXT,
-      ]}
+      ]},
+      COOLDOWN,
     ]
   };
 
@@ -1188,6 +1424,7 @@ function buildWeek(){
   ];
 }
 let EXERCISE_CATALOG = [];
+let MODULES = {A:null, B:null, C:null};
 let WEEK = buildWeek();
 
 /* =========================================================================
@@ -1223,9 +1460,114 @@ function fmtRestWords(sec){
 }
 
 /* =========================================================================
-   LIMITY BEZPIECZEŃSTWA (twarde zasady planu)
-   Obciążenie palców = zalogowane wspinanie LUB ukończona/zalogowana tablica.
+   SILNIK CYKLI 14-DNIOWYCH — dynamiczny makrocykl wg planu:
+   tydz. 1 (wspinaczkowy): pon blok nóg+core · wt/sob wspinanie · czw pełny
+   moduł + tablica; tydz. 2 (bez wspinania): pon/śr/pt pełne moduły + tablica
+   (B pon / A śr / C pt co drugi cykl). Kolejka modułów A→B→C biegnie ciągle
+   (4 moduły na cykl). Deload: tydzień 2 co trzeciego cyklu — połowa serii,
+   zero tablicy, zero kamizelki. Faza wprowadzająca tablicy wg planu 2.7.
    ========================================================================= */
+function getCycleStart(){
+  let cs = store.get('cycleStart', null);
+  if(!cs){
+    const d = new Date();
+    const off = (d.getDay()===0 ? -6 : 1 - d.getDay());
+    d.setDate(d.getDate() + off);            // poniedziałek bieżącego tygodnia
+    cs = isoOf(d);
+    store.set('cycleStart', cs);
+  }
+  return cs;
+}
+function planPos(iso){
+  const start = new Date(getCycleStart()+'T00:00:00');
+  const d = new Date(iso+'T00:00:00');
+  let diff = Math.round((d - start) / 86400000);
+  const beforeStart = diff < 0;
+  if(beforeStart) diff = 0;
+  const cycleIndex = Math.floor(diff / 14);
+  const weekInCycle = (diff % 14) < 7 ? 1 : 2;
+  return {
+    cycleIndex,
+    weekInCycle,
+    planWeek: cycleIndex*2 + weekInCycle,
+    deload: (cycleIndex % 3 === 2) && weekInCycle === 2,
+    beforeStart,
+  };
+}
+/* Który moduł wypada w danym slocie siłowym (kolejka A→B→C, 4 sloty/cykl). */
+function moduleForSlot(cycleIndex, slot){ // slot: 0=czw(tydz.1), 1=pon2, 2=śr2, 3=pt2
+  return 'ABC'[(cycleIndex*4 + slot) % 3];
+}
+/* Protokół tablicy dla slotu, z fazą wprowadzającą (plan 2.7) i deloadem. */
+function hbForSlot(pos, slot){ // slot: 'thu'|'mon2'|'wed2'|'fri2'
+  if(pos.deload) return null;                          // deload: zero tablicy
+  const w = pos.planWeek;
+  if(w <= 2){                                          // tyg. 1–2: wyłącznie A, 3 serie
+    if(slot === 'fri2') return null;
+    return {...getProtocol('A'), series:3, name:'Chwytotablica — Protokół A (faza wprowadzająca, 3 serie)'};
+  }
+  if(w <= 4){                                          // tyg. 3–4: A pełny + B skrócony
+    if(slot === 'mon2') return {...getProtocol('B'), series:3, name:'Chwytotablica — Protokół B (skrócony, 3 serie)',
+      warn:'Faza wprowadzająca repeaterów: 3 serie zamiast pełnych. Ostatnie powtórzenie trudne, ale wykonane w całości.'};
+    if(slot === 'fri2') return null;
+    return getProtocol('A');
+  }
+  // tyg. 5+: pełny podział
+  if(slot === 'mon2') return getProtocol('B');
+  if(slot === 'wed2') return getProtocol('A');
+  if(slot === 'fri2') return (pos.cycleIndex % 2 === 0) ? getProtocol('C') : null;
+  return getProtocol('A');                             // czw
+}
+/* Deload: połowa serii w pozycjach siłowych. */
+function applyDeload(items){
+  return items.map(ex => ({...ex, sets: Math.max(1, Math.floor(ex.sets/2)), deload:true}));
+}
+/* Pełny moduł jako lista bloków dnia (z rozgrzewkami, tablicą wg slotu i wyciszeniem). */
+function moduleDay(pos, slot, label){
+  const letter = moduleForSlot(pos.cycleIndex, {thu:0, mon2:1, wed2:2, fri2:3}[slot]);
+  const mod = MODULES[letter];
+  const hb = hbForSlot(pos, slot);
+  const items = pos.deload ? applyDeload(mod.items) : mod.items;
+  const blocks = [GENERAL_WARMUP];
+  if(hb) blocks.push(FINGER_WARMUP, hb);
+  blocks.push({id:'block_main', name:mod.title, kind:'exercises', items});
+  blocks.push(COOLDOWN);
+  return {
+    key:'mod'+letter, label, type:'strength',
+    title: mod.title + (hb ? ' + tablica' : '') + (pos.deload ? ' · DELOAD' : ''),
+    proposed: !!mod.proposed, blocks,
+  };
+}
+/* Plan dnia wg pozycji w makrocyklu. */
+function scheduleFor(iso){
+  const pos = planPos(iso);
+  const dow = new Date(iso+'T00:00:00').getDay();      // 0=Nd..6=Sob
+  const label = {1:'Pon',2:'Wt',3:'Śr',4:'Czw',5:'Pt',6:'Sob',0:'Nd'}[dow];
+  let day;
+  if(pos.weekInCycle === 1){
+    if(dow === 1)      day = {...WEEK.find(w=>w.key==='mon'), label};
+    else if(dow === 4){
+      day = moduleDay(pos, 'thu', label);   // moduł z kolejki (A→B→C przez cykle)
+      if(pos.planWeek === 1){
+        // pierwszy czwartek planu: pomiar maks. podciągnięć przed częścią główną
+        const measure = { id:'measure_pullups', name:'Pomiar: maks. podciągnięć', kind:'measure',
+          cue:'Jednorazowy test przed ćwiczeniem ciągnącym.',
+          tech:[{t:'Jak wykonać test', h:'Nachwyt na szerokość barków, pełny zakres, tempo spokojne, bez kiwania nogami. Ciągniesz do <b>odmowy technicznej</b> — kończysz przy pierwszym kiwnięciu albo niepełnym powtórzeniu. Po teście pierwsze ćwiczenie ciągnące zrób w <b>4 seriach zamiast 5</b>.'}]};
+        const mainIdx = day.blocks.findIndex(b=>b.kind==='exercises');
+        day.blocks = [...day.blocks.slice(0, mainIdx), measure, ...day.blocks.slice(mainIdx)];
+      }
+    }
+    else if(dow === 2 || dow === 6) day = {key:'climb', label, type:'climb', title:'Wspinanie'};
+    else day = {key:'rest', label, type:'rest', title: dow===5 ? 'Odpoczynek / mobilność' : 'Pełny odpoczynek'};
+  } else {
+    if(dow === 1)      day = moduleDay(pos, 'mon2', label);
+    else if(dow === 3) day = moduleDay(pos, 'wed2', label);
+    else if(dow === 5) day = moduleDay(pos, 'fri2', label);
+    else day = {key:'rest', label, type:'rest', title:'Regeneracja (tydzień bez wspinania)'};
+  }
+  day.pos = pos;
+  return day;
+}
 function fingerLoadInfo(){
   const byDate = {};
   for(const k of store.keys('entries:')){
@@ -1556,6 +1898,11 @@ function rebuildRegistry(){
       else GLOBAL_REGISTRY[block.id] = {type:block.kind, data:block};
     });
   });
+  // Moduły B i C + wyciszenie — pozycje spoza statycznego tygodnia 1
+  ['B','C'].forEach(k=>{
+    (MODULES[k] && MODULES[k].items || []).forEach(ex=>{ GLOBAL_REGISTRY[ex.id] = {type:'exercise', data:ex}; });
+  });
+  GLOBAL_REGISTRY[COOLDOWN.id] = {type:'warmup', data:COOLDOWN};
   // Katalog pojedynczych ćwiczeń — także te, których nie ma w planie tygodnia (np. ławka rzymska)
   EXERCISE_CATALOG.forEach(ex=>{ GLOBAL_REGISTRY[ex.id] = {type:'exercise', data:ex}; });
 }
@@ -1609,8 +1956,7 @@ function dayFromKey(key, label){
 }
 
 function resolveDay(iso){
-  const d = new Date(iso+'T00:00:00');
-  const planned = WEEK.find(w=>w.key===jsDayToKey(d.getDay()));
+  const planned = scheduleFor(iso);
   const entry = loadEntry(iso);
   const ovr = entry.dayOverride;
 
@@ -1859,6 +2205,11 @@ function dayComponentHTML(dayObj, entry){
     html += `<div class="notes-box"><b>Plan na sesję:</b> długie łatwe wspinanie ciągiem (20–30 min), powtarzane przewiązki, trening odpoczywania na drodze. <span class="warn">Z bulderów schodź po chwytach — nigdy nie zeskakuj.</span></div>`;
     html += `<div style="margin-top:12px;"><button class="btn btn-primary" onclick="openClimb()">Otwórz zapis sesji</button></div>`;
     if(entry.climb) html += `<div class="meta" style="margin-top:10px;text-align:center;">✓ Sesja zapisana: ${entry.climb.routes||0} dróg, ${entry.climb.boulders||0} bulderów</div>`;
+    // wyciszenie po wspinaniu — przedramiona po sesji na ścianie to priorytet
+    state.registry[COOLDOWN.id] = {type:'warmup', data:COOLDOWN};
+    const cdDone = !!(entry.warmups && entry.warmups[COOLDOWN.id]);
+    html += `<div class="block-title" style="margin-top:20px;"><div class="idx">✦</div><h3>Po sesji</h3></div>`;
+    html += rowHTML(COOLDOWN.id, COOLDOWN.name, kroki(COOLDOWN.steps.length), cdDone);
     return html;
   }
   if(dayObj.type==='rest'){
@@ -1917,6 +2268,13 @@ function renderToday(){
     <div class="meta" style="text-transform:capitalize;">${niceDate}</div>
   </div>`;
 
+  const pos = planned.pos;
+  if(pos && pos.deload && !overridden){
+    html += `<div class="banner warn">🪫 <b>Tydzień odciążeniowy (deload).</b> Co trzeci cykl organizm dostaje tydzień na odbudowę: liczba serii w ćwiczeniach jest automatycznie <b>zmniejszona o połowę</b>, chwytotablica i kamizelka całkowicie odpadają. Ciężary i technika zostają — schodzi tylko objętość. To nie strata tygodnia, to warunek dalszych postępów.</div>`;
+  }
+  if(day.proposed && !overridden){
+    html += `<div class="banner warn">🧩 <b>${day.title.split(' ')[0]} ${day.title.split(' ')[1]} to propozycja trenerska</b> przygotowana przeze mnie według założeń Twojego planu (te same wzorce ruchowe co Moduł A w innych wariantach, zakresy siłowe, soleus dla Achillesa). Nie pochodzi z Twojego projektu treningowego — jeśli kiedyś dostaniesz „oficjalne" moduły B/C, podmienimy treść.</div>`;
+  }
   if(overridden){
     const tail = day.type === 'rest'
       ? 'Pauza zamiast treningu jest zawsze w porządku — regeneracja też buduje formę.'
@@ -1943,7 +2301,10 @@ function renderToday(){
   html += extraExercisesHTML(units, entry);
 
   cont.innerHTML = html;
-  document.getElementById('headerSub').textContent = 'Cykl 1 · Tydzień 1 · ' + allTitles.join(' + ');
+  const hdr = pos
+    ? `Cykl ${pos.cycleIndex+1} · Tydz. ${pos.weekInCycle}${pos.deload?' (deload)':''} · ${pos.planWeek}. tydzień planu`
+    : '';
+  document.getElementById('headerSub').textContent = hdr + ' · ' + allTitles.join(' + ');
 }
 
 function rowHTML(id, name, sub, done){
@@ -2300,6 +2661,11 @@ function renderExerciseBody(ex){
     <div><label>${ex.holdBased?'Utrzymane sekundy (najlepsza seria)':'Zrobione powtórzenia'}</label><input type="number" id="log_reps" placeholder="${ex.holdBased?ex.holdRange[1]:''}"></div>
     <div><label>Dociążenie / asysta</label><input type="text" id="log_load" placeholder="bez"${ex.loadKg > 0 ? ` value="${fmtKg(ex.loadKg)} kg"` : ''}></div>
   </div>`;
+  html += `<div class="log-row"><div>
+    <label>Jak ciężko było? (RPE <span id="rpeVal" class="tabnum">7</span>/10 — 10 = nic więcej bym nie zrobił)</label>
+    <input type="range" id="log_rpe" min="1" max="10" value="7" oninput="document.getElementById('rpeVal').textContent=this.value">
+  </div></div>`;
+  html += `<div class="log-row"><div><label>Notatka do serii (opcjonalnie)</label><input type="text" id="log_note" placeholder="np. lewa strona słabsza"></div></div>`;
   html += `<div class="btn-row" style="margin-top:14px;">
     <button class="btn btn-secondary" id="logSetBtn" onclick="logCurrentSet('${ex.id}')">Zaliczona seria</button>
   </div>`;
@@ -2357,7 +2723,14 @@ function logCurrentSet(exId){
   if(exState.setIndex >= exState.totalSets) return;
   const reps = document.getElementById('log_reps').value;
   const load = document.getElementById('log_load').value;
-  exState.logs.push({set:exState.setIndex+1, reps, load, at:new Date().toISOString()});
+  const rpe = numOr('log_rpe', null);
+  const note = (document.getElementById('log_note') && document.getElementById('log_note').value.trim()) || '';
+  const rec = {set:exState.setIndex+1, reps, load, at:new Date().toISOString()};
+  if(rpe != null) rec.rpe = rpe;
+  if(note) rec.note = note;
+  const noteEl = document.getElementById('log_note');
+  if(noteEl) noteEl.value = '';
+  exState.logs.push(rec);
   exState.setIndex++;
   document.getElementById('log_reps').value = '';
   vibrate(25);
@@ -2689,11 +3062,24 @@ function loadSettingsForm(){
   document.getElementById('overridesInfo').textContent = n
     ? `Masz zmienione liczby w ${n} ${plural(n,'pozycji','pozycjach','pozycjach')}.`
     : 'Wszystko jeszcze na wartościach z planu.';
+  document.getElementById('setCycleStart').value = getCycleStart();
+  const p = planPos(todayISO());
+  document.getElementById('cycleInfo').textContent =
+    `Dziś: cykl ${p.cycleIndex+1}, tydzień ${p.weekInCycle} (${p.planWeek}. tydzień planu)${p.deload ? ' — DELOAD' : ''}.`;
   const ft = store.get('fitnessTest', null);
   const nl = Object.keys(getLevels()).length;
   document.getElementById('testInfo').textContent = ft
     ? `Ostatni test: ${ft.date.slice(0,10)}. ${nl ? 'Dobrane poziomy w '+nl+' '+plural(nl,'ćwiczeniu','ćwiczeniach','ćwiczeniach')+'.' : 'Wszystkie poziomy zgodne z planem.'}`
     : 'Jeszcze nie robiłeś testu — 9 krótkich prób, które ustawią poziom startowy każdego ćwiczenia pod Twoją aktualną sprawność.';
+}
+function saveCycleStart(val){
+  if(!val) return;
+  const d = new Date(val+'T00:00:00');
+  const off = (d.getDay()===0 ? -6 : 1 - d.getDay());
+  d.setDate(d.getDate() + off);              // przyciągnij do poniedziałku
+  store.set('cycleStart', isoOf(d));
+  vibrate(25);
+  loadSettingsForm();
 }
 function resetAllLevelsConfirm(){
   const nl = Object.keys(getLevels()).length;
