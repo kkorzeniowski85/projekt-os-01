@@ -207,6 +207,11 @@
     color:inherit; font-weight:700; text-decoration:underline; cursor:pointer;
   }
 
+  /* Animacje techniki — rysowane, działają offline, skalują się do szerokości karty */
+  .anim-wrap svg{ width:100%; height:auto; display:block; }
+  .anim-wrap .lbl{ font-size:11px; font-weight:700; }
+  .anim-wrap .cap{ font-size:9.5px; }
+
   details.tech{
     background:var(--stone-900); border:1px solid var(--stone-800);
     border-radius:var(--radius); margin-bottom:8px; overflow:hidden;
@@ -499,7 +504,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.9.1';
+const APP_VERSION = '1.10.0';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -997,6 +1002,165 @@ function saveFitnessTest(){
   </div>`;
   document.getElementById('testResult').innerHTML = res;
   document.getElementById('testResult').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+/* =========================================================================
+   ANIMACJE TECHNIKI — rysowane w SVG (SMIL), więc działają offline i ważą
+   kilka kB. Zrobione dla ćwiczeń, w których sam opis słowny nie wystarcza:
+   liczy się tempo albo granica zakresu. Pokazywane TYLKO dla wariantu
+   z planu — przy regresji obraz nie pasowałby do wykonywanej wersji.
+   ========================================================================= */
+/* Wspólny generator etykiety fazy: widoczna między t0 a t1 (ułamki 0–1). */
+function phaseLbl(x, y, txt, t0, t1, dur, color){
+  const e = 0.004;
+  return `<text x="${x}" y="${y}" class="lbl" fill="${color}" opacity="0">${txt}
+    <animate attributeName="opacity" values="0;0;1;1;0;0"
+      keyTimes="0;${Math.max(0,t0-e).toFixed(3)};${t0.toFixed(3)};${t1.toFixed(3)};${Math.min(1,t1+e).toFixed(3)};1"
+      dur="${dur}s" repeatCount="indefinite"/></text>`;
+}
+function progBar(x, y, w, values, keyTimes, dur){
+  return `<rect x="${x}" y="${y}" width="${w}" height="6" rx="3" fill="var(--stone-700)"/>
+    <rect x="${x}" y="${y}" width="0" height="6" rx="3" fill="var(--rope-500)">
+      <animate attributeName="width" values="${values}" keyTimes="${keyTimes}" dur="${dur}s" repeatCount="indefinite"/></rect>`;
+}
+function anim(attr, values, keyTimes, dur){
+  return `<animate attributeName="${attr}" values="${values}" keyTimes="${keyTimes}" dur="${dur}s" repeatCount="indefinite"/>`;
+}
+
+const EX_ANIM = {
+  /* --- Pistol squat z deficytu: tempo 4-1-X + pięta na szczeblu --- */
+  E3: (()=>{ const D=6.5, kt='0;0.615;0.769;0.892;1';
+    return `<svg viewBox="0 0 320 225" role="img" aria-label="Pistol squat z deficytu: cztery sekundy w dół, sekunda pauzy w dole, dynamiczne wyjście w górę. Pięta przez cały ruch pozostaje na szczeblu.">
+    <line x1="14" y1="164" x2="306" y2="164" stroke="var(--stone-600)" stroke-width="3"/>
+    <rect x="94" y="148" width="56" height="16" fill="var(--stone-700)"/>
+    <text x="122" y="160" class="cap" fill="var(--chalk-500)" text-anchor="middle">szczebel</text>
+    <polyline points="120,146 148,118 106,140 96,102" fill="none" stroke="var(--chalk-100)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+      ${anim('points','120,146 120,108 120,70 120,30;120,146 148,118 106,140 96,102;120,146 148,118 106,140 96,102;120,146 120,108 120,70 120,30;120,146 120,108 120,70 120,30',kt,D)}</polyline>
+    <polyline points="106,140 152,146 198,152" fill="none" stroke="var(--lichen-500)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+      ${anim('points','120,70 162,74 202,78;106,140 152,146 198,152;106,140 152,146 198,152;120,70 162,74 202,78;120,70 162,74 202,78',kt,D)}</polyline>
+    <polyline points="96,102 138,98" fill="none" stroke="var(--chalk-500)" stroke-width="4" stroke-linecap="round">
+      ${anim('points','120,30 158,44;96,102 138,98;96,102 138,98;120,30 158,44;120,30 158,44',kt,D)}</polyline>
+    <circle cx="93" cy="92" r="9" fill="var(--chalk-100)">
+      ${anim('cx','120;93;93;120;120',kt,D)}${anim('cy','19;92;92;19;19',kt,D)}</circle>
+    <line x1="106" y1="146" x2="136" y2="146" stroke="var(--lichen-500)" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="107" cy="146" r="6" fill="none" stroke="var(--lichen-500)" stroke-width="2.5"/>
+    <text x="306" y="62" class="cap" fill="var(--chalk-500)" text-anchor="end">kolano nad linią stopy</text>
+    <text x="306" y="76" class="cap" fill="var(--chalk-500)" text-anchor="end">noga wolna wyprostowana</text>
+    ${phaseLbl(14,188,'4 s w dół',0,0.615,D,'var(--rope-400)')}
+    ${phaseLbl(14,188,'1 s pauzy w dole',0.615,0.769,D,'var(--rope-400)')}
+    ${phaseLbl(14,188,'dynamicznie w górę',0.769,0.892,D,'var(--lichen-400)')}
+    ${progBar(14,196,180,'0;111;138;180;180',kt,D)}
+    <text x="14" y="218" class="cap" fill="var(--lichen-400)">● pięta cały czas na szczeblu — nie odrywa się ani na moment</text>
+  </svg>`; })(),
+
+  /* --- Nordic curl: 4 s opuszczania + biodra w jednej linii --- */
+  E5: (()=>{ const D=5.5, kt='0;0.727;0.909;1';
+    return `<svg viewBox="0 0 320 225" role="img" aria-label="Nordic curl: cztery sekundy powolnego opuszczania w przód. Tułów, biodra i uda tworzą przez cały ruch jedną linię.">
+    <line x1="14" y1="172" x2="306" y2="172" stroke="var(--stone-600)" stroke-width="3"/>
+    <rect x="232" y="152" width="48" height="14" rx="3" fill="var(--stone-700)"/>
+    <text x="256" y="186" class="cap" fill="var(--chalk-500)" text-anchor="middle">stopy pod szczeblem</text>
+    <line x1="204" y1="168" x2="240" y2="160" stroke="var(--chalk-100)" stroke-width="6" stroke-linecap="round"/>
+    <polyline points="209,159 96,94" fill="none" stroke="var(--lichen-500)" stroke-width="2.5" stroke-dasharray="6 5">
+      ${anim('points','214,168 214,58;209,159 96,94;214,168 214,58;214,168 214,58',kt,D)}</polyline>
+    <polyline points="204,168 168,147 125,122" fill="none" stroke="var(--chalk-100)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+      ${anim('points','204,168 204,126 204,76;204,168 168,147 125,122;204,168 204,126 204,76;204,168 204,126 204,76',kt,D)}</polyline>
+    <polyline points="125,122 108,158" fill="none" stroke="var(--chalk-500)" stroke-width="4" stroke-linecap="round">
+      ${anim('points','204,76 180,94;125,122 108,158;204,76 180,94;204,76 180,94',kt,D)}</polyline>
+    <circle cx="115" cy="116" r="9" fill="var(--chalk-100)">
+      ${anim('cx','204;115;204;204',kt,D)}${anim('cy','64;116;64;64',kt,D)}</circle>
+    <circle cx="204" cy="168" r="5" fill="var(--rope-500)"/>
+    <text x="14" y="62" class="cap" fill="var(--chalk-500)">biodra się NIE zginają</text>
+    <text x="14" y="76" class="cap" fill="var(--chalk-500)">ręce pomagają dopiero przy podłodze</text>
+    ${phaseLbl(14,196,'4 s opuszczania',0,0.727,D,'var(--rope-400)')}
+    ${phaseLbl(14,196,'powrót',0.727,0.909,D,'var(--lichen-400)')}
+    ${progBar(14,204,180,'0;131;180;180',kt,D)}
+    <text x="14" y="222" class="cap" fill="var(--lichen-400)">- - - tułów, biodra i uda przez cały ruch w JEDNEJ linii</text>
+  </svg>`; })(),
+
+  /* --- Ab wheel: gdzie kończy się bezpieczny zakres --- */
+  E9: (()=>{ const D=4.5, kt='0;0.444;0.511;0.889;1';
+    return `<svg viewBox="0 0 320 225" role="img" aria-label="Ab wheel z kolan: kółko wytacza się w przód tylko do momentu, w którym lędźwie zaczęłyby się wyginać.">
+    <line x1="14" y1="170" x2="306" y2="170" stroke="var(--stone-600)" stroke-width="3"/>
+    <line x1="256" y1="56" x2="256" y2="170" stroke="var(--rope-500)" stroke-width="2" stroke-dasharray="6 5"/>
+    <text x="306" y="42" class="cap" fill="var(--rope-400)" text-anchor="end">koniec zakresu —</text>
+    <text x="306" y="54" class="cap" fill="var(--rope-400)" text-anchor="end">dalej lędźwie się wyginają</text>
+    <polyline points="70,162 78,142 146,138" fill="none" stroke="var(--chalk-100)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+      ${anim('points','70,162 74,128 104,112;70,162 78,142 146,138;70,162 78,142 146,138;70,162 74,128 104,112;70,162 74,128 104,112',kt,D)}</polyline>
+    <polyline points="146,138 240,155" fill="none" stroke="var(--chalk-500)" stroke-width="4" stroke-linecap="round">
+      ${anim('points','104,112 130,155;146,138 240,155;146,138 240,155;104,112 130,155;104,112 130,155',kt,D)}</polyline>
+    <circle cx="158" cy="128" r="9" fill="var(--chalk-100)">
+      ${anim('cx','114;158;158;114;114',kt,D)}${anim('cy','102;128;128;102;102',kt,D)}</circle>
+    <circle cx="240" cy="155" r="15" fill="none" stroke="var(--lichen-500)" stroke-width="4">
+      ${anim('cx','130;240;240;130;130',kt,D)}</circle>
+    <circle cx="240" cy="155" r="3.5" fill="var(--lichen-500)">
+      ${anim('cx','130;240;240;130;130',kt,D)}</circle>
+    <circle cx="70" cy="162" r="5" fill="var(--rope-500)"/>
+    <text x="14" y="70" class="cap" fill="var(--chalk-500)">kolana w miejscu</text>
+    ${phaseLbl(14,196,'wysunięcie',0,0.511,D,'var(--rope-400)')}
+    ${phaseLbl(14,196,'powrót pracą brzucha',0.511,0.889,D,'var(--lichen-400)')}
+    ${progBar(14,204,180,'0;80;92;180;180',kt,D)}
+    <text x="14" y="222" class="cap" fill="var(--lichen-400)">● miednica podwinięta ZANIM ruszysz — i taka zostaje</text>
+  </svg>`; })(),
+
+  /* --- Ławka rzymska: STOP dokładnie na linii ciała --- */
+  E13: (()=>{ const D=5.5, kt='0;0.364;0.545;0.909;1';
+    return `<svg viewBox="0 0 320 235" role="img" aria-label="Prostowanie grzbietu na ławce rzymskiej: dwie sekundy w górę, zatrzymanie dokładnie na linii z nogami, dwie sekundy w dół.">
+    <line x1="14" y1="176" x2="306" y2="176" stroke="var(--stone-600)" stroke-width="3"/>
+    <rect x="246" y="132" width="14" height="44" fill="var(--stone-700)"/>
+    <rect x="236" y="106" width="30" height="26" rx="5" fill="var(--stone-700)"/>
+    <rect x="168" y="94" width="36" height="14" rx="5" fill="var(--stone-700)"/>
+    <text x="200" y="152" class="cap" fill="var(--chalk-500)" text-anchor="middle">poduszka pod biodrami</text>
+    <line x1="254" y1="105" x2="112" y2="59" stroke="var(--rope-500)" stroke-width="2" stroke-dasharray="6 5"/>
+    <text x="14" y="40" class="cap" fill="var(--rope-400)">STOP: tułów w jednej linii z nogami</text>
+    <text x="14" y="52" class="cap" fill="var(--rope-400)">— ani centymetra wyżej</text>
+    <polyline points="248,112 214,102 186,92" fill="none" stroke="var(--chalk-100)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <polyline points="186,92 129,74" fill="none" stroke="var(--chalk-100)" stroke-width="7" stroke-linecap="round">
+      ${anim('points','186,92 175,146;186,92 129,74;186,92 129,74;186,92 175,146;186,92 175,146',kt,D)}</polyline>
+    <circle cx="117" cy="70" r="9" fill="var(--chalk-100)">
+      ${anim('cx','172;117;117;172;172',kt,D)}${anim('cy','158;70;70;158;158',kt,D)}</circle>
+    <circle cx="142" cy="80" r="7" fill="var(--lichen-500)">
+      ${anim('cx','180;142;142;180;180',kt,D)}${anim('cy','153;80;80;153;153',kt,D)}</circle>
+    <circle cx="186" cy="92" r="5" fill="var(--rope-500)"/>
+    ${phaseLbl(14,200,'2 s w górę',0,0.364,D,'var(--lichen-400)')}
+    ${phaseLbl(14,200,'1 s pauzy na linii',0.364,0.545,D,'var(--rope-400)')}
+    ${phaseLbl(14,200,'2 s w dół',0.545,0.909,D,'var(--rope-400)')}
+    ${progBar(14,208,180,'0;65;98;180;180',kt,D)}
+    <text x="14" y="230" class="cap" fill="var(--lichen-400)">● ciężar przytulony do klatki — nigdy za głową</text>
+  </svg>`; })(),
+
+  /* --- Soleus: kolana zgięte przez cały ruch --- */
+  E21: (()=>{ const D=5.5, kt='0;0.364;0.545;0.909;1';
+    return `<svg viewBox="0 0 320 235" role="img" aria-label="Wspięcia na palce ze zgiętymi kolanami: plecy na ścianie, kolana zgięte pod kątem prostym przez cały ruch, dwie sekundy w górę i dwie w dół.">
+    <line x1="76" y1="34" x2="76" y2="180" stroke="var(--stone-600)" stroke-width="5"/>
+    <text x="70" y="30" class="cap" fill="var(--chalk-500)" text-anchor="end">ściana</text>
+    <line x1="14" y1="180" x2="306" y2="180" stroke="var(--stone-600)" stroke-width="3"/>
+    <polyline points="132,118 132,132 146,132" fill="none" stroke="var(--lichen-500)" stroke-width="2.5">
+      ${anim('points','132,134 132,148 146,148;132,118 132,132 146,132;132,118 132,132 146,132;132,134 132,148 146,148;132,134 132,148 146,148',kt,D)}</polyline>
+    <text x="126" y="126" class="cap" fill="var(--lichen-400)" text-anchor="end">90°
+      ${anim('y','142;126;126;142;142',kt,D)}</text>
+    <polyline points="86,76 86,118 146,118 146,156" fill="none" stroke="var(--chalk-100)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+      ${anim('points','86,92 86,134 146,134 146,172;86,76 86,118 146,118 146,156;86,76 86,118 146,118 146,156;86,92 86,134 146,134 146,172;86,92 86,134 146,134 146,172',kt,D)}</polyline>
+    <polyline points="134,160 146,156 174,179" fill="none" stroke="var(--rope-500)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+      ${anim('points','134,176 146,172 174,179;134,160 146,156 174,179;134,160 146,156 174,179;134,176 146,172 174,179;134,176 146,172 174,179',kt,D)}</polyline>
+    <circle cx="86" cy="64" r="9" fill="var(--chalk-100)">
+      ${anim('cy','80;64;64;80;80',kt,D)}</circle>
+    <text x="306" y="66" class="cap" fill="var(--chalk-500)" text-anchor="end">pięta wraca do poziomu,</text>
+    <text x="306" y="80" class="cap" fill="var(--chalk-500)" text-anchor="end">nie schodzi niżej</text>
+    ${phaseLbl(14,200,'2 s w górę',0,0.364,D,'var(--lichen-400)')}
+    ${phaseLbl(14,200,'1 s pauzy u góry',0.364,0.545,D,'var(--rope-400)')}
+    ${phaseLbl(14,200,'2 s w dół',0.545,0.909,D,'var(--rope-400)')}
+    ${progBar(14,208,180,'0;65;98;180;180',kt,D)}
+    <text x="14" y="230" class="cap" fill="var(--lichen-400)">● kolana zgięte przez CAŁĄ serię — inaczej pracuje inny mięsień</text>
+  </svg>`; })(),
+};
+
+function animBlock(ex){
+  const svg = EX_ANIM[ex.id];
+  if(!svg) return '';
+  // przy regresji/progresji obraz nie odpowiadałby wykonywanemu wariantowi
+  if(ex.levelIdx != null && ex.levelIdx !== ex.levelDef) return '';
+  return `<details class="tech" open><summary>Animacja — tempo i zakres ruchu</summary>
+    <div class="inner anim-wrap">${svg}</div></details>`;
 }
 
 /* ---- UI poziomów: pasek na ekranie ćwiczenia ---- */
@@ -2678,6 +2842,7 @@ function renderExerciseBody(ex){
   exState = { setIndex: priorLog.length, totalSets: ex.sets, logs: [...priorLog] };
 
   let html = levelAwareCue(ex);
+  html += animBlock(ex);
   html += levelBarHTML(ex);
   html += exerciseEditPanel(ex);
   html += `<div class="card">`;
