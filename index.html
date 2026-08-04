@@ -414,6 +414,15 @@
     </div>
   </section>
 
+  <!-- ===================== EKRAN: TEST SPRAWNOŚCI ===================== -->
+  <section class="screen" id="screen-test">
+    <div class="back-row">
+      <button class="back-btn" onclick="switchTab('settings')">←</button>
+      <h2 style="font-size:1.05rem;">Test sprawności</h2>
+    </div>
+    <div id="testBody"></div>
+  </section>
+
   <!-- ===================== EKRAN: USTAWIENIA ===================== -->
   <section class="screen" id="screen-settings">
     <h2 style="margin-bottom:14px;">Ustawienia</h2>
@@ -433,6 +442,12 @@
         </select>
       </div>
       <div class="meta">Wersja obunóż obowiązuje, dopóki nie potwierdzisz, ile epizodów zapalenia Achillesa przeszedłeś (jeden czy więcej, jedna noga czy obie). Dipy płycej, dopóki nie zmierzysz szerokości barków i nie porównasz z rozstawem stacji (56 cm).</div>
+    </div>
+    <div class="card">
+      <h2 style="margin-bottom:10px;">Test sprawności i poziomy</h2>
+      <div class="meta" style="margin-bottom:10px;" id="testInfo"></div>
+      <button class="btn btn-primary" onclick="openTest()">Zrób test i dobierz poziomy</button>
+      <button class="btn btn-ghost" style="margin-top:8px;" onclick="resetAllLevelsConfirm()">Przywróć wszystkie poziomy do planu</button>
     </div>
     <div class="card">
       <h2 style="margin-bottom:10px;">Zmienione liczby w ćwiczeniach</h2>
@@ -463,7 +478,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.7.2';
+const APP_VERSION = '1.8.0';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -701,6 +716,293 @@ function getProtocol(key){
   return applyHangboardOverride(HANGBOARD_PROTOCOLS[key]);
 }
 
+/* =========================================================================
+   POZIOMY TRUDNOŚCI — drabinka wariantów każdego ćwiczenia.
+   „def" = wariant z Twojego planu. Niżej = regresja (łatwiej), wyżej =
+   progresja. Warianty pochodzą z sekcji „Za trudne / za łatwe?" opisów
+   techniki. Wybór zapisywany per ćwiczenie, id zostaje ten sam — dzięki
+   temu historia wyników jest ciągła mimo zmiany wariantu.
+   ========================================================================= */
+const LADDERS = {
+  E2: { def:3, steps:[
+    {name:'Podciąganie australijskie', sets:4, repsRange:'8–12 powt.', rest:150,
+     how:'Drążek nisko albo stopy na podłodze pod wyższym drążkiem. Ciało w jednej linii, ciągniesz klatką do drążka. Im bliżej poziomu ustawisz ciało, tym trudniej — to Twoja regulacja obciążenia.'},
+    {name:'Negatywy podciągania', sets:4, repsRange:'3–5 powt.', rest:180,
+     how:'Wchodzisz na górę z podskoku albo ze szczebla, a potem opuszczasz się <b>5 sekund</b> do prawie pełnego wyprostu. Sama faza opuszczania buduje siłę potrzebną do pierwszego pełnego podciągnięcia.'},
+    {name:'Podciąganie strict', sets:4, repsRange:'3–6 powt.', rest:180,
+     how:'Nachwyt na szerokość barków, pełny zakres, bez kiwania nogami. Zatrzymanie tuż przed pełnym wyprostem łokci — nie zawisasz biernie na stawach.'},
+    {name:'Podciąganie archer', sets:4, repsRange:'3–5 powt. na stronę', rest:210,
+     how:'Wersja z Twojego planu. Chwyt wyraźnie szerszy niż barki, podciągasz się skosem w stronę jednej ręki, druga zostaje prosta i tylko balansuje.'},
+    {name:'Archer z dużym skosem (typewriter)', sets:4, repsRange:'3–5 powt. na stronę', rest:210,
+     how:'Większy skos niż w wersji podstawowej, a w górnej pozycji przejeżdżasz z boku na bok, zanim opuścisz się w dół.'},
+  ]},
+  E3: { def:2, steps:[
+    {name:'Przysiad jednonóż do podwyższenia', sets:5, repsRange:'5–8 powt. na nogę', rest:150,
+     how:'Siadasz kontrolowanie na szczebel drabinki albo skrzynkę i wstajesz z niej na jednej nodze. Im wyższe podwyższenie, tym łatwiej — obniżasz je stopniowo, aż dojdziesz do pełnego zakresu.'},
+    {name:'Pistol bez deficytu', sets:5, repsRange:'3–5 powt. na nogę', rest:180,
+     how:'Pełny przysiad na jednej nodze, ale stopa stoi <b>płasko na podłodze</b>. Noga wolna wyprostowana w przód. Pięta cały czas na podłożu.'},
+    {name:'Pistol z deficytu', sets:5, repsRange:'3–5 powt. na nogę', rest:180,
+     how:'Wersja z Twojego planu. Stopa robocza na dolnym szczeblu drabinki, dzięki czemu noga wolna może swobodnie zejść niżej.'},
+    {name:'Pistol z deficytu + pauza 2 s', sets:5, repsRange:'3–5 powt. na nogę', rest:180,
+     how:'Jak wersja z planu, ale w najniższej pozycji zatrzymujesz się na <b>2 sekundy</b> zamiast jednej. Wydłużona pauza usuwa resztki sprężystości ścięgien — całą pracę wykonują mięśnie.'},
+  ]},
+  E4: { def:0, steps:[
+    {name:'Front lever — tuck', sets:5, holdRange:[5,8], rest:180,
+     how:'Kolana podciągnięte do klatki, uda równolegle do podłogi. Ramiona proste, miednica podwinięta, łopatki ściągnięte w dół.'},
+    {name:'Front lever — advanced tuck', sets:5, holdRange:[5,8], rest:180,
+     how:'Jak tuck, ale kolana odsuwasz dalej od klatki, a plecy ustawiasz równolegle do podłogi. Dłuższa dźwignia = trudniej.'},
+    {name:'Front lever — jedna noga wyprostowana', sets:5, holdRange:[5,8], rest:180,
+     how:'Jedna noga wyprostowana w linii ciała, druga zgięta przy klatce. Zmieniaj nogę między seriami.'},
+    {name:'Front lever — half lay', sets:5, holdRange:[5,8], rest:180,
+     how:'Obie nogi ugięte pod kątem prostym, ale uda w jednej linii z tułowiem. Najtrudniejszy wariant przed pełnym front leverem.'},
+  ]},
+  E5: { def:2, steps:[
+    {name:'Nordic curl z taśmą (mocna asysta)', sets:4, repsRange:'5–8 powt.', rest:150,
+     how:'Taśma przypięta wysoko na drabince, przełożona pod klatką — odciąża Cię przez cały ruch i pomaga wrócić. Dobierz taśmę tak, żeby całe opuszczanie było kontrolowane.'},
+    {name:'Nordic curl z asystą rąk', sets:4, repsRange:'4–6 powt.', rest:180,
+     how:'Opuszczasz się bez taśmy, a w dolnej części ruchu łapiesz podłogę rękami i nimi odpychasz się do powrotu. Ręce wchodzą do gry dopiero tam, gdzie tracisz kontrolę.'},
+    {name:'Nordic curl', sets:4, repsRange:'3–5 powt.', rest:180,
+     how:'Wersja z Twojego planu. Opuszczanie minimum 4 sekundy, biodra w jednej linii z tułowiem, powrót siłą tylnej strony ud (ręce tylko asekuracyjnie).'},
+    {name:'Nordic curl — pełny zakres bez asysty', sets:4, repsRange:'3–5 powt.', rest:180,
+     how:'Schodzisz aż do podłogi i wracasz bez dotykania jej rękami. Wchodzi dopiero wtedy, gdy wersja podstawowa jest w pełni kontrolowana na całym zakresie.'},
+  ]},
+  E6: { def:2, steps:[
+    {name:'Pompki pochyłe (ręce na podwyższeniu)', sets:5, repsRange:'8–12 powt.', rest:150,
+     how:'Dłonie na szczeblu drabinki albo krześle, stopy na podłodze. Im wyżej ręce, tym łatwiej. To budowanie bazy przed pracą nad głową.'},
+    {name:'Pompki pike, stopy na podłodze', sets:5, repsRange:'5–8 powt.', rest:180,
+     how:'Pozycja odwróconego „V" bez podwyższenia: stopy na podłodze, biodra wysoko. Głowa schodzi przed linię dłoni.'},
+    {name:'Pompki pike, stopy na drabince', sets:5, repsRange:'3–5 powt.', rest:180,
+     how:'Wersja z Twojego planu. Stopy na szczeblu, biodra wysoko nad barkami — im wyżej stopy, tym bardziej pionowo i trudniej.'},
+    {name:'Pompki pike z deficytu', sets:5, repsRange:'3–5 powt.', rest:180,
+     how:'Stopy wysoko, a dłonie na podporach (np. dwóch stabilnych podwyższeniach), żeby głowa mogła zejść niżej niż dłonie. Większy zakres ruchu w barkach.'},
+  ]},
+  E7: { def:3, steps:[
+    {name:'Pompki zwykłe', sets:4, repsRange:'8–12 powt.', rest:150,
+     how:'Dłonie na szerokość barków, ciało w jednej linii. Baza siłowa przed przechodzeniem na jedną rękę.'},
+    {name:'Pompki szerokie', sets:4, repsRange:'6–10 powt.', rest:180,
+     how:'Dłonie wyraźnie szerzej niż barki, nogi na podłodze. Uczy pracy w rozstawie, który potem wykorzystasz w wersji archer.'},
+    {name:'Pompki archer, nogi na podłodze', sets:4, repsRange:'3–5 powt. na stronę', rest:180,
+     how:'Przenosisz ciężar na jedną rękę, druga zostaje prosta w bok jako podpora. Nogi na podłodze, więc obciążenie mniejsze niż w wersji z planu.'},
+    {name:'Pompki archer, nogi wysoko', sets:4, repsRange:'3–5 powt. na stronę', rest:180,
+     how:'Wersja z Twojego planu. Nogi na drabince na wysokości ok. 1 m — więcej ciężaru przechodzi na ręce.'},
+  ]},
+  E8: { def:2, steps:[
+    {name:'Dipy z asystą nóg', sets:5, repsRange:'6–10 powt.', rest:150,
+     how:'Stopy oparte o podłogę albo niski szczebel — nogi zdejmują część ciężaru. Zasada głębokości ta sama: stop na ustalonym kącie, nie głębiej.'},
+    {name:'Negatywy dipów', sets:5, repsRange:'3–5 powt.', rest:180,
+     how:'Wchodzisz do podporu z pomocą nóg, a opuszczasz się wyłącznie na rękach przez <b>3–4 sekundy</b> do ustalonego kąta. Barki wciśnięte w dół przez cały czas.'},
+    {name:'Dipy na poręczach', sets:5, repsRange:'3–5 powt.', rest:180,
+     how:'Wersja z Twojego planu. Ekscentryk 2–3 s, barki aktywnie wciśnięte w dół, stop na ustalonym kącie w łokciu.'},
+    {name:'Dipy z pauzą w dole', sets:5, repsRange:'3–5 powt.', rest:180,
+     how:'Jak wersja z planu, ale na dole zatrzymujesz się na <b>1 sekundę</b> przy zachowanej pozycji barków. Pauza sprawdza, czy naprawdę kontrolujesz najtrudniejszy punkt zakresu.'},
+  ]},
+  E9: { def:2, steps:[
+    {name:'Ab wheel — zakres do połowy', sets:4, repsRange:'8–12 powt.', rest:90,
+     how:'Wysuwasz kółko tylko na tyle, na ile pewnie utrzymujesz podwinięcie miednicy — mniej więcej do połowy zasięgu. Zakres zwiększasz stopniowo, tydzień po tygodniu.'},
+    {name:'Ab wheel — zakres 3/4', sets:4, repsRange:'8–12 powt.', rest:90,
+     how:'Jak wyżej, ale wysuwasz się dalej. Nadal kończysz zakres w momencie, w którym lędźwie zaczynają się wyginać.'},
+    {name:'Ab wheel z kolan — pełny zakres', sets:4, repsRange:'10–15 powt.', rest:90,
+     how:'Wersja z Twojego planu. Pełne wysunięcie przy zachowanym podwinięciu miednicy i żebrach ściągniętych w dół.'},
+    {name:'Rollout ze stania (do ściany)', sets:4, repsRange:'5–8 powt.', rest:120,
+     how:'Start ze stania, kółko wysuwasz w stronę ściany, która ogranicza zakres. Odsuwając się od ściany, stopniowo wydłużasz ruch. Dużo trudniejsze — wchodzi dopiero, gdy 15 powtórzeń z kolan jest łatwe.'},
+  ]},
+  E11: { def:1, steps:[
+    {name:'Scapular pull-ups z odciążeniem', sets:3, repsRange:'10–12 powt.', rest:60,
+     how:'Stopy oparte o podłogę lub szczebel, żeby zdjąć część ciężaru. Ruch identyczny: unosisz się wyłącznie ściągnięciem łopatek, ramiona zostają proste.'},
+    {name:'Scapular pull-ups w zwisie', sets:3, repsRange:'10–12 powt.', rest:60,
+     how:'Wersja z Twojego planu. Pełny zwis, ramiona wyprostowane przez cały ruch, unosisz ciało o 3–5 cm samą pracą łopatek.'},
+    {name:'Scapular pull-ups z pauzą 2 s', sets:3, repsRange:'8–10 powt.', rest:60,
+     how:'W górnej pozycji (łopatki maksymalnie ściągnięte w dół) zatrzymujesz się na <b>2 sekundy</b>. Buduje wytrzymałość mięśni utrzymujących bark w dobrej pozycji.'},
+  ]},
+};
+
+function getLevels(){ return store.get('levels', {}); }
+function getLevel(id, def){
+  const v = getLevels()[id];
+  return (typeof v === 'number') ? v : def;
+}
+function setLevel(id, idx){
+  const l = getLevels(); l[id] = idx; store.set('levels', l);
+  clearOverride(id);   // liczby pochodzą teraz z nowego wariantu
+}
+function clearLevel(id){
+  const l = getLevels(); delete l[id]; store.set('levels', l);
+  clearOverride(id);
+}
+
+/* Podmienia ćwiczenie na wybrany wariant drabinki (przed nadpisaniami). */
+function applyLevel(ex){
+  const L = LADDERS[ex.id];
+  if(!L) return ex;
+  const idx = Math.min(Math.max(0, getLevel(ex.id, L.def)), L.steps.length - 1);
+  const s = L.steps[idx];
+  const next = {...ex, levelIdx:idx, levelMax:L.steps.length - 1, levelDef:L.def, levelHow:s.how};
+  next.name = s.name;
+  if(s.sets != null) next.sets = s.sets;
+  if(s.rest != null) next.rest = s.rest;
+  if(s.repsRange) next.repsRange = s.repsRange;
+  if(s.holdRange) next.holdRange = s.holdRange;
+  return next;
+}
+/* Pełne przygotowanie pozycji: wariant drabinki → ręczne nadpisania liczb. */
+function prepEx(ex){ return applyExerciseOverride(applyLevel(ex)); }
+
+/* =========================================================================
+   TEST SPRAWNOŚCI — jednorazowy (powtarzalny) test dobierający poziom
+   startowy każdej drabinki. Wynik nigdy nie przekracza poziomu z planu
+   (progresja ponad plan zostaje decyzją ręczną) — wyjątek: front lever,
+   gdzie sam plan każe dobrać wariant tak, żeby 8 s było granicą.
+   ========================================================================= */
+const TEST_DEFS = [
+  {id:'E2', type:'number', label:'Podciągnięcia klasyczne — maks. powtórzeń',
+   how:'Nachwyt na szerokość barków, pełny zakres, bez kiwania nogami. Kończysz przy pierwszym kiwnięciu lub niepełnym powtórzeniu.',
+   map:v=> v<=0?0 : v<=4?1 : v<=9?2 : 3},
+  {id:'E3', type:'number', label:'Pistol bez deficytu — maks. powtórzeń na SŁABSZĄ nogę',
+   how:'Stopa płasko na podłodze, palce jednej ręki na drabince tylko dla równowagi. Liczysz powtórzenia w pełnej kontroli.',
+   map:v=> v<=0?0 : v<=2?1 : 2},
+  {id:'E4', type:'select', label:'Front lever — który wariant utrzymasz ok. 8 sekund na granicy możliwości?',
+   how:'Spróbuj od najłatwiejszego. Ramiona proste, miednica podwinięta. Wybierz ten, przy którym 8 s to walka — nie 15 s i nie 3 s.',
+   options:['Tuck — kolana przy klatce (lub jeszcze z asystą taśmy)','Advanced tuck — kolana dalej od klatki','Jedna noga wyprostowana','Half lay — nogi ugięte w linii ciała'],
+   map:v=>v},
+  {id:'E5', type:'select', label:'Nordic curl — jak wygląda Twoje opuszczanie?',
+   how:'Kolana na macie, stopy pod szczeblem. Opuść się raz w przód najwolniej, jak umiesz.',
+   options:['Kontroluję tylko z taśmą jako asystą','Bez taśmy, ale ręce muszą przejąć wcześnie','Pełne 4 s kontroli, ręce dopiero przy podłodze'],
+   map:v=>v},
+  {id:'E6', type:'number', label:'Pompki pike ze stopami na PODŁODZE — maks. powtórzeń',
+   how:'Biodra wysoko (odwrócone „V"), głowa schodzi przed linię dłoni. Bez podwyższenia pod stopami.',
+   map:v=> v<=2?0 : v<=7?1 : 2},
+  {id:'E7', type:'number', label:'Pompki klasyczne — maks. powtórzeń',
+   how:'Ciało w jednej linii, pełny zakres, klatka do podłogi.',
+   map:v=> v<=7?0 : v<=14?1 : v<=19?2 : 3},
+  {id:'E8', type:'number', label:'Dipy na poręczach — maks. powtórzeń',
+   how:'Barki wciśnięte w dół, zejście do ustalonego kąta (100–110°). Wpisz 0, jeśli nie masz ani jednego pewnego powtórzenia.',
+   map:v=> v<=0?0 : v<=2?1 : 2},
+  {id:'E9', type:'number', label:'Ab wheel z kolan, pełny zakres — maks. powtórzeń',
+   how:'Miednica podwinięta przed startem. Kończysz przy pierwszym powtórzeniu, w którym lędźwie zaczynają się wyginać.',
+   map:v=> v<=4?0 : v<=9?1 : 2},
+  {id:'E11', type:'select', label:'Scapular pull-ups w pełnym zwisie',
+   how:'Zwis na drążku, ramiona proste. Unosisz się 3–5 cm samą pracą łopatek.',
+   options:['Nie zrobię 10 poprawnych powtórzeń','Zrobię 10–12 poprawnych powtórzeń'],
+   map:v=>v},
+];
+
+function openTest(){
+  engineStop();
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-test').classList.add('active');
+  renderTest();
+}
+
+function renderTest(){
+  const prev = store.get('fitnessTest', null);
+  let html = `<div class="notes-box" style="margin-top:0;">
+    <b>Po co ten test:</b> na jego podstawie aplikacja ustawi poziom startowy każdego ćwiczenia — tak, żeby zestaw był wykonalny od pierwszego dnia. Test nie podnosi niczego ponad Twój plan (progresja zostaje ręczna); może tylko obniżyć to, co byłoby dziś za trudne.
+    <br><br><b>Jak testować:</b> po pełnej rozgrzewce ogólnej, wypoczętym. Między próbami 3 minuty przerwy. Możesz rozłożyć test na dwa dni — wyniki wpisujesz, kiedy chcesz.
+    <br><br><span class="warn"><b>Czego nie testujemy:</b> palców. Maksymalny zwis wchodzi dopiero w 5. tygodniu planu — na tablicy obowiązuje na razie wyłącznie lekki Protokół A.</span>
+    ${prev ? `<br><br><b>Ostatni test:</b> ${prev.date.slice(0,10)} — ponowne zapisanie nadpisze dobrane poziomy.` : ''}
+  </div>`;
+
+  TEST_DEFS.forEach(t=>{
+    html += `<div class="card">
+      <b style="font-size:0.95rem;">${t.label}</b>
+      <div class="meta" style="margin:6px 0 10px;">${t.how}</div>`;
+    if(t.type === 'number'){
+      html += `<input type="number" id="t_${t.id}" min="0" placeholder="wpisz liczbę"${prev && prev.answers[t.id]!=null ? ` value="${prev.answers[t.id]}"` : ''}>`;
+    } else {
+      html += `<select id="t_${t.id}">` + t.options.map((o,i)=>
+        `<option value="${i}"${prev && prev.answers[t.id]===i ? ' selected' : ''}>${o}</option>`).join('') + `</select>`;
+    }
+    html += `</div>`;
+  });
+
+  html += `<button class="btn btn-primary" onclick="saveFitnessTest()">Zapisz i dobierz poziomy</button>
+    <div class="meta" style="margin-top:10px;">Każdy dobrany poziom możesz później zmienić ręcznie przyciskami „stopień niżej / wyżej" na ekranie ćwiczenia.</div>
+    <div id="testResult"></div>`;
+  document.getElementById('testBody').innerHTML = html;
+}
+
+function saveFitnessTest(){
+  const answers = {}, assigned = {};
+  for(const t of TEST_DEFS){
+    const el = document.getElementById('t_'+t.id);
+    if(t.type === 'number'){
+      if(el.value === ''){
+        el.style.borderColor = 'var(--alert-500)';
+        el.scrollIntoView({behavior:'smooth', block:'center'});
+        return;
+      }
+      answers[t.id] = Math.max(0, Number(el.value));
+    } else {
+      answers[t.id] = Number(el.value);
+    }
+    const L = LADDERS[t.id];
+    const cap = t.id === 'E4' ? L.steps.length - 1 : L.def;   // nie ponad plan (wyjątek: front lever)
+    assigned[t.id] = Math.min(t.map(answers[t.id]), cap);
+  }
+  for(const id in assigned) setLevel(id, assigned[id]);
+  store.set('fitnessTest', {date:new Date().toISOString(), answers, assigned});
+  vibrate([60,40,60]);
+
+  let res = `<div class="notes-box"><b>✓ Poziomy dobrane.</b> Tak od dziś wyglądają Twoje ćwiczenia:</div><div class="card" style="padding:0;margin-top:10px;">`;
+  for(const t of TEST_DEFS){
+    const L = LADDERS[t.id], idx = assigned[t.id];
+    const diff = idx - L.def;
+    const tag = diff === 0 ? '<span class="pill">wariant z planu</span>'
+      : `<span class="pill" style="color:var(--rope-400);">${diff<0 ? Math.abs(diff)+' stopień niżej' : 'poziom wg testu'}</span>`;
+    res += `<div class="hist-item"><span style="font-size:0.85rem;">${L.steps[idx].name}</span><div class="tags">${tag}</div></div>`;
+  }
+  res += `</div><div class="btn-row" style="margin-top:12px;">
+    <button class="btn btn-primary" onclick="switchTab('today')">Zobacz dzisiejszy plan</button>
+    <button class="btn btn-ghost" onclick="switchTab('settings')">Wróć do ustawień</button>
+  </div>`;
+  document.getElementById('testResult').innerHTML = res;
+  document.getElementById('testResult').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+/* ---- UI poziomów: pasek na ekranie ćwiczenia ---- */
+function changeLevel(id, delta){
+  const L = LADDERS[id]; if(!L) return;
+  const cur = getLevel(id, L.def);
+  setLevel(id, Math.min(Math.max(0, cur + delta), L.steps.length - 1));
+  vibrate(30);
+  reopenExercise();
+}
+function resetLevelUI(id){
+  clearLevel(id);
+  vibrate(20);
+  reopenExercise();
+}
+function levelBarHTML(ex){
+  if(ex.levelIdx == null) return '';
+  const atMin = ex.levelIdx <= 0, atMax = ex.levelIdx >= ex.levelMax;
+  const onPlan = ex.levelIdx === ex.levelDef;
+  const planName = LADDERS[ex.id].steps[ex.levelDef].name;
+  return `<div class="card">
+    <div class="slider-row" style="margin-bottom:8px;"><b>Poziom trudności</b><span class="val tabnum">${ex.levelIdx+1} / ${ex.levelMax+1}</span></div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" ${atMin?'disabled':''} onclick="changeLevel('${ex.id}',-1)">⬇ Za trudne — stopień niżej</button>
+      <button class="btn btn-ghost" ${atMax?'disabled':''} onclick="changeLevel('${ex.id}',1)">Stopień wyżej ⬆</button>
+    </div>
+    <div class="meta" style="margin-top:10px;">${onPlan
+      ? 'To wariant z Twojego planu.'
+      : `Wariant z planu to poziom ${ex.levelDef+1}: „${planName}". Wyniki zapisują się do tej samej pozycji, więc historia zostaje ciągła.`}
+    </div>
+    ${onPlan ? '' : `<button class="btn btn-ghost" style="margin-top:10px;" onclick="resetLevelUI('${ex.id}')">Wróć do wariantu z planu</button>`}
+    <div class="meta" style="margin-top:10px;">Kiedy wyżej? Gdy w dwóch kolejnych sesjach robisz górny zakres powtórzeń we wszystkich seriach i czujesz zapas. Kiedy niżej? Gdy nie domykasz dolnego zakresu albo technika się sypie.</div>
+  </div>`;
+}
+/* Opis na górze ekranu: dla wariantu spoza planu pokazuje instrukcję TEGO wariantu. */
+function levelAwareCue(ex){
+  if(ex.levelIdx == null || ex.levelIdx === ex.levelDef) return cueBlock(ex);
+  const dir = ex.levelIdx < ex.levelDef ? 'łatwiejszy' : 'trudniejszy';
+  let html = `<div class="notes-box" style="margin-top:0;">`;
+  html += `<span class="badge strength" style="margin-bottom:8px;display:inline-block;">Wariant ${dir} niż w planie</span><br>`;
+  html += ex.levelHow;
+  if(ex.warn) html += `<br><br><span class="warn"><b>Uważaj:</b> ${ex.warn}</span>`;
+  html += `</div>`;
+  return html;
+}
+
 function customHangboard(cfg, name){
   return {
     id:'hangboard_custom', key:'custom', kind:'hangboard',
@@ -822,7 +1124,7 @@ function buildWeek(){
     EX_ARCHER_PULL, EX_PISTOL, EX_FRONTLEVER, EX_NORDIC, EX_PIKE,
     EX_ARCHER_PUSH, dipsExercise(), EX_ABWHEEL, calfExercise(),
     EX_SCAP, EX_EXT, EX_BACK_EXT,
-  ].map(applyExerciseOverride);
+  ].map(prepEx);
 
   const DAY_MON = {
     key:'mon', label:'Pon', type:'strength', title:'Blok nóg + core',
@@ -869,7 +1171,7 @@ function buildWeek(){
 
   [DAY_MON, DAY_THU].forEach(day=>{
     day.blocks = day.blocks.map(block=>{
-      if(block.kind === 'exercises') return {...block, items: block.items.map(applyExerciseOverride)};
+      if(block.kind === 'exercises') return {...block, items: block.items.map(prepEx)};
       if(block.kind === 'hangboard') return applyHangboardOverride(block);
       return block;
     });
@@ -1627,6 +1929,9 @@ function renderToday(){
   if(iso === todayISO() && !loadEntry(todayISO()).stiffness){
     html += `<div class="banner warn">🌅 <b>Brak dzisiejszego wpisu porannego.</b> Zapisz sztywność Achillesa i palców w zakładce „Poranek" — od tego wpisu zależy m.in., czy dziś bezpiecznie robić chwytotablicę.</div>`;
   }
+  if(!store.get('fitnessTest', null) && !Object.keys(getLevels()).length){
+    html += `<div class="banner warn" style="cursor:pointer;" onclick="openTest()">🎯 <b>Dobierz poziom startowy.</b> Krótki test sprawności (9 prób) ustawi każde ćwiczenie tak, żeby było wykonalne od pierwszego dnia — a gdy coś okaże się za trudne, na ekranie ćwiczenia zawsze masz przycisk „stopień niżej". <u>Dotknij, aby zrobić test.</u></div>`;
+  }
 
   const units = [day, ...extras];
   units.forEach((u, i)=>{
@@ -1979,7 +2284,8 @@ function renderExerciseBody(ex){
   const priorLog = prior && prior[ex.id] && prior[ex.id].sets ? prior[ex.id].sets : [];
   exState = { setIndex: priorLog.length, totalSets: ex.sets, logs: [...priorLog] };
 
-  let html = cueBlock(ex);
+  let html = levelAwareCue(ex);
+  html += levelBarHTML(ex);
   html += exerciseEditPanel(ex);
   html += `<div class="card">`;
   html += `<div class="set-tracker" id="setTracker"></div>`;
@@ -1998,6 +2304,9 @@ function renderExerciseBody(ex){
     <button class="btn btn-secondary" id="logSetBtn" onclick="logCurrentSet('${ex.id}')">Zaliczona seria</button>
   </div>`;
   html += `<div class="meta" style="margin-top:8px;">Po zaliczeniu serii przerwa odlicza się sama (${fmtRestWords(ex.rest)}).</div>`;
+  if(ex.levelIdx != null && ex.levelIdx !== ex.levelDef){
+    html += `<div class="meta" style="margin-top:14px;">Sekcje techniki poniżej opisują wariant z planu — ogólne zasady (pozycja barków, miednicy, tempo) obowiązują też w Twoim wariancie.</div>`;
+  }
   html += techBlock(ex, false);
 
   setTimeout(()=>setupExerciseTimer(ex), 0);
@@ -2380,6 +2689,19 @@ function loadSettingsForm(){
   document.getElementById('overridesInfo').textContent = n
     ? `Masz zmienione liczby w ${n} ${plural(n,'pozycji','pozycjach','pozycjach')}.`
     : 'Wszystko jeszcze na wartościach z planu.';
+  const ft = store.get('fitnessTest', null);
+  const nl = Object.keys(getLevels()).length;
+  document.getElementById('testInfo').textContent = ft
+    ? `Ostatni test: ${ft.date.slice(0,10)}. ${nl ? 'Dobrane poziomy w '+nl+' '+plural(nl,'ćwiczeniu','ćwiczeniach','ćwiczeniach')+'.' : 'Wszystkie poziomy zgodne z planem.'}`
+    : 'Jeszcze nie robiłeś testu — 9 krótkich prób, które ustawią poziom startowy każdego ćwiczenia pod Twoją aktualną sprawność.';
+}
+function resetAllLevelsConfirm(){
+  const nl = Object.keys(getLevels()).length;
+  if(!nl) return;
+  if(!confirm(`Przywrócić wszystkie ${nl} ${plural(nl,'poziom','poziomy','poziomów')} do wariantów z planu?`)) return;
+  store.set('levels', {});
+  loadSettingsForm();
+  vibrate(30);
 }
 function resetAllOverridesConfirm(){
   const n = Object.keys(getOverrides()).length;
