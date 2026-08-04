@@ -187,13 +187,25 @@
   .notes-box b{ color:var(--chalk-100); }
   .notes-box .warn{ color:var(--alert-400); }
 
+  /* Zwijane paski: domyślnie sam nagłówek, pełny tekst po dotknięciu.
+     Twarde blokady (⛔) startują rozwinięte — nie chowamy stopu za kliknięciem. */
   .banner{
-    border-radius:var(--radius); padding:13px 14px; font-size:0.88rem; line-height:1.55;
-    margin:12px 0;
+    border-radius:var(--radius); font-size:0.88rem; line-height:1.55;
+    margin:10px 0; overflow:hidden; cursor:pointer;
   }
   .banner.block{ background:#33201C; border:1px solid var(--alert-500); color:var(--alert-400); }
   .banner.warn{ background:#332A1A; border:1px solid var(--rope-500); color:var(--rope-400); }
   .banner b{ color:inherit; }
+  .banner-head{ display:flex; align-items:center; gap:10px; padding:11px 13px; }
+  .banner-ic{ font-size:1rem; flex-shrink:0; line-height:1.3; }
+  .banner-title{ flex:1; font-weight:700; }
+  .banner-chev{ flex-shrink:0; opacity:0.55; font-size:0.72rem; transition:transform .18s; }
+  .banner.open .banner-chev{ transform:rotate(180deg); }
+  .banner-body{ display:none; padding:0 13px 12px 39px; }
+  .banner.open .banner-body{ display:block; }
+  .banner-body a, .banner-body .lnk{
+    color:inherit; font-weight:700; text-decoration:underline; cursor:pointer;
+  }
 
   details.tech{
     background:var(--stone-900); border:1px solid var(--stone-800);
@@ -487,7 +499,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.9.0';
+const APP_VERSION = '1.9.1';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -1598,7 +1610,7 @@ function checkFingerLimits(forWhat){ // 'hangboard' | 'climb'
   const y = new Date(); y.setDate(y.getDate()-1);
   const yIso = isoOf(y);
   if(loads[yIso] && !loads[today]){
-    out.blocks.push('<b>Wczoraj pracowały palce</b> (wspinanie albo tablica). Dwa dni obciążania palców pod rząd są w tym planie zabronione — ścięgna i troczki regenerują się wolniej niż mięśnie i potrzebują pełnej doby przerwy.');
+    out.blocks.push({t:'Wczoraj pracowały palce', b:'Wczoraj było wspinanie albo tablica. Dwa dni obciążania palców pod rząd są w tym planie zabronione — ścięgna i troczki regenerują się wolniej niż mięśnie i potrzebują pełnej doby przerwy.'});
   }
 
   // Maks. 3 obciążenia palców na 7 dni
@@ -1609,7 +1621,7 @@ function checkFingerLimits(forWhat){ // 'hangboard' | 'climb'
       if(loads[isoOf(d)]) count++;
     }
     if(count >= 3){
-      out.blocks.push('<b>Palce pracowały już '+count+' razy w ostatnich 7 dniach</b> (wspinanie + tablica łącznie). Limit planu to 3 — dzisiejsza sesja byłaby czwarta. Ten limit nie rośnie niezależnie od samopoczucia.');
+      out.blocks.push({t:'Limit obciążeń palców wyczerpany ('+count+'/3)', b:'Palce pracowały już '+count+' razy w ostatnich 7 dniach (wspinanie + tablica łącznie). Limit planu to 3 — dzisiejsza sesja byłaby czwarta. Ten limit nie rośnie niezależnie od samopoczucia.'});
     }
   }
 
@@ -1624,7 +1636,7 @@ function checkFingerLimits(forWhat){ // 'hangboard' | 'climb'
   if(lastOther){
     const hours = (Date.now() - new Date(lastOther).getTime()) / 3600000;
     if(hours < 48 && hours >= 0){
-      out.warns.push('Od ostatniego '+otherName+' minęło dopiero <b>'+Math.round(hours)+' godz.</b> — plan wymaga co najmniej 48 godz. odstępu między tablicą a wspinaniem. Jeśli się da, przesuń sesję na później.');
+      out.warns.push({t:'Za mały odstęp — '+Math.round(hours)+' godz. od '+otherName, b:'Plan wymaga co najmniej 48 godzin odstępu między tablicą a wspinaniem, żeby ścięgna palców zdążyły się odbudować. Jeśli się da, przesuń dzisiejszą sesję na później.'});
     }
   }
 
@@ -1632,16 +1644,30 @@ function checkFingerLimits(forWhat){ // 'hangboard' | 'climb'
   if(forWhat === 'hangboard'){
     const st = loadEntry(today).stiffness;
     if(st && Number(st.fingersScore) >= 3){
-      out.warns.push('Rano zgłosiłeś sztywność palców <b>'+st.fingersScore+'/10</b>. Jeśli jest większa niż zwykle u Ciebie — <b>dziś bez tablicy, reszta treningu zostaje</b>.');
+      out.warns.push({t:'Poranna sztywność palców '+st.fingersScore+'/10', b:'Jeśli jest większa niż zwykle u Ciebie — <b>dziś bez tablicy, reszta treningu zostaje</b>. To najwcześniejszy sygnał, że palce nie odbudowały się po ostatnim obciążeniu.'});
     }
   }
   return out;
 }
 
+/* Zwijany pasek. Nagłówek zawsze widoczny, treść po dotknięciu.
+   Klik w link/przycisk w środku wykonuje akcję zamiast zwijać. */
+function bannerHTML(kind, icon, title, body, forceOpen){
+  const open = forceOpen || kind === 'block';
+  return `<div class="banner ${kind}${open ? ' open' : ''}" onclick="toggleBanner(event, this)">
+    <div class="banner-head"><span class="banner-ic">${icon}</span><span class="banner-title">${title}</span><span class="banner-chev">▼</span></div>
+    <div class="banner-body">${body}</div>
+  </div>`;
+}
+function toggleBanner(ev, el){
+  if(ev.target.closest('a, button, .lnk')) return;   // to odnośnik — nie zwijaj
+  el.classList.toggle('open');
+}
+
 function limitsBannerHTML(res){
   let html = '';
-  for(const b of res.blocks) html += '<div class="banner block">⛔ '+b+'</div>';
-  for(const w of res.warns) html += '<div class="banner warn">⚠️ '+w+'</div>';
+  for(const b of res.blocks) html += bannerHTML('block', '⛔', b.t, b.b);
+  for(const w of res.warns) html += bannerHTML('warn', '⚠️', w.t, w.b);
   return html;
 }
 
@@ -2062,7 +2088,9 @@ function extraExercisesHTML(units, entry){
     const climbedYesterday = !!(loadEntry(isoOf(y)).climb);
     const climbToday = units.some(u=>u.type==='climb') || !!entry.climb;
     if(climbToday || climbedYesterday){
-      html += `<div class="banner warn">⚠️ <b>Dołożyłeś dipy ${climbToday ? 'w dzień wspinania' : 'dobę po wspinaniu'}.</b> Plan zabrania dipów w ciągu doby po mocnym wspinaniu — przód barku dostaje wtedy podwójny bodziec i to najczęstszy mechanizm bólu przedniego barku. Jeśli sesja była (albo będzie) mocna, dziś je odpuść — pompki zostają.</div>`;
+      html += bannerHTML('warn', '⚠️',
+        `Dipy ${climbToday ? 'w dzień wspinania' : 'dobę po wspinaniu'}`,
+        'Plan zabrania dipów w ciągu doby po mocnym wspinaniu — przód barku dostaje wtedy podwójny bodziec i to najczęstszy mechanizm bólu przedniego barku. Jeśli sesja była (albo będzie) mocna, dziś je odpuść — pompki zostają.');
     }
   }
 
@@ -2124,18 +2152,17 @@ function comboWarningHTML(day, extra){
   const hasDips = blocks.some(b=>b.kind==='exercises' && b.items.some(i=>i.id==='E8'));
 
   if(hasHangboard){
-    return `<div class="banner block">⛔ <b>Uwaga: chwytotablica i wspinanie tego samego dnia.</b>
-      Plan wymaga co najmniej <b>48 godzin odstępu</b> między tablicą a wspinaniem — ten sam dzień to najostrzejsze możliwe naruszenie tej zasady.
-      Do tego tablicę robi się wyłącznie <b>na początku jednostki, na świeżych palcach</b>, więc po wspinaniu i tak nie miałaby sensu.
-      <b>Rozwiązanie:</b> zrób dziś moduł siłowy bez tablicy (odpuść ją tylko dzisiaj), a tablicę przenieś na inny dzień.
-      ${hasDips ? ' Dodatkowo dipy: plan zabrania ich w dobie po mocnym wspinaniu — jeśli wspinasz się dziś mocno, dipy odpuść.' : ''}</div>`;
+    return bannerHTML('block', '⛔', 'Chwytotablica i wspinanie tego samego dnia',
+      `Plan wymaga co najmniej <b>48 godzin odstępu</b> między tablicą a wspinaniem — ten sam dzień to najostrzejsze możliwe naruszenie tej zasady.
+       Do tego tablicę robi się wyłącznie <b>na początku jednostki, na świeżych palcach</b>, więc po wspinaniu i tak nie miałaby sensu.
+       <br><br><b>Rozwiązanie:</b> zrób dziś moduł siłowy bez tablicy (odpuść ją tylko dzisiaj), a tablicę przenieś na inny dzień.
+       ${hasDips ? '<br><br>Dodatkowo dipy: plan zabrania ich w dobie po mocnym wspinaniu — jeśli wspinasz się dziś mocno, dipy odpuść.' : ''}`);
   }
-  let html = `<div class="banner warn">⚠️ <b>Dwie jednostki tego samego dnia.</b>
-    Ten blok nie obciąża palców, więc <b>nie koliduje ze wspinaniem</b> — to bezpieczne połączenie.
+  let body = `Ten blok nie obciąża palców, więc <b>nie koliduje ze wspinaniem</b> — to bezpieczne połączenie.
     Pilnuj tylko kolejności: zmęczone nogi pogarszają pracę stóp na ścianie, więc albo wspinaj się najpierw, albo rozdziel obie jednostki o kilka godzin.
     Pamiętaj też o limicie <b>5 jednostek siłowych na 14 dni</b>.`;
-  if(hasDips) html += ` Dipy pomiń, jeśli wspinanie było mocne — plan zabrania ich w dobie po ciężkiej sesji.`;
-  return html + `</div>`;
+  if(hasDips) body += ` Dipy pomiń, jeśli wspinanie było mocne — plan zabrania ich w dobie po ciężkiej sesji.`;
+  return bannerHTML('warn', '⚠️', 'Dwie jednostki tego samego dnia', body);
 }
 
 function dayPickerHTML(planned, day, overridden, extras){
@@ -2270,25 +2297,30 @@ function renderToday(){
 
   const pos = planned.pos;
   if(pos && pos.deload && !overridden){
-    html += `<div class="banner warn">🪫 <b>Tydzień odciążeniowy (deload).</b> Co trzeci cykl organizm dostaje tydzień na odbudowę: liczba serii w ćwiczeniach jest automatycznie <b>zmniejszona o połowę</b>, chwytotablica i kamizelka całkowicie odpadają. Ciężary i technika zostają — schodzi tylko objętość. To nie strata tygodnia, to warunek dalszych postępów.</div>`;
+    html += bannerHTML('warn', '🪫', 'Tydzień odciążeniowy (deload)',
+      'Co trzeci cykl organizm dostaje tydzień na odbudowę: liczba serii jest automatycznie <b>zmniejszona o połowę</b>, chwytotablica i kamizelka całkowicie odpadają. Ciężary i technika zostają — schodzi tylko objętość. To nie strata tygodnia, to warunek dalszych postępów.');
   }
   if(day.proposed && !overridden){
-    html += `<div class="banner warn">🧩 <b>${day.title.split(' ')[0]} ${day.title.split(' ')[1]} to propozycja trenerska</b> przygotowana przeze mnie według założeń Twojego planu (te same wzorce ruchowe co Moduł A w innych wariantach, zakresy siłowe, soleus dla Achillesa). Nie pochodzi z Twojego projektu treningowego — jeśli kiedyś dostaniesz „oficjalne" moduły B/C, podmienimy treść.</div>`;
+    html += bannerHTML('warn', '🧩', day.title.split(' ').slice(0,2).join(' ') + ' — propozycja trenerska',
+      'Ten moduł przygotowałem według założeń Twojego planu (te same wzorce ruchowe co Moduł A w innych wariantach, zakresy siłowe, soleus dla Achillesa). Nie pochodzi z Twojego projektu treningowego — jeśli kiedyś dostaniesz „oficjalne" moduły B/C, podmienimy treść.');
   }
   if(overridden){
     const tail = day.type === 'rest'
       ? 'Pauza zamiast treningu jest zawsze w porządku — regeneracja też buduje formę.'
       : 'Pamiętaj, że dzień odpoczynku w planie nie jest przypadkowy — traktuj tę zmianę jako wyjątek, nie regułę.';
-    html += `<div class="banner warn">📅 <b>Modyfikacja planu.</b> Według planu ten dzień to „${planned.title}", a Ty wybrałeś „${day.title}". ${tail}</div>`;
+    html += bannerHTML('warn', '📅', 'Modyfikacja planu',
+      `Według planu ten dzień to „${planned.title}", a Ty wybrałeś „${day.title}". ${tail}`);
   }
   extras.forEach(x=>{ html += comboWarningHTML(day, x); });
   html += dayPickerHTML(planned, day, overridden, extras);
 
   if(iso === todayISO() && !loadEntry(todayISO()).stiffness){
-    html += `<div class="banner warn">🌅 <b>Brak dzisiejszego wpisu porannego.</b> Zapisz sztywność Achillesa i palców w zakładce „Poranek" — od tego wpisu zależy m.in., czy dziś bezpiecznie robić chwytotablicę.</div>`;
+    html += bannerHTML('warn', '🌅', 'Brak dzisiejszego wpisu porannego',
+      'Zapisz sztywność Achillesa i palców — od tego wpisu zależy m.in., czy dziś bezpiecznie robić chwytotablicę. <span class="lnk" onclick="switchTab(\'stiff\')">Przejdź do porannego wpisu</span>');
   }
   if(!store.get('fitnessTest', null) && !Object.keys(getLevels()).length){
-    html += `<div class="banner warn" style="cursor:pointer;" onclick="openTest()">🎯 <b>Dobierz poziom startowy.</b> Krótki test sprawności (9 prób) ustawi każde ćwiczenie tak, żeby było wykonalne od pierwszego dnia — a gdy coś okaże się za trudne, na ekranie ćwiczenia zawsze masz przycisk „stopień niżej". <u>Dotknij, aby zrobić test.</u></div>`;
+    html += bannerHTML('warn', '🎯', 'Dobierz poziom startowy',
+      'Krótki test sprawności (9 prób) ustawi każde ćwiczenie tak, żeby było wykonalne od pierwszego dnia — a gdy coś okaże się za trudne, na ekranie ćwiczenia zawsze masz przycisk „stopień niżej". <span class="lnk" onclick="openTest()">Zrób test sprawności</span>');
   }
 
   const units = [day, ...extras];
