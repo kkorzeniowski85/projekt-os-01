@@ -380,42 +380,6 @@
     </div>
   </section>
 
-  <!-- ===================== EKRAN: PORANEK ===================== -->
-  <section class="screen" id="screen-stiff">
-    <h2 style="margin-bottom:2px;">Poranny dziennik ścięgien</h2>
-    <div class="meta" style="margin-bottom:14px;">Codziennie rano, zaraz po wstaniu — zajmuje pół minuty.</div>
-
-    <details class="tech" id="stiffInfo">
-      <summary>Po co to jest i jak oceniać?</summary>
-      <div class="inner">
-        <b>Co oceniasz:</b> uczucie „zastania" po nocy — jak sztywne i oporne są przy pierwszych ruchach:<br>
-        • <b>ścięgno Achillesa</b> — przy pierwszych krokach po wstaniu z łóżka,<br>
-        • <b>palce dłoni</b> — przy pierwszym zaciśnięciu pięści.
-        <br><br>
-        <b>Skala 0–10:</b> 0 = nic nie czuć · 2–3 = lekkie zastanie, znika po chwili · 5–6 = wyraźna sztywność, utrudnia pierwsze kroki/ruchy · 8+ = silne usztywnienie.
-        <br><br>
-        <b>Minuty:</b> po ilu minutach od wstania uczucie całkiem znika.
-        <br><br>
-        <b>Dlaczego to najważniejszy wpis w całej aplikacji:</b> poranna sztywność ścięgna to najwcześniejszy sygnał, że dostaje ono więcej obciążenia, niż jest w stanie przerobić — pojawia się na <b>tygodnie przed bólem</b>. Aplikacja liczy z Twoich wpisów osobistą normę i porównuje z nią każdy poranek. Gdy odczyt jest wyraźnie powyżej normy, plan cofa obciążenie, zanim cokolwiek zacznie boleć. Bez codziennych wpisów ten mechanizm nie ma danych i nie działa.
-      </div>
-    </details>
-
-    <div class="card slider-card" style="margin-top:14px;">
-      <div class="slider-row"><b>Achilles — sztywność rano</b><span class="val tabnum" id="achVal">0</span></div>
-      <input type="range" id="achScore" min="0" max="10" value="0" oninput="document.getElementById('achVal').textContent=this.value">
-      <div style="margin-top:10px;"><label style="font-size:0.75rem;color:var(--chalk-500);">Po ilu minutach ustąpiła</label><input type="number" id="achMin" placeholder="np. 5"></div>
-    </div>
-
-    <div class="card slider-card">
-      <div class="slider-row"><b>Palce — sztywność rano</b><span class="val tabnum" id="finVal">0</span></div>
-      <input type="range" id="finScore" min="0" max="10" value="0" oninput="document.getElementById('finVal').textContent=this.value">
-      <div style="margin-top:10px;"><label style="font-size:0.75rem;color:var(--chalk-500);">Po ilu minutach ustąpiła</label><input type="number" id="finMin" placeholder="np. 5"></div>
-    </div>
-
-    <button class="btn btn-primary" onclick="saveStiffness()">Zapisz dzisiejszy wpis</button>
-    <div class="notes-box" id="stiffFlag" style="display:none;"></div>
-  </section>
-
   <!-- ===================== EKRAN: TIMERY / POJEDYNCZE ĆWICZENIA ===================== -->
   <section class="screen" id="screen-tools">
     <h2 style="margin-bottom:2px;">Timery</h2>
@@ -497,14 +461,13 @@
 <nav class="bottomnav">
   <button class="active" data-tab="today" onclick="switchTab('today')"><span class="ic">🏠</span>Dziś</button>
   <button data-tab="tools" onclick="switchTab('tools')"><span class="ic">⏱️</span>Timery</button>
-  <button data-tab="stiff" onclick="switchTab('stiff')"><span class="ic">🌅</span>Poranek</button>
   <button data-tab="history" onclick="switchTab('history')"><span class="ic">📓</span>Dziennik</button>
   <button data-tab="settings" onclick="switchTab('settings')"><span class="ic">⚙️</span>Więcej</button>
 </nav>
 
 <script>
 'use strict';
-const APP_VERSION = '1.10.0';
+const APP_VERSION = '1.11.0';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -1804,13 +1767,6 @@ function checkFingerLimits(forWhat){ // 'hangboard' | 'climb'
     }
   }
 
-  // Poranna sztywność palców blokuje tablicę
-  if(forWhat === 'hangboard'){
-    const st = loadEntry(today).stiffness;
-    if(st && Number(st.fingersScore) >= 3){
-      out.warns.push({t:'Poranna sztywność palców '+st.fingersScore+'/10', b:'Jeśli jest większa niż zwykle u Ciebie — <b>dziś bez tablicy, reszta treningu zostaje</b>. To najwcześniejszy sygnał, że palce nie odbudowały się po ostatnim obciążeniu.'});
-    }
-  }
   return out;
 }
 
@@ -2115,7 +2071,6 @@ function switchTab(tab){
   state.returnTab = tab;
   if(tab==='today'){ document.getElementById('screen-today').classList.add('active'); renderAll(); }
   else if(tab==='tools'){ document.getElementById('screen-tools').classList.add('active'); renderTools(); }
-  else if(tab==='stiff'){ document.getElementById('screen-stiff').classList.add('active'); loadStiffnessForm(); }
   else if(tab==='history'){ document.getElementById('screen-history').classList.add('active'); renderHistory(); }
   else if(tab==='settings'){ document.getElementById('screen-settings').classList.add('active'); loadSettingsForm(); }
 }
@@ -2404,8 +2359,7 @@ function dayComponentHTML(dayObj, entry){
     return html;
   }
   if(dayObj.type==='rest'){
-    html += `<div class="notes-box">Dziś nic nie trenujesz — regeneracja jest częścią planu, nie przerwą w nim. Pamiętaj tylko o porannym wpisie sztywności.</div>`;
-    html += `<div style="margin-top:12px;"><button class="btn btn-secondary" onclick="switchTab('stiff')">Przejdź do porannego wpisu</button></div>`;
+    html += `<div class="notes-box">Dziś nic nie trenujesz — regeneracja jest częścią planu, nie przerwą w nim. Jeśli chcesz, możesz dołożyć lekką mobilność albo wyciszenie.</div>`;
     return html;
   }
   dayObj.blocks.forEach((block, bi)=>{
@@ -2478,10 +2432,6 @@ function renderToday(){
   extras.forEach(x=>{ html += comboWarningHTML(day, x); });
   html += dayPickerHTML(planned, day, overridden, extras);
 
-  if(iso === todayISO() && !loadEntry(todayISO()).stiffness){
-    html += bannerHTML('warn', '🌅', 'Brak dzisiejszego wpisu porannego',
-      'Zapisz sztywność Achillesa i palców — od tego wpisu zależy m.in., czy dziś bezpiecznie robić chwytotablicę. <span class="lnk" onclick="switchTab(\'stiff\')">Przejdź do porannego wpisu</span>');
-  }
   if(!store.get('fitnessTest', null) && !Object.keys(getLevels()).length){
     html += bannerHTML('warn', '🎯', 'Dobierz poziom startowy',
       'Krótki test sprawności (9 prób) ustawi każde ćwiczenie tak, żeby było wykonalne od pierwszego dnia — a gdy coś okaże się za trudne, na ekranie ćwiczenia zawsze masz przycisk „stopień niżej". <span class="lnk" onclick="openTest()">Zrób test sprawności</span>');
@@ -2947,81 +2897,6 @@ function logCurrentSet(exId){
 }
 
 /* =========================================================================
-   PORANNY DZIENNIK — z porównaniem do Twojej normy
-   ========================================================================= */
-function stiffnessBaseline(){
-  const today = todayISO();
-  const entries = [];
-  for(const k of store.keys('entries:')){
-    const iso = k.replace('entries:','');
-    if(iso >= today) continue;
-    const e = store.get(k, {});
-    if(e.stiffness) entries.push({iso, s:e.stiffness});
-  }
-  entries.sort((a,b)=>a.iso<b.iso?1:-1);
-  const last = entries.slice(0,10);
-  if(last.length < 3) return null;
-  const avg = arr => arr.reduce((s,x)=>s+x,0)/arr.length;
-  return {
-    n: last.length,
-    achMin: avg(last.map(x=>Number(x.s.achillesMinutes)||0)),
-    finMin: avg(last.map(x=>Number(x.s.fingersMinutes)||0)),
-  };
-}
-
-function loadStiffnessForm(){
-  const e = loadEntry(todayISO());
-  const s = e.stiffness || {};
-  document.getElementById('achScore').value = s.achillesScore ?? 0;
-  document.getElementById('achVal').textContent = s.achillesScore ?? 0;
-  document.getElementById('achMin').value = s.achillesMinutes ?? '';
-  document.getElementById('finScore').value = s.fingersScore ?? 0;
-  document.getElementById('finVal').textContent = s.fingersScore ?? 0;
-  document.getElementById('finMin').value = s.fingersMinutes ?? '';
-  // przy pierwszych wejściach rozwiń wyjaśnienie
-  if(store.keys('entries:').length < 3) document.getElementById('stiffInfo').open = true;
-  if(e.stiffness) checkStiffFlag(s);
-}
-
-function saveStiffness(){
-  const data = {
-    achillesScore: Number(document.getElementById('achScore').value),
-    achillesMinutes: document.getElementById('achMin').value,
-    fingersScore: Number(document.getElementById('finScore').value),
-    fingersMinutes: document.getElementById('finMin').value,
-    savedAt: new Date().toISOString(),
-  };
-  mergeEntry(todayISO(), {stiffness:data});
-  checkStiffFlag(data);
-  vibrate(30);
-}
-
-function checkStiffFlag(s){
-  const box = document.getElementById('stiffFlag');
-  const base = stiffnessBaseline();
-  const msgs = [];
-
-  if(base){
-    const achMin = Number(s.achillesMinutes)||0;
-    const finMin = Number(s.fingersMinutes)||0;
-    if(achMin > base.achMin*1.5 && achMin - base.achMin >= 3){
-      msgs.push(`<span class="warn"><b>Achilles: dziś sztywniejszy niż zwykle.</b></span> Sztywność ustępowała ${achMin} min, a Twoja norma z ostatnich ${base.n} dni to ${base.achMin.toFixed(0)} min. To najwcześniejszy sygnał przeciążenia — jeśli powtórzy się jutro, wróć do łatwiejszej wersji wspięć (np. bez pauzy w dole, mniej serii), zanim pojawi się ból.`);
-    }
-    if(finMin > base.finMin*1.5 && finMin - base.finMin >= 3){
-      msgs.push(`<span class="warn"><b>Palce: dziś sztywniejsze niż zwykle.</b></span> Dziś ${finMin} min vs. norma ${base.finMin.toFixed(0)} min. Dziś nie rób chwytotablicy. Jeśli to samo będzie jutro — cały tydzień bez tablicy.`);
-    }
-  } else {
-    msgs.push(`Zapisano. Aplikacja buduje teraz Twoją normę — po 3 wpisach zacznie porównywać każdy poranek z Twoją średnią i ostrzegać, gdy coś odbiega.`);
-  }
-  if(s.achillesScore>=6 || s.fingersScore>=6){
-    msgs.push(`<span class="warn"><b>Wysoka sztywność (≥6/10).</b></span> Nie trenuj dziś obciążająco tej okolicy. Sztywność wyprzedza ból o tygodnie — zareagowanie teraz to najtańszy moment.`);
-  }
-  if(msgs.length === 0) msgs.push('✓ Zapisano. Wartości w Twojej normie.');
-  box.style.display = 'block';
-  box.innerHTML = msgs.join('<br><br>');
-}
-
-/* =========================================================================
    ZAPIS WSPINANIA
    ========================================================================= */
 function saveClimb(){
@@ -3228,7 +3103,7 @@ function renderHistory(){
   const list = document.getElementById('historyList');
   const keys = store.keys('entries:').sort().reverse().slice(0,14);
   if(!keys.length){
-    list.innerHTML = '<div class="empty-hint">Brak zapisanych dni. Zacznij od dzisiejszego wpisu porannego.</div>';
+    list.innerHTML = '<div class="empty-hint">Brak zapisanych dni. Zaloguj pierwszą serię albo sesję wspinania.</div>';
     return;
   }
   let html = '';
@@ -3236,7 +3111,6 @@ function renderHistory(){
     const iso = k.replace('entries:','');
     const entry = store.get(k, {});
     const tags = [];
-    if(entry.stiffness) tags.push(`<span class="pill">Achilles ${entry.stiffness.achillesScore}/10 · palce ${entry.stiffness.fingersScore}/10</span>`);
     if(entry.climb) tags.push(`<span class="pill">🧗 ${entry.climb.routes||0} dróg / ${entry.climb.boulders||0} buld.</span>`);
     if(entry.exercises){
       const n = Object.keys(entry.exercises).length;

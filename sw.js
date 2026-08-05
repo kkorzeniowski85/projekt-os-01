@@ -1,6 +1,6 @@
 /* Service worker — offline-first, aktualizacja w tle.
    Przy każdej nowej wersji aplikacji podbij CACHE_VERSION. */
-const CACHE_VERSION = 'trener-fbw-v16';
+const CACHE_VERSION = 'trener-fbw-v17';
 const ASSETS = [
   './',
   './index.html',
