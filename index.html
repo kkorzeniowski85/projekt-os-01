@@ -462,7 +462,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.11.1';
+const APP_VERSION = '1.12.0';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -590,6 +590,26 @@ const GENERAL_WARMUP = {
      desc:'Cat-cow: w klęku podpartym powolne wyginanie i zaokrąglanie kręgosłupa. Dead bug: na plecach, lędźwie dociśnięte do podłogi przez cały czas, naprzemienne prostowanie przeciwnej ręki i nogi. Jeśli lędźwie odrywają się od podłogi — skróć zakres.'},
     {label:'Mobilność bioder — gołąb + głęboki przysiad', seconds:300,
      desc:'Gołąb: z klęku podpartego jedna noga zgięta z przodu, druga wyprostowana w tył, biodra równo — 45–60 s na stronę, spokojny oddech. Potem głęboki przysiad (tzw. słowiański): pięty na podłodze, łokcie rozpychają kolana od środka — 2 × 45–60 s. Otwarte biodra to wyższe podciąganie nóg na ścianie i mniejsze kompensacje w lędźwiach.'},
+  ]
+};
+
+/* Rozgrzewka do programu gumowego — zero sprzętu poza taśmą. */
+const GUM_WARMUP = {
+  id:'warmup_gum', name:'Rozgrzewka dynamiczna', kind:'warmup',
+  intro:'8 minut. Wyłącznie ruch dynamiczny — <b>bez długiego rozciągania statycznego przed sesją</b>: rozciąganie trzymane 60 s i dłużej obniża siłę maksymalną w tym treningu. Statykę zostaw na wyciszenie po sesji.',
+  steps:[
+    {label:'Podniesienie tętna — 3 min', seconds:180,
+     desc:'Szybki marsz w miejscu z pracą ramion, wykroki chodzone, „bokser" (przenoszenie ciężaru z nogi na nogę). <b>Bez podskoków</b> ze względu na Twoje ścięgna Achillesa. Koniec, gdy oddech przyspieszony, ale mówisz pełnymi zdaniami.'},
+    {label:'Nadgarstki i przedramiona', seconds:60,
+     desc:'Krążenia nadgarstków w obie strony, zginanie i prostowanie, delikatne rozciąganie w podporze na czworakach (palce do kolan i od kolan). Obowiązkowe — cała sesja push i ab wheel obciąża nadgarstki.'},
+    {label:'Obręcz barkowa z taśmą', reps:'2 × 10',
+     desc:'Rozciąganie taśmy przed klatką (pull-apart) na prostych rękach oraz „dyslokacje": taśma trzymana szeroko, przeprowadzasz ją wyprostowanymi rękami nad głową do tyłu i z powrotem. Szerokość chwytu dobierz tak, żeby ramiona zostały proste.'},
+    {label:'Odcinek piersiowy i biodra', seconds:120,
+     desc:'Cat-cow 8 powtórzeń, rotacje piersiowe „open book" leżąc na boku 6 na stronę, pozycja 90/90 z przechylaniem 6 na stronę, 3 głębokie przysiady z przytrzymaniem 5 s (łokcie rozpychają kolana).'},
+    {label:'Aktywacja pośladków i core', reps:'2 × 12',
+     desc:'Odwodzenie na taśmie w bok (taśma nad kolanami), mostek biodrowy obunóż z sekundą pauzy, dead bug 8 naprzemiennych powtórzeń z lędźwiami dociśniętymi do podłogi.'},
+    {label:'Aktywacja docelowego wzorca', reps:'1 × 5',
+     desc:'Pięć powtórzeń pierwszego ćwiczenia sesji w łatwiejszym wariancie, z maksymalną intencją przyspieszenia. To „budzi" układ nerwowy — a on jest w tym programie głównym motorem siły.'},
   ]
 };
 
@@ -1308,6 +1328,216 @@ function buildWeek(){
   };
 
   /* Moduły jako kompletne listy pozycji (rotacja A→B→C przez cykle). */
+  /* =======================================================================
+     PROGRAM GUMOWY — osobny trening: tylko taśmy oporowe, masa ciała i ab
+     wheel. Zero drążka, zero drabinki. Cel: siła maksymalna przy minimum
+     hipertrofii, więc reguła nadrzędna: 3–5 powtórzeń albo 5–6 s izometrii,
+     RIR 2–3 (nigdy do upadku), przerwy 3–5 min, maksymalna INTENCJA
+     przyspieszenia. Objętość celowo niska (≤4–5 serii na grupę tygodniowo).
+     ======================================================================= */
+  const RIR_NOTE = 'Kończysz serię z zapasem 2–3 powtórzeń — nigdy do upadku. Każde powtórzenie z maksymalną intencją przyspieszenia, nawet jeśli realnie idzie wolno; to intencja, nie prędkość, buduje siłę neuronalną.';
+
+  const G01 = {
+    id:'G01', name:'Wspieranie przy ścianie / pompki pike', sets:4, repsRange:'3–5 powt.', rest:210, tempo:null,
+    cue:'Główny wzorzec pchania nad głowę. Wyciskasz z maksymalną intencją, schodzisz kontrolowanie. ' + RIR_NOTE,
+    warn:'Ból przedniej strony barku albo nadgarstka → zejdź do pompek pike o mniejszym kącie. Nie ćwicz przez ból karku.',
+    tech:[
+      {t:'Wybór wariantu', h:'Zacznij od <b>pompek pike ze stopami na podłodze</b> (pozycja odwróconego „V", biodra wysoko). Trudniej: stopy na kanapie lub krzesle. Najtrudniej: <b>wspieranie przy ścianie</b> — brzuchem do ściany, stopy wchodzą po niej w górę, dłonie 30 cm od ściany. Wybierz wariant, w którym <b>5 powtórzeń to granica</b>.'},
+      {t:'Wykonanie', h:'<ol><li>Dłonie nieco szerzej niż barki, palce szeroko rozstawione, ciężar na całej dłoni.</li><li>Barki aktywnie wypchnięte („długie ramiona"), miednica podwinięta, żebra w dół.</li><li>Schodzisz tak, żeby głowa wyszła <b>przed</b> linię dłoni — nie między dłonie.</li><li>Łokcie ok. 45° od tułowia, nie na boki.</li><li>Wyjście z pełną intencją przyspieszenia, na końcu wypchnięcie barków.</li></ol>'},
+      {t:'Jak progresować bez ciężaru', h:'Kolejność: stopy coraz wyżej → dłonie na podporach (większy zakres) → wspieranie przy ścianie → wspieranie z dłońmi bliżej ściany → pauza 2 s w dole. <b>Gdy zrobisz 6 czystych powtórzeń — zmień wariant, nie dokładaj powtórzeń.</b> Dokładanie powtórzeń buduje masę, zmiana wariantu buduje siłę.'},
+      {t:'Bezpieczeństwo przy ścianie', h:'Zejście zawsze stopami po ścianie, nigdy przewrotem ani zeskokiem. Jeśli tracisz kontrolę — wariant za trudny.'},
+    ]
+  };
+  const G02 = {
+    id:'G02', name:'Pompki archer (docelowo jednorącz)', sets:3, repsRange:'3–5 powt. na stronę', rest:180, tempo:null,
+    cue:'Pchanie jednostronne — namiastka bardzo ciężkiej pompki bez dokładania obciążenia. ' + RIR_NOTE,
+    tech:[
+      {t:'Ustawienie', h:'Pozycja pompki z rękami rozstawionymi szeroko. Ciężar przenosisz na jedną rękę i schodzisz w jej kierunku; ręka „wolna" zostaje <b>wyprostowana w bok</b>, dłoń na podłodze jako podpora, nie jako druga pchająca ręka.'},
+      {t:'Wykonanie', h:'<ol><li>Ciało w jednej linii, bez skręcania miednicy i bez zapadania barku po stronie pracującej.</li><li>Schodzisz kontrolowanie do zgięcia łokcia pracującej ręki.</li><li>Wyjście z maksymalną intencją przyspieszenia.</li></ol>'},
+      {t:'Drabinka trudności', h:'Pompki zwykłe → szerokie → archer z nogami na podłodze → archer z nogami wyżej (kanapa) → archer z coraz mniejszym udziałem ręki wolnej → pompka jednorącz z szeroko rozstawionymi stopami → jednorącz ze stopami wąsko. Progresujesz wariantem, nie liczbą powtórzeń.'},
+      {t:'Najczęstsze błędy', h:'<ul><li>Ręka wolna zgina się i zaczyna pchać — wtedy to zwykła szeroka pompka.</li><li>Skręcanie tułowia zamiast przesunięcia w bok.</li><li>Zapadanie bioder (brak napięcia core).</li></ul>'},
+    ]
+  };
+  const G03 = {
+    id:'G03', name:'Pseudo-planche — izometria', sets:3, holdRange:[5,6], rest:180, tempo:null, holdBased:true, kindHold:true,
+    cue:'Utrzymanie pochylenia z maksymalnym napięciem. 5–6 s to granica — jeśli wytrzymujesz 15 s, wariant jest za łatwy.',
+    warn:'Ostry ból nadgarstka albo przedniej strony łokcia → zmniejsz pochylenie. Nadgarstki muszą być rozgrzane przed tym ćwiczeniem.',
+    tech:[
+      {t:'Ustawienie', h:'Pozycja deski na prostych rękach, ale dłonie cofnięte w stronę bioder, palce skierowane <b>w tył lub na boki</b> (co wygodniejsze dla nadgarstków). Barki wychylasz daleko przed linię dłoni — to pochylenie jest miarą trudności.'},
+      {t:'Wykonanie', h:'<ol><li>Ciało sztywne jak deska: miednica podwinięta, żebra ściągnięte, pośladki napięte.</li><li>Barki aktywnie wypchnięte, plecy lekko zaokrąglone między łopatkami (protrakcja).</li><li>Utrzymujesz 5–6 s z <b>maksymalnym napięciem całego ciała</b>, oddychając płytko.</li></ol>'},
+      {t:'Dlaczego izometria działa bez ciężaru', h:'Izometria pokonująca z maksymalnym wysiłkiem podnosi siłę głównie przez rekrutację najwyższoprogowych jednostek motorycznych — czyli dokładnie ten mechanizm, którego nie potrzebujesz obciążać z zewnątrz. Efekt jest jednak <b>specyficzny dla kąta</b>, w którym trenujesz, dlatego w programie masz też pracę dynamiczną.'},
+      {t:'Progresja', h:'Większe pochylenie (barki dalej przed dłonie) → dłużej → nogi wyżej → nogi wąsko razem. Możesz też stopniowo unosić jedną stopę.'},
+    ]
+  };
+  const G04 = {
+    id:'G04', name:'Ab wheel — rollout', sets:3, repsRange:'3–5 powt.', rest:180, tempo:null,
+    cue:'Miednica podwinięta ZANIM ruszysz. Zakres kończy się tam, gdzie lędźwie zaczynają się wyginać.',
+    warn:'Ból w lędźwiach → skróć zakres i sprawdź podwinięcie miednicy. To ćwiczenie daje silny bodziec ekscentryczny, dlatego objętość jest celowo niska — nie dokładaj serii.',
+    tech:[
+      {t:'Wykonanie', h:'<ol><li>Klęk, kółko pod barkami. <b>Przed ruchem</b>: miednica podwinięta, żebra ściągnięte w dół.</li><li>Wytaczasz kółko w przód, utrzymując dokładnie tę pozycję.</li><li>Zakres kończy się w momencie, w którym czujesz, że lędźwie zaczynają się wyginać w łuk — ani centymetra dalej.</li><li>Powrót pracą brzucha, nie składaniem bioder.</li></ol>'},
+      {t:'Progresja', h:'Zakres do połowy → 3/4 → pełny z kolan → rollout ze stania do ściany (ścianę stopniowo odsuwasz). Zwiększasz <b>zakres</b>, nigdy tempo.'},
+      {t:'Dlaczego niska objętość', h:'Ab wheel to jedno z najsilniejszych ćwiczeń na mięsień prosty brzucha, ale faza ekscentryczna łatwo daje zakwasy i przerost. Przy celu „siła bez masy" trzymamy 3 serie i pełne przerwy.'},
+    ]
+  };
+  const G05 = {
+    id:'G05', name:'Pallof press na taśmie', sets:2, repsRange:'6–8 powt. na stronę', rest:90, tempo:null,
+    cue:'Taśma ciągnie w bok — Ty nie pozwalasz się obrócić. Wyciskasz ręce przed klatkę i wracasz, tułów nieruchomy.',
+    tech:[
+      {t:'Ustawienie', h:'Taśma przypięta na wysokości mostka do <b>niskiej, pewnej kotwicy</b> — klamka zamkniętych drzwi (taśma po drugiej stronie), noga ciężkiego łóżka, słupek. Stań bokiem, chwyt oburącz przy klatce, odejdź na tyle, żeby taśma była wyraźnie napięta.'},
+      {t:'Wykonanie', h:'<ol><li>Wyciskasz ręce powoli przed klatkę do pełnego wyprostu.</li><li>Zatrzymanie 2 s — biodra i barki idealnie w linii, <b>zero rotacji tułowia</b>.</li><li>Powolny powrót do klatki. Po serii zmień stronę.</li></ol>'},
+      {t:'Po co to w programie', h:'Anty-rotacja to jedyny wzorzec core, którego nie dają ani ab wheel, ani hollow hold. Przy pracy w asymetrycznym obciążeniu (fartuch ołowiany, plecak, sięganie w bok na ścianie) właśnie ta funkcja chroni odcinek lędźwiowy.'},
+      {t:'Progresja', h:'Dalej od kotwicy → mocniejsza taśma → dłuższa pauza → pozycja w półprzysiadzie lub w klęku jednonóż (mniejsza podstawa).'},
+    ]
+  };
+  const G06 = {
+    id:'G06', name:'Izometria pokonująca: wyprost łokcia w ścianę', sets:3, holdRange:[5,5], rest:120, tempo:null, holdBased:true,
+    cue:'Pchasz w nieruchomy opór z maksymalną siłą przez 5 sekund. Narastanie siły ma być szybkie, nie powolne.',
+    tech:[
+      {t:'Ustawienie', h:'Stań przy ścianie (albo futrynie) w odległości, w której łokcie są zgięte pod kątem <b>ok. 90–100°</b>, dłonie na ścianie na wysokości klatki. Możesz też pchać w blat lub w podłogę w pozycji pompki zatrzymanej w dole.'},
+      {t:'Wykonanie', h:'<ol><li>Napnij całe ciało, potem <b>w ciągu ułamka sekundy</b> rozwiń maksymalną siłę pchania — jakbyś chciał przesunąć ścianę.</li><li>Utrzymaj maksimum 5 sekund, oddychając płytko.</li><li>Rozluźnij całkowicie i odczekaj pełną przerwę.</li></ol>'},
+      {t:'Dlaczego szybkie narastanie siły', h:'Intencja balistyczna (szybkie dojście do maksimum) daje wyraźnie lepszy przyrost szybkości rozwijania siły i aktywacji nerwowej niż powolne narastanie — a jednocześnie <b>mniejszy przyrost masy</b> niż długo podtrzymywane napięcie. To dokładnie ten kompromis, który chcesz.'},
+      {t:'Ograniczenie, o którym warto wiedzieć', h:'Siła izometryczna rośnie przede wszystkim <b>w trenowanym kącie</b>. Dlatego ćwiczenie stoi w programie obok pracy dynamicznej, a nie zamiast niej — samo nie da siły w całym zakresie ruchu.'},
+    ]
+  };
+
+  const G07 = {
+    id:'G07', name:'Pistol squat (progresja)', sets:4, repsRange:'3–5 powt. na nogę', rest:210,
+    tempo:{label:'3-1-X', phases:[{l:'W dół',s:3},{l:'Pauza',s:1},{l:'W górę (X)',s:0}]},
+    cue:'Przysiad na jednej nodze — główna siła nóg bez grama obciążenia. 3 s w dół, 1 s pauzy, dynamicznie w górę. Pięta na podłożu.',
+    warn:'Pięta musi zostać na podłodze przez cały ruch. Jeśli się odrywa — ogranicz głębokość, nie kompensuj.',
+    tech:[
+      {t:'Wybór wariantu', h:'Zacznij od <b>przysiadu na jednej nodze do siedziska</b> (krzesło, kanapa) i wstawania z niego. Potem: niższe siedzisko → pistol bez deficytu, pełny zakres, płasko → pistol z pauzą 2 s → pistol z taśmą dającą dodatkowy opór. Wybierz wariant, w którym 5 powtórzeń to granica.'},
+      {t:'Wykonanie', h:'<ol><li>Noga wolna wyprostowana w przód, uniesiona.</li><li><b>3 sekundy</b> kontrolowanego schodzenia, kolano nad linią stopy — nie zapada się do środka.</li><li><b>1 sekunda pauzy</b> na dole, bez odbicia ze ścięgien.</li><li>Wyjście z maksymalną intencją przyspieszenia.</li></ol>'},
+      {t:'Bez drabinki — jak trzymać równowagę', h:'Możesz opierać opuszki palców jednej ręki o ścianę albo o framugę <b>wyłącznie dla równowagi</b>. Jeśli łapiesz się mocno i podciągasz — to już nie jest pistol i ćwiczenie traci sens.'},
+      {t:'Najczęstsze błędy', h:'<ul><li>Koślawienie kolana w dolnej fazie.</li><li>Zaokrąglenie lędźwi na samym dole — zatrzymaj się nad tym punktem.</li><li>Ręka na ścianie niepostrzeżenie przejmuje część ciężaru.</li></ul>'},
+    ]
+  };
+  const G08 = {
+    id:'G08', name:'Nordic curl — negatywy', sets:3, repsRange:'3–5 powt.', rest:180, tempo:null,
+    cue:'Opuszczanie w przód minimum 4 sekundy. Tułów, biodra i uda w jednej linii — biodra się nie zginają.',
+    warn:'Zanim obciążysz — przetestuj zakotwiczenie stóp bez pełnego ciężaru. Wyrwanie się stóp w połowie ruchu to realne ryzyko urazu, nie potknięcie.',
+    tech:[
+      {t:'Zakotwiczenie stóp bez drabinki i bez partnera', h:'Trzy działające opcje: <b>(1)</b> stopy wciśnięte pod ciężką kanapę lub szafkę — sprawdź, czy mebel się nie przesuwa; <b>(2)</b> stopy pod zamkniętymi drzwiami, na ręczniku chroniącym pięty, ćwiczysz od strony, w którą drzwi się nie otwierają; <b>(3)</b> taśma zapętlona wokół niskiego ciężkiego mebla i przełożona nad kostkami. Pod rzepki zawsze coś miękkiego.'},
+      {t:'Wykonanie', h:'<ol><li>Tułów, biodra i uda ustawione w <b>jednej linii</b> — i ta linia nie łamie się przez cały ruch.</li><li>Opuszczasz się w przód <b>minimum 4 sekundy</b>, tak daleko, jak utrzymujesz kontrolę.</li><li>Przy podłodze łapiesz ją rękami i odpychasz się nimi do powrotu — powrót nie musi być siłą samych ud.</li></ol>'},
+      {t:'Najczęstsze błędy', h:'<ul><li><b>„Spadanie"</b> po przekroczeniu punktu granicznego — zakres, nad którym nie panujesz, jest bezwartościowy i ryzykowny.</li><li>Zgięcie w biodrach („kłanianie się") — zamienia ćwiczenie w dużo łatwiejszy ruch.</li></ul>'},
+      {t:'Progresja', h:'Taśma jako mocna asysta → asysta rąk od wczesnej fazy → asysta rąk tylko przy podłodze → pełny negatyw bez rąk → powrót siłą ud.'},
+    ]
+  };
+  const G09 = {
+    id:'G09', name:'Mostek biodrowy jednonóż z pauzą', sets:3, repsRange:'5–6 powt. na nogę', rest:120,
+    tempo:{label:'2-1-2', phases:[{l:'W górę',s:2},{l:'Pauza',s:1},{l:'W dół',s:2}]},
+    cue:'Biodra do pełnego wyprostu, 1 s pauzy u góry. Lędźwie neutralne — ruch kończy pośladek, nie przeprost.',
+    tech:[
+      {t:'Ustawienie', h:'Leżenie tyłem, jedna stopa płasko na podłodze z ugiętym kolanem, druga noga uniesiona i wyprostowana. Trudniej: stopa na podwyższeniu (kanapa, stopień). Taśma nad kolanami dodaje opór odwodzenia.'},
+      {t:'Wykonanie', h:'<ol><li>Dociśnij <b>piętę</b> i unieś biodra przez 2 s, aż ciało od barków do kolana utworzy jedną linię.</li><li>1 s pauzy ze świadomym napięciem pośladka.</li><li>Opuszczanie 2 s, bez odkładania bioder na podłogę między powtórzeniami.</li></ol>'},
+      {t:'Po co to w programie', h:'Wyprost biodra to wzorzec, którego pistol i nordic nie pokrywają (tam pracuje kolano). Silny pośladek stabilizuje miednicę i odciąża lędźwie — istotne przy długim staniu w fartuchu ołowianym.'},
+      {t:'Najczęstsze błędy', h:'<ul><li>Przeprost w lędźwiach zamiast wyprostu biodra — żebra ściągnięte w dół.</li><li>Pchanie z palców zamiast z pięty.</li><li>Skracanie pauzy u góry.</li></ul>'},
+    ]
+  };
+  const G10 = {
+    id:'G10', name:'Wspięcia na palce jednonóż', sets:3, repsRange:'6–8 powt. na nogę', rest:120,
+    tempo:{label:'3-1-3', phases:[{l:'W górę',s:3},{l:'Pauza',s:1},{l:'W dół',s:3}]},
+    cue:'3 s w górę, 1 s pauzy, 3 s w dół. Płasko, bez deficytu, bez odbicia.',
+    warn:'Jeśli poranna sztywność Achillesa jest dłuższa niż zwykle — zmniejsz zakres albo odpuść tę pozycję. Powolna praca w dużym napięciu jest tu celowa i chroni ścięgno; szarpanie działa odwrotnie.',
+    tech:[
+      {t:'Wykonanie', h:'<ol><li>Przodostopie na płaskim podłożu, palce jednej ręki na ścianie dla równowagi. Pięta <b>nie schodzi poniżej poziomu palców</b>.</li><li>3 s powolnego wspięcia na pełny zakres.</li><li>1 s pauzy u góry.</li><li>3 s opuszczania do pozycji neutralnej, bez odbicia.</li></ol>'},
+      {t:'Dlaczego tak wolno', h:'Powolne obciążanie w dużym napięciu (protokół Heavy Slow Resistance) buduje tolerancję ścięgna Achillesa lepiej niż odpoczynek — u Ciebie, po przebytych zapaleniach, działa profilaktycznie. Faza opuszczania jest ważniejsza niż unoszenie.'},
+      {t:'Progresja', h:'Obunóż → jednonóż płasko → jednonóż z pauzą 2 s → jednonóż z plecakiem obciążonym (jeśli chcesz dołożyć opór). Deficyt (pięta poniżej poziomu palców) wchodzi tylko wtedy, gdy od dwóch tygodni nie masz zwiększonej sztywności porannej.'},
+    ]
+  };
+  const G11 = {
+    id:'G11', name:'Izometria pokonująca: przysiad w ścianę', sets:3, holdRange:[5,6], rest:150, tempo:null, holdBased:true,
+    cue:'Maksymalne pchanie w nieruchomy opór przy kolanach zgiętych 90–100°. Szybkie dojście do maksimum, 5–6 s utrzymania.',
+    tech:[
+      {t:'Jak zrobić opór nieruchomy', h:'Dwie opcje: <b>(1)</b> półprzysiad z plecami na ścianie i mocne pchanie stopami w podłogę oraz plecami w ścianę; <b>(2)</b> mocna taśma zapętlona pod stopami i przełożona przez barki — w półprzysiadzie próbujesz wstać przeciwko taśmie, która nie pozwala się wyprostować.'},
+      {t:'Kąt ma znaczenie', h:'Trenuj przy <b>kolanach zgiętych 90–100°</b>, czyli w pozycji, w której mięsień jest długi. Izometria w długiej długości mięśnia przenosi się na wyraźnie szerszy zakres kątów niż izometria w pozycji skróconej — a to właśnie tego chcesz od jednego ćwiczenia.'},
+      {t:'Wykonanie', h:'<ol><li>Ustaw kąt, napnij całe ciało.</li><li>Rozwiń maksymalną siłę <b>szybko</b>, nie narastając powoli.</li><li>5–6 s maksimum, potem pełne rozluźnienie i pełna przerwa.</li></ol>'},
+    ]
+  };
+  const G12 = {
+    id:'G12', name:'Hollow body hold', sets:2, holdRange:[10,20], rest:90, tempo:null, holdBased:true,
+    cue:'Lędźwie dociśnięte do podłogi przez cały czas. Jeśli odstają — podciągnij kolana, skróć dźwignię.',
+    tech:[
+      {t:'Wykonanie', h:'<ol><li>Leżenie tyłem, miednica podwinięta, <b>lędźwie mocno dociśnięte do podłogi</b> — to warunek konieczny, nie wskazówka.</li><li>Unieś barki i nogi nad podłogę, ramiona przy uszach lub przy biodrach (łatwiej).</li><li>Utrzymujesz pozycję, oddychając płytko. Kończysz w momencie, w którym lędźwie odrywają się od podłogi.</li></ol>'},
+      {t:'Progresja', h:'Kolana ugięte i ramiona przy biodrach → jedna noga prosta → obie nogi proste → ramiona wyciągnięte przy uszach → dłuższy czas. Dopiero potem wydłużasz utrzymanie.'},
+    ]
+  };
+
+  const G13 = {
+    id:'G13', name:'Wiosłowanie z taśmą jednorącz', sets:4, repsRange:'5–6 powt. na stronę', rest:180, tempo:null,
+    cue:'Główny wzorzec ciągnięcia w tym programie. Najmocniejszy dostępny opór, łokieć wzdłuż ciała, pauza u końca ruchu. ' + RIR_NOTE,
+    tech:[
+      {t:'Ustawienie i kotwica', h:'Taśma przypięta na wysokości klatki albo bioder do <b>pewnej niskiej kotwicy</b>: klamka zamkniętych drzwi (taśma przełożona po drugiej stronie), noga ciężkiego łóżka, słupek balustrady. Stań w wykroku, żeby móc pracować przeciwko napięciu bez przesuwania się.'},
+      {t:'Wykonanie', h:'<ol><li>Start z ramieniem wyprostowanym, łopatka wysunięta w przód.</li><li>Ciągnij, prowadząc <b>łokieć wzdłuż tułowia</b> do tyłu, kończąc ściągnięciem łopatki w dół i do siebie.</li><li>Krótka pauza w końcowej pozycji — to tam guma daje największy opór, więc tam jest najcenniejszy bodziec.</li><li>Powrót kontrolowany, bez pozwalania taśmie na szarpnięcie ramienia.</li></ol>'},
+      {t:'Jak zwiększać opór bez nowych taśm', h:'Skróć taśmę (chwyt bliżej kotwicy) → odejdź dalej od kotwicy (większe wydłużenie na starcie) → zawiąż krótszą pętlę → połącz dwie taśmy równolegle (opór ok. dwukrotny) → dodaj pauzę → zwolnij powrót.'},
+      {t:'Uczciwie o ograniczeniu', h:'Taśma daje najmniejszy opór na początku ruchu, gdzie mięsień jest rozciągnięty — czyli tam, gdzie zwykle jesteś najsłabszy. Dlatego pauza w końcowej fazie i wysoka intencja mają tu zastąpić brak ciężaru. To dobre ćwiczenie, ale nie identyczne z wiosłowaniem ze sztangą.'},
+    ]
+  };
+  const G14 = {
+    id:'G14', name:'Wiosłowanie z taśmą oburącz z pauzą', sets:3, repsRange:'5–6 powt.', rest:150, tempo:null,
+    cue:'Symetryczne ciągnięcie. 2 s pauzy w końcowej pozycji, łopatki ściągnięte nisko.',
+    tech:[
+      {t:'Ustawienie', h:'Taśma przypięta nisko, chwyt oburącz. Siedząc na podłodze z taśmą wokół stóp albo stojąc w wykroku. Ustaw się tak, żeby taśma była napięta już w pozycji startowej.'},
+      {t:'Wykonanie', h:'<ol><li>Ciągnij oba łokcie do tyłu wzdłuż tułowia.</li><li><b>2 sekundy pauzy</b> w pozycji końcowej — klatka wypchnięta, łopatki nisko i ściągnięte, barki nie wzruszone do uszu.</li><li>Powolny, kontrolowany powrót.</li></ol>'},
+      {t:'Wariant „bodyweight row"', h:'Jeśli masz naprawdę pewną niską kotwicę (np. słupek, ciężki stół sprawdzony pod obciążeniem), możesz chwycić taśmę i odchylić się, robiąc wiosłowanie ciężarem ciała — to obciąża grzbiet mocniej niż sama taśma. <b>Testuj kotwicę bez pełnego ciężaru, zanim się na niej zawiesisz.</b>'},
+    ]
+  };
+  const G15 = {
+    id:'G15', name:'Pull-apart + face pull na taśmie', sets:3, repsRange:'10–12 powt.', rest:60, tempo:null,
+    cue:'Lekka taśma, pełna kontrola. Tu wyższe powtórzenia są celowe — to praca zdrowotna barku, nie siłowa.',
+    tech:[
+      {t:'Pull-apart', h:'Taśma trzymana oburącz przed klatką na wyprostowanych rękach. Rozciągasz ją na boki, aż dotknie mostka, łopatki ściągnięte — i powoli wracasz. Ramiona cały czas na wysokości barków.'},
+      {t:'Face pull', h:'Taśma przypięta na wysokości twarzy (albo przełożona przez klamkę). Ciągniesz końce do czoła, łokcie wysoko i szeroko, na końcu rotacja przedramion tak, że kciuki kierują się w tył. Powrót powoli.'},
+      {t:'Po co, przy celu „minimum masy"', h:'To jedyne miejsce w programie z wyższymi powtórzeniami — i jest to świadome. Małe stabilizatory łopatki i tylnego barku odpowiadają na taką pracę zdrowiem stawu, nie przyrostem masy. Bez tej przeciwwagi cała reszta programu (pchanie) ściągałaby barki do przodu.'},
+    ]
+  };
+  const G16 = {
+    id:'G16', name:'Pullover z taśmą (niska kotwica)', sets:2, repsRange:'8 powt.', rest:90, tempo:null,
+    cue:'Ramiona proste, ruch wychodzi z barku. Najbliższa dostępna namiastka pracy najszerszego grzbietu bez drążka.',
+    tech:[
+      {t:'Ustawienie', h:'Taśma przypięta <b>nisko przy podłodze</b> za Tobą. Leżąc na plecach (albo w klęku, twarzą od kotwicy) chwytasz taśmę oburącz nad głową, ramiona wyprostowane.'},
+      {t:'Wykonanie', h:'<ol><li>Z ramionami <b>wyprostowanymi przez cały ruch</b> przeciągasz taśmę po łuku nad głową w stronę bioder.</li><li>Kończysz, gdy ręce dojdą nad klatkę, z wyraźnym napięciem pod pachami.</li><li>Powolny powrót do rozciągnięcia nad głową.</li></ol>'},
+      {t:'Uczciwie o tym ćwiczeniu', h:'To <b>częściowa</b> namiastka pracy najszerszego grzbietu. Bez drążka nie odtworzysz pełnego przywodzenia ramienia pod dużym obciążeniem ani siły chwytu zwisowego — to największa luka całego programu. Pullover ratuje część funkcji, ale nie udaję, że zastępuje podciąganie.'},
+    ]
+  };
+  const G17 = {
+    id:'G17', name:'Y / T / W raises (leżenie przodem)', sets:2, repsRange:'8 powt. każda litera', rest:60, tempo:null,
+    cue:'Leżenie przodem, ruch prowadzony łopatkami. Unosisz nisko, ale z pełnym napięciem i pauzą.',
+    tech:[
+      {t:'Wykonanie', h:'<ol><li>Leżenie przodem, czoło oparte na zwiniętym ręczniku, żebra ściągnięte, pośladki lekko napięte.</li><li><b>Y</b> — ramiona wyprostowane po skosie nad głową, kciuki w górę; unieś, pauza 2 s.<br><b>T</b> — ramiona w bok na wysokości barków; unieś, pauza 2 s.<br><b>W</b> — łokcie zgięte przy tułowiu, dłonie na zewnątrz; ściągnij łopatki, pauza 2 s.</li><li>Ruch jest mały — nie próbuj unosić wysoko, licz się z jakością.</li></ol>'},
+      {t:'Po co to w programie', h:'Dolna część kaptura i prostowniki grzbietu, których taśma sama nie obciąża w tej pozycji. Przy pracy w fartuchu ołowianym i pochyleniu nad pacjentem to bezpośrednia przeciwwaga dla protrakcji barków.'},
+    ]
+  };
+  const G18 = {
+    id:'G18', name:'Samoopór zginaczy łokcia', sets:2, holdRange:[5,5], rest:90, tempo:null, holdBased:true,
+    cue:'Jedna ręka zgina, druga stawia opór. 5 s maksymalnego napięcia na stronę.',
+    tech:[
+      {t:'Wykonanie', h:'<ol><li>Jedna ręka zgięta w łokciu pod kątem 90°, dłoń do góry.</li><li>Drugą dłonią naciskasz na przedramię z góry, stawiając opór.</li><li>Zginasz ramię z maksymalną siłą przeciwko własnemu oporowi przez <b>5 sekund</b>, po czym zmieniasz stronę. Możesz powtórzyć przy dwóch–trzech różnych kątach łokcia.</li></ol>'},
+      {t:'Uczciwie o skuteczności', h:'Metoda działa, ale efekt jest <b>umiarkowany</b> — w badaniu 6-tygodniowym dała ok. 6% przyrostu siły zginaczy łokcia przy istotnym wzroście aktywacji mięśnia. To sensowna łatka na brak podciągania, a nie jego zamiennik. Drugie ograniczenie: nie zmierzysz oporu, więc progresję prowadzisz „na czucie".'},
+    ]
+  };
+  const G19 = {
+    id:'G19', name:'Kondycja: interwały 6 × 20 s', sets:6, repsRange:'20 s pracy / 40 s przerwy', rest:40, tempo:null,
+    cue:'Krótko i intensywnie. Zawsze PO części siłowej albo w osobnym dniu — nigdy przed.',
+    warn:'Wersja domyślna jest bezuderzeniowa ze względu na Twoje ścięgna Achillesa: bez burpee, bez pajacyków, bez skakanki. Jeśli kiedyś je wprowadzisz, to tylko przy dwóch tygodniach bez zwiększonej sztywności porannej.',
+    tech:[
+      {t:'Co robić w te 20 sekund (bezuderzeniowo)', h:'Wybierz jedno i trzymaj się go w całej sesji: <b>szybkie wykroki chodzone w miejscu</b>, <b>przysiady w tempie</b> (bez wyskoku), <b>mountain climbers</b>, <b>szybkie wiosłowanie z taśmą</b>, rower stacjonarny albo wioślarz, jeśli masz dostęp. Intensywność: ostatnie 5 sekund mają być ciężkie.'},
+      {t:'Dlaczego po sile, nie przed', h:'Trening wytrzymałościowy przed siłowym obniża jakość serii siłowych i osłabia adaptacje siłowe (zjawisko interferencji). Interferencja rośnie z <b>częstotliwością i długością</b> pracy wytrzymałościowej, dlatego tu masz 6 minut pracy netto, a nie 40 minut. Bieganie interferuje mocniej niż rower.'},
+      {t:'Kiedy to pominąć', h:'Jeśli w tym tygodniu wspinasz się dwa razy albo masz zaplanowane inne obciążenie tlenowe — odpuść ten blok. Kondycja jest tu dodatkiem, nie celem programu.'},
+    ]
+  };
+
+  const GUM_DAYS = {
+    A: { key:'gumA', type:'strength', title:'Gumy A — Push + core',
+      blocks:[GUM_WARMUP, {id:'block_main', name:'Część główna', kind:'exercises', items:[G01,G02,G03,G04,G05,G06].map(prepEx)}, COOLDOWN] },
+    B: { key:'gumB', type:'strength', title:'Gumy B — Nogi + core',
+      blocks:[GUM_WARMUP, {id:'block_main', name:'Część główna', kind:'exercises', items:[G07,G08,G09,G10,G11,G12].map(prepEx)}, COOLDOWN] },
+    C: { key:'gumC', type:'strength', title:'Gumy C — Pull + kondycja',
+      blocks:[GUM_WARMUP, {id:'block_main', name:'Część główna', kind:'exercises', items:[G13,G14,G15,G16,G17,G18,G19].map(prepEx)}, COOLDOWN] },
+  };
+  GUM_PROGRAM = GUM_DAYS;
+  GUM_EXERCISES = [G01,G02,G03,G04,G05,G06,G07,G08,G09,G10,G11,G12,G13,G14,G15,G16,G17,G18,G19].map(prepEx);
+
   MODULES = {
     A: { title:'Moduł A', items:[
       EX_ARCHER_PULL, EX_PISTOL, EX_FRONTLEVER, EX_NORDIC, EX_PIKE,
@@ -1333,7 +1563,7 @@ function buildWeek(){
     EX_LEGRAISE, EX_PALLOF, EX_SOLEUS, EX_BANDPULL,
     EX_WIDE_PULL, EX_STEPDOWN, EX_SL_RDL, EX_PIKE_DEF, EX_DIPS_PAUSE,
     EX_LSIT, EX_ROLLOUT_ST, EX_PUSHUP_PLUS,
-  ].map(prepEx);
+  ].map(prepEx).concat(GUM_EXERCISES);   // + program gumowy, żeby dało się dołożyć pojedynczo
 
   const DAY_MON = {
     key:'mon', label:'Pon', type:'strength', title:'Blok nóg + core',
@@ -1400,6 +1630,8 @@ function buildWeek(){
 }
 let EXERCISE_CATALOG = [];
 let MODULES = {A:null, B:null, C:null};
+let GUM_PROGRAM = {A:null, B:null, C:null};   // osobny program: taśmy + masa ciała
+let GUM_EXERCISES = [];
 let WEEK = buildWeek();
 
 /* =========================================================================
@@ -1427,6 +1659,11 @@ const kroki = n => n + ' ' + plural(n, 'krok', 'kroki', 'kroków');
 /* Tekst wpisany przez użytkownika nie może rozjechać HTML-a. */
 function esc(s){
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+/* Zakres utrzymania: „5 s" gdy min = max, inaczej „5–8 s". */
+function holdTxt(ex){
+  const a = ex.holdRange[0], b = ex.holdRange[1];
+  return (a === b ? a : a + '–' + b) + ' s';
 }
 function fmtRestWords(sec){
   if(!sec) return '0 s';
@@ -1885,6 +2122,9 @@ function rebuildRegistry(){
     (MODULES[k] && MODULES[k].items || []).forEach(ex=>{ GLOBAL_REGISTRY[ex.id] = {type:'exercise', data:ex}; });
   });
   GLOBAL_REGISTRY[COOLDOWN.id] = {type:'warmup', data:COOLDOWN};
+  GLOBAL_REGISTRY[GUM_WARMUP.id] = {type:'warmup', data:GUM_WARMUP};
+  // Program gumowy — osobny trening, dostępny też pojedynczo w Timerach
+  GUM_EXERCISES.forEach(ex=>{ GLOBAL_REGISTRY[ex.id] = {type:'exercise', data:ex}; });
   // Katalog pojedynczych ćwiczeń — także te, których nie ma w planie tygodnia (np. ławka rzymska)
   EXERCISE_CATALOG.forEach(ex=>{ GLOBAL_REGISTRY[ex.id] = {type:'exercise', data:ex}; });
 }
@@ -1932,6 +2172,9 @@ function openClimb(){
    ========================================================================= */
 function dayFromKey(key, label){
   if(key === 'mon' || key === 'thu') return {...WEEK.find(w=>w.key===key), label};
+  if(key === 'gumA' || key === 'gumB' || key === 'gumC'){
+    return {...GUM_PROGRAM[key.slice(3)], label, gumProgram:true};
+  }
   if(key === 'climb') return {key:'ovr_climb', label, type:'climb', title:'Wspinanie'};
   return {key:'ovr_rest', label, type:'rest', title:'Odpoczynek (pauza)'};
 }
@@ -2066,7 +2309,7 @@ function extraExercisesHTML(units, entry){
       const done = !!(log && log.sets && log.sets.length >= ex.sets);
       const partial = !!(log && log.sets && log.sets.length > 0 && log.sets.length < ex.sets);
       const sub = (ex.holdBased
-        ? `${serie(ex.sets)} × utrzymanie ${ex.holdRange[0]}–${ex.holdRange[1]} s`
+        ? `${serie(ex.sets)} × utrzymanie ${holdTxt(ex)}`
         : `${serie(ex.sets)} × ${esc(ex.repsRange)}`) + loadTxt(ex) + (partial ? ` · zrobione ${log.sets.length}/${ex.sets}` : '');
       html += `<div class="exercise-row ${done?'done':''}" onclick="openExercise('${ex.id}')">
         <div class="left"><div class="exname">${ex.name}</div><div class="exsub">${sub}</div></div>
@@ -2146,6 +2389,10 @@ function dayPickerHTML(planned, day, overridden, extras){
       ${opt('setDayOverride','thu','💪','Trening: Moduł A + chwytotablica')}
       ${opt('setDayOverride','climb','🧗','Wspinanie')}
       ${opt('setDayOverride','rest','😴','Odpoczynek (pauza)')}
+      <div class="meta" style="margin:16px 0 8px;"><b>Program gumowy</b> — osobny trening bez drążka i drabinki (taśmy, masa ciała, ab wheel). Na wyjazd, hotel albo dzień bez dostępu do sprzętu:</div>
+      ${opt('setDayOverride','gumA','🎒','Gumy A — Push + core')}
+      ${opt('setDayOverride','gumB','🎒','Gumy B — Nogi + core')}
+      ${opt('setDayOverride','gumC','🎒','Gumy C — Pull + kondycja')}
       ${(overridden || extras.length) ? `<button class="btn btn-primary" style="margin-top:4px;" onclick="setDayOverride('plan')">✓ Wróć do planu (${planned.title})</button>` : ''}
       ${addSection}
       <div class="meta" style="margin-top:10px;">Limity bezpieczeństwa palców (max 3 obciążenia / 7 dni, nie dwa dni pod rząd, 48 h tablica↔wspinanie) obowiązują niezależnie od tych zmian.</div>
@@ -2219,7 +2466,7 @@ function dayComponentHTML(dayObj, entry){
         const done = !!(log && log.sets && log.sets.length >= ex.sets);
         const partial = !!(log && log.sets && log.sets.length > 0 && log.sets.length < ex.sets);
         const sub = ex.holdBased
-          ? `${serie(ex.sets)} × utrzymanie ${ex.holdRange[0]}–${ex.holdRange[1]} s`
+          ? `${serie(ex.sets)} × utrzymanie ${holdTxt(ex)}`
           : `${serie(ex.sets)} × ${esc(ex.repsRange)}`;
         html += rowHTML(ex.id, ex.name, sub + loadTxt(ex) + (partial ? ` · zrobione ${log.sets.length}/${ex.sets}` : ''), done);
       });
@@ -2253,6 +2500,10 @@ function renderToday(){
   if(pos && pos.deload && !overridden){
     html += bannerHTML('warn', '🪫', 'Tydzień odciążeniowy (deload)',
       'Co trzeci cykl organizm dostaje tydzień na odbudowę: liczba serii jest automatycznie <b>zmniejszona o połowę</b>, chwytotablica i kamizelka całkowicie odpadają. Ciężary i technika zostają — schodzi tylko objętość. To nie strata tygodnia, to warunek dalszych postępów.');
+  }
+  if(day.gumProgram){
+    html += bannerHTML('warn', '🎒', 'Program gumowy — inne zasady niż plan główny',
+      'Ten trening obchodzi się bez drążka i drabinki: taśmy, masa ciała, ab wheel. Cel to <b>siła maksymalna przy minimum przyrostu masy</b>, więc reguły są inne niż w Twoim planie FBW: <b>3–5 powtórzeń albo 5–6 s izometrii, zapas 2–3 powtórzeń (nigdy do upadku), przerwy 3–5 minut</b> i maksymalna intencja przyspieszenia w każdym powtórzeniu.<br><br>Progresja idzie przez <b>trudniejszy wariant</b>, nie przez więcej powtórzeń — gdy zrobisz 6 czystych, zmień wariant. Objętość jest celowo niska.<br><br><b>Świadome ograniczenie:</b> bez drążka nie da się w pełni obciążyć najszerszego grzbietu w ciągnięciu pionowym ani siły chwytu zwisowego. Wiosłowanie i pullover to częściowa łatka, nie zamiennik podciągania.');
   }
   if(day.proposed && !overridden){
     html += bannerHTML('warn', '🧩', day.title.split(' ').slice(0,2).join(' ') + ' — propozycja trenerska',
@@ -2634,7 +2885,7 @@ function renderExerciseBody(ex){
   html += `<div class="set-tracker" id="setTracker"></div>`;
   html += `<div style="text-align:center;color:var(--chalk-500);font-size:0.85rem;margin-bottom:10px;" id="setLabel"></div>`;
   if(ex.tempo) html += `<div style="text-align:center;margin-bottom:6px;"><span class="badge strength">Tempo ${ex.tempo.label}</span></div>`;
-  if(ex.holdBased) html += `<div style="text-align:center;margin-bottom:6px;"><span class="badge strength">Utrzymanie ${ex.holdRange[0]}–${ex.holdRange[1]} s</span></div>`;
+  if(ex.holdBased) html += `<div style="text-align:center;margin-bottom:6px;"><span class="badge strength">Utrzymanie ${holdTxt(ex)}</span></div>`;
   if(ex.loadKg != null) html += `<div style="text-align:center;margin-bottom:6px;"><span class="badge strength">${ex.loadKg > 0 ? 'Ciężar '+fmtKg(ex.loadKg)+' kg' : 'Bez obciążenia'}</span></div>`;
   html += timerRingHTML();
   if(ex.tempo) html += `<div class="meta" style="text-align:center;margin-top:6px;">Timer prowadzi rytm ruchu i zapętla się — jedna pętla to jedno powtórzenie. Rób powtórzenia w jego takcie.</div>`;
@@ -2772,7 +3023,7 @@ function protoSummary(p){
 function exSummary(ex){
   if(ex.steps) return kroki(ex.steps.length);
   return (ex.holdBased
-    ? `${serie(ex.sets)} × utrzymanie ${ex.holdRange[0]}–${ex.holdRange[1]} s`
+    ? `${serie(ex.sets)} × utrzymanie ${holdTxt(ex)}`
     : `${serie(ex.sets)} × ${esc(ex.repsRange)}`) + loadTxt(ex);
 }
 /* Zamiana tokenu ulubionego na dane do wyświetlenia i uruchomienia. */
