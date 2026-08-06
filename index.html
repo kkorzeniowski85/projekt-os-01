@@ -462,7 +462,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.12.0';
+const APP_VERSION = '1.12.1';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -2519,10 +2519,6 @@ function renderToday(){
   extras.forEach(x=>{ html += comboWarningHTML(day, x); });
   html += dayPickerHTML(planned, day, overridden, extras);
 
-  if(!store.get('fitnessTest', null) && !Object.keys(getLevels()).length){
-    html += bannerHTML('warn', '🎯', 'Dobierz poziom startowy',
-      'Krótki test sprawności (9 prób) ustawi każde ćwiczenie tak, żeby było wykonalne od pierwszego dnia — a gdy coś okaże się za trudne, na ekranie ćwiczenia zawsze masz przycisk „stopień niżej". <span class="lnk" onclick="openTest()">Zrób test sprawności</span>');
-  }
 
   const units = [day, ...extras];
   units.forEach((u, i)=>{
