@@ -417,7 +417,12 @@
           <option value="90">Do kąta prostego</option>
         </select>
       </div>
-      <div class="meta">Wersja obunóż obowiązuje, dopóki nie potwierdzisz, ile epizodów zapalenia Achillesa przeszedłeś (jeden czy więcej, jedna noga czy obie). Dipy płycej, dopóki nie zmierzysz szerokości barków i nie porównasz z rozstawem stacji (56 cm).</div>
+      <div class="log-row" style="margin-top:4px;">
+        <div><label>Rozstaw stacji do dipów (cm)</label><input type="number" id="setStationWidth" step="0.5" onchange="saveBodyMeasurements()"></div>
+        <div><label>Szerokość barków, deltoid–deltoid (cm)</label><input type="number" id="setShoulderWidth" step="0.5" onchange="saveBodyMeasurements()"></div>
+      </div>
+      <div class="meta" id="dipsWidthInfo" style="margin-top:8px;"></div>
+      <div class="meta" style="margin-top:8px;">Wersja obunóż obowiązuje, dopóki nie potwierdzisz, ile epizodów zapalenia Achillesa przeszedłeś (jeden czy więcej, jedna noga czy obie).</div>
     </div>
     <div class="card">
       <h2 style="margin-bottom:10px;">Makrocykl</h2>
@@ -462,7 +467,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.13.0';
+const APP_VERSION = '1.13.1';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -491,7 +496,14 @@ const store = {
   }
 };
 
-let SETTINGS = store.get('settings', { achillesTrack:'slow', dipsDepth:'100-110' });
+let SETTINGS = store.get('settings', { achillesTrack:'slow', dipsDepth:'100-110', stationWidthCm:57, shoulderWidthCm:50.5 });
+/* Różnica rozstawu stacji vs barków — używana w opisie dipów, żeby liczby
+   zawsze były aktualne, gdy użytkownik je kiedyś zmieni. */
+function stationWidthDelta(){
+  const st = Number(SETTINGS.stationWidthCm), sh = Number(SETTINGS.shoulderWidthCm);
+  if(!st || !sh) return null;
+  return {station:st, shoulders:sh, deltaCm:+(st-sh).toFixed(1), deltaPct:Math.round((st-sh)/sh*100)};
+}
 
 function saveSettings(){
   SETTINGS.achillesTrack = document.getElementById('setAchilles').value;
@@ -671,12 +683,16 @@ function dipsExercise(){
   const depthTxt = SETTINGS.dipsDepth === '100-110'
     ? 'schodzisz tylko do kąta <b>100–110°</b> w łokciu (czyli płycej niż do kąta prostego)'
     : 'schodzisz do <b>kąta prostego</b> w łokciu, nigdy głębiej';
+  const wd = stationWidthDelta();
+  const widthTxt = wd
+    ? `<br><br><b>Zmierzone u Ciebie:</b> rozstaw Twojej stacji to ${wd.station} cm (środek–środek poręczy), a szerokość barków (deltoid–deltoid) to ${wd.shoulders} cm — stacja jest więc <b>o ${wd.deltaCm} cm szersza niż barki (${wd.deltaPct>=0?'+':''}${wd.deltaPct}%)</b>. Szerszy niż barki rozstaw poręczy sam w sobie zwiększa odwiedzenie poziome ramienia w barku — działa w tym samym kierunku co głębsze zejście. Dlatego przy tej stacji zostajesz przy <b>100–110°</b>: przechodzenie na pełny kąt prosty sumowałoby dwa czynniki naraz (szerszy rozstaw + głębsze zejście), a plan każe zmieniać tylko jedną zmienną na raz.`
+    : '';
   return {
     id:'E8', name:'Dipy na poręczach', sets:5, repsRange:'3–5 powt.', rest:180, tempo:null,
     cue:'Barki wciśnięte w dół przez cały ruch. ' + (SETTINGS.dipsDepth==='100-110' ? 'Stop na 100–110° w łokciu.' : 'Stop na kącie prostym.'),
     warn:'Ból z przodu barku po dipach → odstaw dipy na 2 tygodnie, pompki zostają. Dipów nie robi się też nigdy w ciągu doby po mocnym wspinaniu — przód barku dostaje wtedy podwójny bodziec.',
     tech:[
-      {t:'Jak głęboko i dlaczego', h:'W tym tygodniu '+depthTxt+'. Powód: zejście poniżej przenosi obciążenie na przednią torebkę stawu ramiennego i przyczep mięśnia piersiowego. Twój przód barku i tak ciężko pracuje przy wspinaniu — sumowanie tych obciążeń to najczęstszy mechanizm bólu przedniego barku u wspinaczy, którzy dołożyli dipy. Ustawienie konserwatywne (100–110°) obowiązuje, dopóki nie porównasz szerokości swoich barków z rozstawem stacji (56 cm).'},
+      {t:'Jak głęboko i dlaczego', h:'W tym tygodniu '+depthTxt+'. Powód: zejście poniżej przenosi obciążenie na przednią torebkę stawu ramiennego i przyczep mięśnia piersiowego. Twój przód barku i tak ciężko pracuje przy wspinaniu — sumowanie tych obciążeń to najczęstszy mechanizm bólu przedniego barku u wspinaczy, którzy dołożyli dipy.'+widthTxt},
       {t:'Wykonanie', h:'<ol><li>Wejdź do podporu: łokcie wyprostowane, <b>barki aktywnie wciśnięte w dół</b> — daleko od uszu.</li><li>Tułów lekko pochylony w przód, łokcie blisko ciała, nie na boki.</li><li>Schodź <b>2–3 sekundy</b> — zero swobodnego opadania.</li><li>Zatrzymaj się na ustalonym kącie i wyjdź w górę, bez „wyrzucania" barków do góry na końcu.</li></ol>'},
       {t:'Najczęstsze błędy', h:'<ul><li><b>Bark „wjeżdża" do ucha w dolnej pozycji</b> — utrata wciśnięcia łopatek w dół. To najważniejszy błąd na tym ćwiczeniu; jeśli nie utrzymujesz barków nisko przez cały zakres, skróć zakres.</li><li>Kołysanie nogami dla rozpędu.</li><li>Schodzenie „na odczucie" zamiast do ustalonego kąta — zmęczenie zawsze pogłębia zejście, kontroluj kąt świadomie.</li></ul>'},
       {t:'Przed pierwszą sesją', h:'Obciąż stację i sprawdź, czy nie przesuwa się na szczeblach drabinki. Poluzowanie mocowania w dolnej pozycji to uraz barku, nie potknięcie.'},
@@ -1308,7 +1324,11 @@ function buildWeek(){
     cue:'Jak zwykłe dipy, ale w dolnym punkcie 1 s pauzy przy barkach wciśniętych w dół.',
     warn:'Ból z przodu barku → odstaw dipy na 2 tygodnie, pompki zostają. Nigdy w dobie po mocnym wspinaniu.',
     tech:[
-      {t:'Ustawienie', h:'Identyczne jak dipy z Modułu A: barki wciśnięte w dół, tułów lekko pochylony, zejście do ustalonego kąta (100–110°, dopóki nie potwierdzisz szerokości barków).'},
+      {t:'Ustawienie', h:(()=>{
+        const wd = stationWidthDelta();
+        const note = wd ? ` (100–110° — Twoja stacja, ${wd.station} cm, jest o ${wd.deltaCm} cm szersza niż barki, więc głębsze ustawienie na razie się nie zmienia)` : ' (100–110°)';
+        return 'Identyczne jak dipy z Modułu A: barki wciśnięte w dół, tułów lekko pochylony, zejście do ustalonego kąta' + note + '.';
+      })()},
       {t:'Wykonanie', h:'<ol><li>Schodź 2–3 s do ustalonego kąta.</li><li><b>1 sekunda pauzy</b> — bark nie może „wjechać" do ucha, łopatki cały czas w depresji.</li><li>Wyjście w górę bez wyrzutu barków.</li></ol>'},
       {t:'Po co pauza', h:'Zatrzymanie w najtrudniejszym punkcie odbiera rozpęd i uczciwie sprawdza kontrolę pozycji barku — dokładnie tam, gdzie dipy bywają ryzykowne. Siła rośnie, ryzyko nie.'},
     ]
@@ -3223,9 +3243,27 @@ function renderHistory(){
 /* =========================================================================
    USTAWIENIA + BACKUP
    ========================================================================= */
+function saveBodyMeasurements(){
+  SETTINGS.stationWidthCm = Number(document.getElementById('setStationWidth').value) || null;
+  SETTINGS.shoulderWidthCm = Number(document.getElementById('setShoulderWidth').value) || null;
+  store.set('settings', SETTINGS);
+  vibrate(20);
+  renderDipsWidthInfo();
+}
+function renderDipsWidthInfo(){
+  const el = document.getElementById('dipsWidthInfo');
+  if(!el) return;
+  const wd = stationWidthDelta();
+  el.textContent = wd
+    ? `Stacja o ${wd.deltaCm} cm szersza niż barki (${wd.deltaPct>=0?'+':''}${wd.deltaPct}%) — pełny opis wyjaśnienia jest przy ćwiczeniu „Dipy na poręczach".`
+    : 'Wpisz obie wartości, żeby opis dipów pokazywał, o ile stacja różni się od Twoich barków.';
+}
 function loadSettingsForm(){
   document.getElementById('setAchilles').value = SETTINGS.achillesTrack;
   document.getElementById('setDips').value = SETTINGS.dipsDepth;
+  document.getElementById('setStationWidth').value = SETTINGS.stationWidthCm ?? '';
+  document.getElementById('setShoulderWidth').value = SETTINGS.shoulderWidthCm ?? '';
+  renderDipsWidthInfo();
   document.getElementById('versionInfo').textContent = 'Trener FBW v'+APP_VERSION;
   const n = Object.keys(getOverrides()).length;
   document.getElementById('overridesInfo').textContent = n
