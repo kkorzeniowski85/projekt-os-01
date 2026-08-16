@@ -462,7 +462,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.12.1';
+const APP_VERSION = '1.13.0';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -716,6 +716,22 @@ const HANGBOARD_PROTOCOLS = {
       {t:'Ustawienie', h:'Listwa 20–25 mm. Chwyt: <b>half-crimp i otwarty naprzemiennie</b> — zmieniasz między seriami, żeby nie obciążać w kółko tej samej struktury. Half-crimp = palce zgięte ok. 90° w środkowym stawie, kciuk swobodny (nie na palcach!).'},
       {t:'Jak dobrać ciężar', h:'Intensywność wyższa niż w Protokole A: ostatnie powtórzenie serii ma być wyraźnie trudne, ale wykonane w pełnym czasie i bez otwierania się palców. Jeśli nie kończysz serii — odciąż. Jeśli kończysz z dużym zapasem — zmniejsz odciążenie.'},
       {t:'Przerwy', h:'Między seriami 2–3 minuty. W 3-sekundowej przerwie wewnątrz serii zdejmujesz ciężar z palców, ale zostajesz przy tablicy.'},
+      ...HANGBOARD_SAFETY,
+    ]
+  },
+  D: {
+    id:'hangboard_D', key:'D', kind:'hangboard',
+    name:'Protokół D — lekkie zwisy z odciążeniem stopą',
+    series:3, reps:6, hang:10, hangRest:50, seriesRest:180,
+    qualNote:'Ma być ŁATWO. Jeśli w trakcie serii czujesz wysiłek w palcach — odciąż mocniej.',
+    cue:'6 × (10 s zwisu / 50 s przerwy) = 1 seria. Intensywność ok. 40–50% ciężaru ciała — resztę bierze stopa.',
+    warn:'To NIE jest przepustka do codziennych zwisów. Limit Twojego planu (maks. 3 obciążenia palców na 7 dni, wliczając wspinanie) obowiązuje nadal, dopóki sam świadomie go nie zmienisz — przeczytaj sekcję o częstotliwości poniżej.',
+    tech:[
+      {t:'Po co ten protokół', h:'To najlżejsza forma pracy palców w całej aplikacji. Cel nie jest siłowy ani wytrzymałościowy w klasycznym sensie — chodzi o <b>przepływ krwi przez ścięgna i pobudzenie syntezy kolagenu</b> przy obciążeniu na tyle niskim, że nie zjada zapasu regeneracyjnego. Używaj go jako uzupełnienia lub w tygodniu, w którym nie robisz Protokołu A/B/C.'},
+      {t:'Jak ustawić obciążenie — konkretnie', h:'Stopa na szczeblu, taborecie albo krześle pod tablicą przejmuje część ciężaru. <b>Zmierz to raz wagą łazienkową:</b> postaw wagę tam, gdzie opierasz stopę, zawiśnij i odczytaj, ile kilogramów bierze stopa. Twoja masa ciała minus ten odczyt = realne obciążenie palców. Celuj w <b>40–50% masy ciała</b> na palcach. Zapisz wynik w polu „Odciążenie stopą" — dzięki temu następnym razem powtórzysz to samo, zamiast zgadywać.'},
+      {t:'Wykonanie', h:'<ol><li>Największa dostępna listwa lub szczebel, chwyt <b>otwarty</b>.</li><li>10 sekund zwisu — spokojnie, bez napinania całego ciała.</li><li>Schodzisz i odpoczywasz <b>50 sekund</b> (w przeciwieństwie do Protokołu A, gdzie zostajesz przy tablicy).</li><li>6 zwisów = 1 seria, potem 3 minuty przerwy.</li></ol>'},
+      {t:'Skąd ten pomysł i jakie ma ograniczenia', h:'Analiza danych użytkowników aplikacji treningowej (Gilmore i wsp. 2024) pokazała, że lekkie, częste zwisy około 40% maksimum dawały przyrost siły chwytu porównywalny z max hangs (rzędu 2,5–3,2%), a połączenie obu metod działało addytywnie (ok. 6%). <b>Uczciwie o sile dowodu:</b> to analiza retrospektywna danych z aplikacji, nie badanie z randomizacją — efekt jest realny, ale umiarkowany i nie tak pewny jak przy klasycznych protokołach.'},
+      {t:'A czy można to robić częściej?', h:'To najważniejsze pytanie przy tym protokole i odpowiedź jest niejednoznaczna. <b>Za:</b> obciążenie jest niskie, a przytoczone dane sugerują, że częsta lekka praca działa. <b>Przeciw:</b> limit w Twoim planie (3 obciążenia palców na 7 dni) nie wynika wyłącznie z wysokości obciążenia — ścięgna i troczki odbudowują kolagen wolno, a limit liczy też wspinanie, które obciąża palce najbardziej. Aplikacja <b>domyślnie liczy ten protokół jak każde inne obciążenie palców</b>. Jeśli chcesz to zmienić, potraktuj to jako zmianę w planie, nie w ustawieniach aplikacji — i najlepiej skonsultuj z osobą, która plan układała.'},
       ...HANGBOARD_SAFETY,
     ]
   },
@@ -2792,7 +2808,7 @@ function renderHangboardBody(data){
   html += `<div class="card">` + timerRingHTML() + `</div>`;
   html += `<div class="log-row">
     <div><label>Listwa (mm albo „szczebel")</label><input type="text" id="log_edge" placeholder="np. szczebel"></div>
-    <div><label>Odciążenie stopą</label><input type="text" id="log_assist" placeholder="np. mocne"></div>
+    <div><label>Odciążenie stopą (kg z wagi)</label><input type="text" id="log_assist" placeholder="np. 30 kg"></div>
   </div>`;
   html += `<div class="log-row"><div><label>Zapas po 1. serii — czy zwisałbyś drugie tyle?</label><input type="text" id="log_reserve" placeholder="np. tak, spory zapas"></div></div>`;
   html += `<button class="btn btn-secondary" style="margin-top:12px;" onclick="saveHangboardLog('${data.id}')">Zapisz parametry sesji</button>`;
@@ -3117,7 +3133,7 @@ function renderTools(){
 
   /* ---------- 2. Chwytotablica ---------- */
   html += `<div class="block-title"><div class="idx">1</div><h3>Chwytotablica</h3></div>`;
-  ['A','B','C'].forEach(k=>{
+  ['A','B','C','D'].forEach(k=>{
     const p = getProtocol(k);
     html += launchRow('proto:'+k, p.name, protoSummary(p), `openProtocol('${k}')`);
   });
