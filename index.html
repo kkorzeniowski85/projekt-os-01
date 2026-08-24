@@ -467,7 +467,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.13.1';
+const APP_VERSION = '1.14.0';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -1945,16 +1945,32 @@ document.addEventListener('visibilitychange', ()=>{
    SILNIK TIMERA — liczy od znaczników czasu (Date.now), nie od ticków.
    Przeżywa zablokowanie ekranu: po powrocie dogania właściwą fazę.
    ========================================================================= */
+const PREP_SECONDS = 5;
+
 const engine = {
   phases:[], idx:0, running:false,
   endAt:0, pausedRemainMs:null,
-  loop:false, repCount:0, onComplete:null,
+  loop:false, loopFrom:0, repCount:0, onComplete:null,
   timer:null, lastSignalSec:null,
 };
 
+/* Doklejamy 5-sekundowe „Przygotuj się" przed sekwencją, która realnie
+   zaczyna się pracą (tablica, tempo, izometria, kroki rozgrzewki) — czas na
+   złapanie listwy albo wejście w pozycję, zanim zacznie się liczyć powtórzenie.
+   Pomijamy to dla samej przerwy (np. auto-start odpoczynku po serii) — tam
+   „przygotuj się" nie ma sensu, bo user właśnie skończył pracować. */
 function engineLoad(phases, opts){
   engineStop();
-  engine.phases = phases || [];
+  let p = phases || [];
+  const skipPrep = opts && opts.noPrep;
+  const startsWithWork = p.length && p[0].kind === 'work';
+  if(!skipPrep && startsWithWork){
+    p = [{label:'Przygotuj się', seconds:PREP_SECONDS, kind:'prep'}, ...p];
+    engine.loopFrom = 1;
+  } else {
+    engine.loopFrom = 0;
+  }
+  engine.phases = p;
   engine.idx = 0;
   engine.loop = !!(opts && opts.loop);
   engine.onComplete = (opts && opts.onComplete) || null;
@@ -1966,7 +1982,7 @@ function engineStop(){
   clearTimeout(engine.timer);
   engine.phases = []; engine.idx = 0; engine.running = false;
   engine.endAt = 0; engine.pausedRemainMs = null;
-  engine.loop = false; engine.repCount = 0; engine.onComplete = null;
+  engine.loop = false; engine.loopFrom = 0; engine.repCount = 0; engine.onComplete = null;
   engine.lastSignalSec = null;
   releaseWakeLock();
 }
@@ -2030,7 +2046,7 @@ function engineAdvance(overshootMs){
     if(++guard > 500) { engineFinish(); return; }
     engine.idx++;
     if(engine.idx >= engine.phases.length){
-      if(engine.loop){ engine.idx = 0; engine.repCount++; }
+      if(engine.loop){ engine.idx = engine.loopFrom; engine.repCount++; }
       else { engineFinish(); return; }
     }
     const ph = engine.phases[engine.idx];
@@ -2124,7 +2140,7 @@ function renderTimerFace(){
   const total = (ph.seconds||1);
   const frac = ph.tap ? 1 : Math.min(1, sec/total);
   arc.setAttribute('stroke-dashoffset', String(628*(1-frac)));
-  const color = (ph.kind==='rest'||ph.kind==='seriesRest') ? 'var(--rope-500)' : 'var(--lichen-500)';
+  const color = (ph.kind==='rest'||ph.kind==='seriesRest'||ph.kind==='prep') ? 'var(--rope-500)' : 'var(--lichen-500)';
   arc.setAttribute('stroke', (sec<=3 && !ph.tap && engine.running) ? 'var(--alert-500)' : color);
   btn.textContent = ph.tap ? 'Dalej (w górę!)' : engine.running ? 'Pauza' : (engine.pausedRemainMs!==null ? 'Wznów' : 'Start');
 }
