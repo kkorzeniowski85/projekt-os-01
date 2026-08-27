@@ -399,6 +399,15 @@
     <div id="testBody"></div>
   </section>
 
+  <!-- ===================== EKRAN: WIDEO Z TECHNIKĄ ===================== -->
+  <section class="screen" id="screen-videos">
+    <div class="back-row">
+      <button class="back-btn" onclick="switchTab('settings')">←</button>
+      <h2 style="font-size:1.05rem;">Wideo z techniką</h2>
+    </div>
+    <div id="videosBody"></div>
+  </section>
+
   <!-- ===================== EKRAN: USTAWIENIA ===================== -->
   <section class="screen" id="screen-settings">
     <h2 style="margin-bottom:14px;">Ustawienia</h2>
@@ -445,6 +454,11 @@
       <button class="btn btn-ghost" onclick="resetAllOverridesConfirm()">Przywróć wszystkie do wartości z planu</button>
     </div>
     <div class="card">
+      <h2 style="margin-bottom:10px;">Wideo z techniką</h2>
+      <div class="meta" style="margin-bottom:10px;">Filmy YouTube z prezentacją każdego ćwiczenia — propozycje, szukajka i miejsce na Twoje własne wybory. Wymaga internetu.</div>
+      <button class="btn btn-secondary" onclick="openVideos()">Otwórz listę wideo</button>
+    </div>
+    <div class="card">
       <h2 style="margin-bottom:10px;">Kopia zapasowa</h2>
       <div class="btn-row">
         <button class="btn btn-secondary" onclick="exportData()">Eksport JSON</button>
@@ -467,7 +481,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.14.0';
+const APP_VERSION = '1.15.0';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -1012,6 +1026,147 @@ function saveFitnessTest(){
   </div>`;
   document.getElementById('testResult').innerHTML = res;
   document.getElementById('testResult').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+/* =========================================================================
+   WIDEO Z TECHNIKĄ — osobna sekcja (wymaga internetu).
+   Trzy warstwy: (1) kurowane propozycje — linki ZNALEZIONE wyszukiwarką
+   (istnienie zweryfikowane w sierpniu 2026; treści nie da się obejrzeć z
+   poziomu kodu, więc każdą propozycję oceń sam), (2) przycisk „Szukaj" z
+   dobranym zapytaniem po angielsku (najlepsze instruktaże są anglojęzyczne,
+   a pokaz ruchu nie wymaga języka), (3) Twój własny link, zapamiętywany.
+   ========================================================================= */
+const YT_LINKS = {
+  E2:  {v:'_LGLKUiQH5k', t:'How-To: Archer Pull-Up (5 progresji)'},
+  E3:  {v:'nGKFTLLRdGU', t:'Pistol Squats for Beginners — Complete Tutorial'},
+  G07: {v:'nGKFTLLRdGU', t:'Pistol Squats for Beginners — Complete Tutorial'},
+  E4:  {v:'AGhb8V8M758', t:'Front Lever for Beginners (wszystkie progresje)'},
+  E5:  {v:'CJTqKi5oCOk', t:'Nordic Curl bez partnera — ustawienie i warianty'},
+  G08: {v:'CJTqKi5oCOk', t:'Nordic Curl bez partnera — ustawienie i warianty'},
+  E6:  {v:'paCOGgmLCA0', t:'Pike Push Up Tutorial for the Complete Beginner'},
+  G01: {v:'paCOGgmLCA0', t:'Pike Push Up Tutorial for the Complete Beginner'},
+  E26: {v:'paCOGgmLCA0', t:'Pike Push Up Tutorial (progresje, w tym deficyt)'},
+  E8:  {v:'nfPAGwFrCD8', t:'Dipy bezpiecznie dla barków — zanim zaczniesz'},
+  E27: {v:'nfPAGwFrCD8', t:'Dipy bezpiecznie dla barków — zanim zaczniesz'},
+  E9:  {v:'ikkOq5mHaho', t:'Ab Wheel — technika i progresje dla początkujących'},
+  G04: {v:'ikkOq5mHaho', t:'Ab Wheel — technika i progresje dla początkujących'},
+  E29: {v:'ikkOq5mHaho', t:'Ab Wheel — technika i progresje (w tym ze stania)'},
+  E11: {v:'-ZIpSoTRsuE', t:'Scapular Pull Ups — od początkującego do zaawansowanego'},
+  E15: {v:'VPhhE6bBzZE', t:'Przysiad bułgarski — poprawna technika'},
+  E17: {v:'nuuvRjGpNKA', t:'Chest to Wall Handstand 101'},
+  E20: {v:'iBDXkpKDRy8', t:'Band Pallof Press — technika [4K]'},
+  G05: {v:'iBDXkpKDRy8', t:'Band Pallof Press — technika [4K]'},
+  E25: {v:'Zfr6wizR8rs', t:'Single-Leg RDL — najlepszy samouczek'},
+  hangboard:   {v:'I3_QdtwFyqY', t:'Hangboard Endurance — lekkie repeatery ~40%'},
+  hangboard_B: {v:'vyhdpNGtF78', t:'Protokół 7/3 Repeater (Hörst)'},
+  hangboard_C: {v:'1XVmaFtaBkc', t:'Max Hangs for Finger Strength (How To)'},
+  hangboard_D: {v:'sBTI9qiH4UE', t:'Emil Abrahamsson — lekkie zwisy 2× dziennie (oryginał)'},
+};
+
+const YT_QUERIES = {
+  hangboard:'hangboard endurance repeaters low intensity', hangboard_B:'hangboard 7 3 repeaters protocol',
+  hangboard_C:'max hangs hangboard tutorial', hangboard_D:'submaximal hangs hangboard daily low intensity',
+  E2:'archer pull up tutorial', E3:'pistol squat tutorial progression', E4:'front lever progression tutorial',
+  E5:'nordic curl no partner setup', E6:'pike push up form tutorial', E7:'archer push up feet elevated tutorial',
+  E8:'parallel bar dips shoulder safe form', E9:'ab wheel rollout knees form', E10:'slow heavy calf raise achilles tendon',
+  E11:'scapular pull up tutorial', E12:'forearm pronation supination hammer rotation exercise',
+  E13:'back extension roman chair proper form', E14:'paused pull up top hold', E15:'bulgarian split squat form',
+  E16:'single leg glute bridge form', E17:'chest to wall handstand hold', E18:'pseudo planche push up tutorial',
+  E19:'strict hanging leg raise toes to bar', E20:'pallof press resistance band', E21:'seated bent knee calf raise soleus',
+  E22:'band pull apart face pull tutorial', E23:'wide grip pull up form', E24:'step down exercise single leg control',
+  E25:'single leg romanian deadlift bodyweight', E26:'deficit pike push up elevated', E27:'paused dips bottom position',
+  E28:'l-sit parallel bars tuck progression', E29:'standing ab wheel rollout progression', E30:'push up plus serratus scapula',
+  G01:'pike push up wall handstand progression', G02:'archer push up one arm progression', G03:'planche lean pseudo planche hold',
+  G04:'ab wheel rollout knees form', G05:'pallof press resistance band', G06:'overcoming isometric push wall',
+  G07:'pistol squat tutorial progression', G08:'nordic curl no partner home setup', G09:'single leg hip thrust pause',
+  G10:'single leg calf raise slow tempo', G11:'wall sit isometric squat push', G12:'hollow body hold tutorial',
+  G13:'single arm band row form', G14:'seated band row pause', G15:'band pull apart face pull',
+  G16:'band lat pullover low anchor', G17:'prone y t w raises form', G18:'self resisted bicep curl isometric',
+  G19:'low impact hiit no jumping intervals',
+};
+
+const YT_DIFFS = {
+  hangboard:'Niezależnie od filmu: zero full crimpu, wejście i zejście przez stopień.',
+  hangboard_B:'Niezależnie od filmu: zero full crimpu; Twoje serie wg aplikacji.',
+  hangboard_C:'Dawka podtrzymująca — nie goń rekordów z filmów.',
+  hangboard_D:'U Ciebie to protokół uzupełniający, liczy się do limitu obciążeń palców.',
+  E3:'Pilnuj pięty na podłożu — na filmach często się odrywa.',
+  G07:'Pilnuj pięty na podłożu — na filmach często się odrywa.',
+  E8:'Na filmach często pełna głębokość — Ty masz stop na 100–110° (Twoja stacja jest szersza niż barki).',
+  E27:'Na filmach często pełna głębokość — Ty masz stop na 100–110°.',
+  E13:'Prostujesz tylko do linii ciała — na filmach często pokazują przeprost.',
+  E10:'Trzymaj wolne tempo z aplikacji (protokół ścięgna Achillesa), nie tempo z filmu.',
+  E21:'Trzymaj wolne tempo z aplikacji (protokół ścięgna Achillesa), nie tempo z filmu.',
+  G10:'Trzymaj wolne tempo z aplikacji (protokół ścięgna Achillesa), nie tempo z filmu.',
+  E19:'Bez bujania — wersje z rozpędem na filmach to inne ćwiczenie.',
+  G19:'Twoja wersja jest bezuderzeniowa (Achilles) — pomiń warianty z wyskokami.',
+};
+
+function getVideoLinks(){ return store.get('videoLinks', {}); }
+function setCustomVideo(id){
+  const cur = getVideoLinks()[id] || '';
+  const url = prompt('Wklej link do filmu YouTube dla tej pozycji\n(pusty = usuń własny link):', cur);
+  if(url === null) return;                      // anulowano
+  const links = getVideoLinks();
+  const trimmed = url.trim();
+  if(!trimmed){ delete links[id]; }
+  else if(/^https?:\/\//.test(trimmed)){ links[id] = trimmed; }
+  else { alert('To nie wygląda na link (musi zaczynać się od http). Nic nie zapisano.'); return; }
+  store.set('videoLinks', links);
+  vibrate(20);
+  renderVideos();
+}
+function ytSearchUrl(id, name){
+  const q = YT_QUERIES[id] || name;
+  return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q);
+}
+function videoRow(id, name){
+  const custom = getVideoLinks()[id];
+  const cur = YT_LINKS[id];
+  const diff = YT_DIFFS[id];
+  let btns = '';
+  if(custom){
+    btns += `<a class="btn btn-primary" style="display:block;text-align:center;text-decoration:none;margin-bottom:8px;" href="${esc(custom)}" target="_blank" rel="noopener">▶ Twój film</a>`;
+  } else if(cur){
+    btns += `<a class="btn btn-primary" style="display:block;text-align:center;text-decoration:none;margin-bottom:8px;" href="https://www.youtube.com/watch?v=${cur.v}" target="_blank" rel="noopener">▶ ${esc(cur.t)}</a>`;
+  }
+  btns += `<div class="btn-row">
+    <a class="btn btn-ghost" style="text-align:center;text-decoration:none;" href="${ytSearchUrl(id, name)}" target="_blank" rel="noopener">🔍 Szukaj na YouTube</a>
+    <button class="btn btn-ghost" style="flex:0 0 auto;width:auto;" onclick="setCustomVideo('${id}')" title="Zapisz własny link">✎</button>
+  </div>`;
+  return `<div class="card">
+    <b style="font-size:0.95rem;">${esc(name)}</b>
+    ${diff ? `<div class="meta" style="margin:6px 0 0;color:var(--rope-400);">⚠ ${diff}</div>` : ''}
+    <div style="margin-top:10px;">${btns}</div>
+  </div>`;
+}
+function openVideos(){
+  engineStop();
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-videos').classList.add('active');
+  renderVideos();
+}
+function renderVideos(){
+  rebuildRegistry();
+  let html = `<div class="notes-box" style="margin-top:0;">
+    <b>Jak korzystać:</b> „▶" otwiera film w YouTube (potrzebny internet). Propozycje to linki znalezione wyszukiwarką — istnienie sprawdzone, ale <b>treści nie oglądałem</b>, więc oceń sam, czy technika pasuje do opisu w aplikacji; przy różnicy <b>rozstrzyga opis w aplikacji</b> (jest dopasowany do Twojego planu i historii urazów). „🔍" szuka po dobranym zapytaniu. „✎" zapisuje Twój własny wybór — od tej pory to on będzie pod „▶".
+  </div>`;
+
+  const groups = [
+    {title:'Chwytotablica', ids:['hangboard','hangboard_B','hangboard_C','hangboard_D'],
+     names:{hangboard:HANGBOARD_PROTOCOLS.A.name, hangboard_B:HANGBOARD_PROTOCOLS.B.name, hangboard_C:HANGBOARD_PROTOCOLS.C.name, hangboard_D:HANGBOARD_PROTOCOLS.D.name}},
+    {title:'Plan FBW — ćwiczenia', ids:['E2','E3','E4','E5','E6','E7','E8','E9','E10','E11','E12','E13']},
+    {title:'Moduły B i C', ids:['E14','E15','E16','E17','E18','E19','E20','E21','E22','E23','E24','E25','E26','E27','E28','E29','E30']},
+    {title:'Program gumowy', ids:['G01','G02','G03','G04','G05','G06','G07','G08','G09','G10','G11','G12','G13','G14','G15','G16','G17','G18','G19']},
+  ];
+  groups.forEach((g, gi)=>{
+    html += `<div class="block-title"><div class="idx">${gi+1}</div><h3>${g.title}</h3></div>`;
+    g.ids.forEach(id=>{
+      const name = (g.names && g.names[id]) || (GLOBAL_REGISTRY[id] && GLOBAL_REGISTRY[id].data.name) || id;
+      html += videoRow(id, name);
+    });
+  });
+  document.getElementById('videosBody').innerHTML = html;
 }
 
 /* ---- UI poziomów: pasek na ekranie ćwiczenia ---- */
