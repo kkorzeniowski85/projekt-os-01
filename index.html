@@ -467,6 +467,13 @@
       <input type="file" id="importFile" accept="application/json" style="display:none;" onchange="importData(this)">
       <div class="meta" style="margin-top:10px;">Wszystkie dane są zapisane wyłącznie na tym telefonie — nie ma konta ani serwera. Rób eksport raz na jakiś czas i trzymaj plik np. na Dysku Google.</div>
     </div>
+    <div class="card">
+      <h2 style="margin-bottom:10px;">Aktualizacja aplikacji</h2>
+      <div class="meta" style="margin-bottom:10px;">Aplikacja aktualizuje się sama, gdy otwierasz ją z internetem — ale nowa wersja potrafi „doskoczyć" dopiero przy kolejnym uruchomieniu. Tym przyciskiem sprawdzisz od ręki, czy na serwerze jest coś nowszego; jeśli jest, aplikacja pobierze nową wersję i da przycisk do natychmiastowego przeładowania. Twoje dane (historia, ustawienia, poziomy) zostają nietknięte — aktualizacja wymienia tylko samą aplikację. Wymaga internetu.</div>
+      <button class="btn btn-primary" id="updCheckBtn" onclick="checkForUpdate()">Sprawdź, czy jest nowa wersja</button>
+      <div class="meta" id="updStatus" style="margin-top:10px;"></div>
+      <button class="btn btn-secondary" id="updReloadBtn" style="display:none;margin-top:8px;" onclick="location.reload()">Uruchom ponownie z nową wersją</button>
+    </div>
     <div class="meta" style="text-align:center;" id="versionInfo"></div>
   </section>
 
@@ -481,7 +488,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.16.0';
+const APP_VERSION = '1.17.0';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -3548,6 +3555,73 @@ function importData(input){
   };
   reader.readAsText(file);
   input.value = '';
+}
+
+/* =========================================================================
+   AKTUALIZACJA NA ŻĄDANIE — przycisk w Ustawieniach.
+   Krok 1: pobierz index.html prosto z sieci (parametr w adresie omija
+   service workera — patrz sw.js — a cache:'no-store' omija cache HTTP)
+   i odczytaj APP_VERSION z serwera. Krok 2: jeśli jest nowsza, każ
+   service workerowi pobrać nowy sw.js i świeże pliki, poczekaj na
+   aktywację i pokaż przycisk przeładowania.
+   ========================================================================= */
+function localVersionNumber(){
+  return APP_VERSION.replace(/[^0-9.].*$/, '');   // odcina np. " (jednoplikowa)"
+}
+function downloadUpdate(){
+  return new Promise((resolve)=>{
+    if(!('serviceWorker' in navigator)){ resolve(); return; }
+    navigator.serviceWorker.getRegistration().then((reg)=>{
+      if(!reg){ resolve(); return; }
+      let done = false;
+      const finish = ()=>{ if(!done){ done = true; resolve(); } };
+      const timer = setTimeout(finish, 20000);      // bezpiecznik: nie wisimy w nieskończoność
+      reg.addEventListener('updatefound', ()=>{
+        const w = reg.installing;
+        if(!w) return;
+        w.addEventListener('statechange', ()=>{
+          if(w.state === 'activated' || w.state === 'redundant'){ clearTimeout(timer); finish(); }
+        });
+      });
+      reg.update().then(()=>{
+        // sw.js bez zmian → updatefound nie przyjdzie; odczekaj chwilę, aż
+        // odświeżanie w tle dograje pliki do cache, i zakończ
+        if(!reg.installing && !reg.waiting){ setTimeout(()=>{ clearTimeout(timer); finish(); }, 2500); }
+      }).catch(()=>{ clearTimeout(timer); finish(); });
+    }).catch(()=>resolve());
+  });
+}
+async function checkForUpdate(){
+  const btn = document.getElementById('updCheckBtn');
+  const status = document.getElementById('updStatus');
+  const reloadBtn = document.getElementById('updReloadBtn');
+  reloadBtn.style.display = 'none';
+  if(!location.protocol.startsWith('http')){
+    status.textContent = 'Ta kopia działa z pliku, nie z serwera — sprawdzanie aktualizacji jej nie dotyczy. Nową wersję pliku jednoplikowego trzeba pobrać ręcznie.';
+    return;
+  }
+  btn.disabled = true;
+  status.textContent = 'Sprawdzam wersję na serwerze…';
+  try{
+    const resp = await fetch('index.html?sprawdzenie=' + Date.now(), {cache:'no-store'});
+    if(!resp.ok) throw new Error('serwer odpowiedział: ' + resp.status);
+    const text = await resp.text();
+    const m = text.match(/APP_VERSION = '([0-9.]+)/);
+    if(!m) throw new Error('nie znalazłem numeru wersji w odpowiedzi serwera');
+    const remote = m[1];
+    const local = localVersionNumber();
+    if(remote === local){
+      status.textContent = 'Masz najnowszą wersję (' + local + '). Nie ma nic do pobrania.';
+    } else {
+      status.textContent = 'Jest nowsza wersja: ' + remote + ' (masz ' + local + '). Pobieram w tle…';
+      await downloadUpdate();
+      status.textContent = 'Wersja ' + remote + ' pobrana. Dotknij poniżej, żeby ją teraz uruchomić. Gdyby po przeładowaniu nadal wyświetlała się stara wersja, zamknij aplikację całkowicie i otwórz ją jeszcze raz.';
+      reloadBtn.style.display = 'block';
+    }
+  }catch(err){
+    status.textContent = 'Nie udało się sprawdzić aktualizacji (' + err.message + '). Sprawdź, czy masz internet, i spróbuj jeszcze raz.';
+  }
+  btn.disabled = false;
 }
 
 /* =========================================================================
