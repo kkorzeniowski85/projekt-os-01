@@ -195,6 +195,7 @@
   }
   .banner.block{ background:#33201C; border:1px solid var(--alert-500); color:var(--alert-400); }
   .banner.warn{ background:#332A1A; border:1px solid var(--rope-500); color:var(--rope-400); }
+  .banner.info{ background:var(--lichen-900); border:1px solid var(--lichen-500); color:var(--lichen-400); }
   .banner b{ color:inherit; }
   .banner-head{ display:flex; align-items:center; gap:10px; padding:11px 13px; }
   .banner-ic{ font-size:1rem; flex-shrink:0; line-height:1.3; }
@@ -494,7 +495,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.18.0';
+const APP_VERSION = '1.19.0';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -730,7 +731,10 @@ function dipsExercise(){
 /* ---- Protokoły chwytotablicy (A/B/C + własny) ---------------------------
    Wspólne zasady bezpieczeństwa dopisywane są do każdego wariantu. */
 const HANGBOARD_SAFETY = [
-  {t:'Zasady wspólne dla każdego protokołu', h:'<ul><li><span class="warn"><b>Nigdy full crimp</b></span> (pełny zamknięty chwyt z kciukiem dociskającym palce) — bez wyjątków, niezależnie od protokołu.</li><li>Żadnych chwytów na jeden ani dwa palce, żadnego campusowania (puszczania i łapania w locie).</li><li>Wejście i zejście z tablicy <b>zawsze przez stopień lub szczebel</b> — nigdy zeskok, zwłaszcza na końcu ostatniej serii.</li><li>Tablica tylko <b>na początku treningu</b>, po pełnej rozgrzewce palców — nigdy na zmęczonych palcach po innych ćwiczeniach.</li><li>Rano sztywne lub bolące palce = dziś bez tablicy. Reszta treningu zostaje.</li></ul>'},
+  {t:'Zasady wspólne dla każdego protokołu', h:'<ul><li><span class="warn"><b>Nigdy full crimp</b></span> (pełny zamknięty chwyt z kciukiem dociskającym palce) — bez wyjątków, niezależnie od protokołu. Z modelowania biomechanicznego wynika, że zamknięty crimp obciąża bloczek A2 wielokrotnie (rzędu 36×) mocniej niż chwyt otwarty — wybór chwytu to największy pojedynczy czynnik ryzyka, na który masz wpływ.</li><li>Żadnych chwytów na jeden ani dwa palce, żadnego campusowania (puszczania i łapania w locie).</li><li>Wejście i zejście z tablicy <b>zawsze przez stopień lub szczebel</b> — nigdy zeskok, zwłaszcza na końcu ostatniej serii.</li><li>Tablica tylko <b>na początku treningu</b>, po pełnej rozgrzewce palców — nigdy na zmęczonych palcach po innych ćwiczeniach.</li><li>Rano sztywne lub bolące palce = dziś bez tablicy. Reszta treningu zostaje.</li></ul>'},
+  {t:'Ile razy w tygodniu — księgowość obciążeń palców', h:'Liczy się <b>każda intensywna ekspozycja palców</b>, a wspinanie jest z nich największą: sesja na ścianie = jedna ekspozycja, dokładnie tak samo jak Protokół B czy C. Zasady planu:<ul><li>Maksymalnie <b>3 intensywne ekspozycje na 7 dni</b> (wspinanie + Protokół B/C/tablica własna łącznie).</li><li><b>Nigdy dwie intensywne dzień po dniu.</b> Dzień po intensywnej sesji dozwolona jest wyłącznie praca niskointensywna (Protokół A lub D) albo przerwa.</li><li>Między wspinaniem a intensywną tablicą minimum <b>48 godzin</b>. Lekka tablica dzień po wspinaniu jest w porządku.</li></ul><b>Dlaczego tak:</b> po ciężkiej sesji siła mięśni zginaczy wraca w około dobę, ale bilans kolagenu w ścięgnie jest we wczesnej fazie (pierwsze 24–36 h) przejściowo ujemny i przewaga syntezy przychodzi dopiero później — dlatego różnicujemy intensywność sąsiednich dni zamiast układać dwa ciężkie dni z rzędu. Aplikacja pilnuje tych reguł automatycznie.'},
+  {t:'Progi: kiedy utrzymać plan, kiedy cofnąć, kiedy STOP', h:'<ul><li><b>Utrzymaj plan</b>, jeśli: brak porannej sztywności palców trwającej ponad 30 minut, brak bólu punktowego u podstawy palca lub przy paliczku środkowym (bloczki A2/A4), siła chwytu stabilna.</li><li><b>Cofnij się o etap</b> (mniej serii, większe odciążenie, tylko lekkie protokoły), jeśli: pojawia się poranna sztywność, siła chwytu spada, poczucie „gotowości" poniżej 100% utrzymuje się ponad 48 h.</li><li><span class="warn"><b>STOP i konsultacja</b></span>, jeśli: ból punktowy nad bloczkiem, obrzęk stawu środkowego palca (PIP), jakikolwiek trzask/„pop", ból przy zgięciu palca z oporem.</li></ul>Prosty autotest raz w tygodniu: powtarzalny maksymalny zwis na świeżych palcach, zawsze w tych samych warunkach. Spadek wyniku o więcej niż ~10% to sygnał przeciążenia, zanim cokolwiek zaboli.'},
+  {t:'Skąd te zasady i jak mocny to dowód', h:'Reguły częstotliwości pochodzą z Twojej analizy dowodów (sierpień 2026). Uczciwie: <b>nie istnieje badanie z randomizacją testujące tablicę w dni następujące po sobie</b> — cała baza badań to 2–3 sesje tygodniowo z dniami przerwy, a schemat „dzień intensywny + dzień lekki" to ekstrapolacja z kinetyki regeneracji tkanek i danych obserwacyjnych (m.in. retrospektywna analiza lekkich częstych zwisów), nie protokół z badań. Dlatego reguły są konserwatywne, a Twój profil (powrót po ~10 latach przerwy — nerwowo-mięśniowa adaptacja niemal na pewno wyprzedza adaptację tkanki łącznej) uzasadnia dodatkową ostrożność. Opcjonalny dodatek: 15 g żelatyny z witaminą C ~1 h przed sesją podnosi marker syntezy kolagenu, ale <b>nie ma dowodu, że zmniejsza liczbę urazów</b> — tani zakład o niskim ryzyku, decyzja Twoja.'},
 ];
 
 const HANGBOARD_PROTOCOLS = {
@@ -740,7 +744,7 @@ const HANGBOARD_PROTOCOLS = {
     series:3, reps:8, hang:10, hangRest:5, seriesRest:240,
     qualNote:'Trening z założenia LEKKI — budujesz ukrwienie i wytrzymałość, nie siłę.',
     cue:'8 × (10 s zwisu / 5 s luzu) = 1 seria. Trening z założenia LEKKI — budujesz ukrwienie i wytrzymałość, nie siłę.',
-    warn:'Jeśli „pompa" w przedramionach utrzymuje się do następnego dnia — intensywność była za wysoka. Następnym razem mocniej odciąż stopą, nie skracaj serii.',
+    warn:'Protokół NISKOINTENSYWNY (jeśli jest dobrze skalibrowany): nie zużywa limitu 3 intensywnych ekspozycji na tydzień i może wchodzić dzień po wspinaniu. Jeśli „pompa" w przedramionach utrzymuje się do następnego dnia — intensywność była za wysoka; mocniej odciąż stopą, nie skracaj serii.',
     tech:[
       {t:'Ustawienie', h:'Największa dostępna listwa albo szczebel (w planie: 25–30 mm). Chwyt <b>otwarty</b>: palce lekko zgięte, bez dociskania kciukiem. Odciążenie: stopa oparta na szczeblu drabinki. W 5-sekundowej przerwie <b>nie schodzisz</b> — tylko zdejmujesz ciężar z palców i zostajesz przy tablicy.'},
       {t:'Kalibracja — najważniejsza rzecz w tym protokole', h:'Dobierz odciążenie stopą tak, żeby po ósmym zwisie pierwszej serii czuć, że <b>spokojnie zwisałbyś drugie tyle</b>. Kontrola po fakcie: jeśli w ostatniej serii palce zaczynają się otwierać — było za ciężko; następnym razem mocniej odciąż.'},
@@ -768,13 +772,13 @@ const HANGBOARD_PROTOCOLS = {
     series:3, reps:6, hang:10, hangRest:50, seriesRest:180,
     qualNote:'Ma być ŁATWO. Jeśli w trakcie serii czujesz wysiłek w palcach — odciąż mocniej.',
     cue:'6 × (10 s zwisu / 50 s przerwy) = 1 seria. Intensywność ok. 40–50% ciężaru ciała — resztę bierze stopa.',
-    warn:'To NIE jest przepustka do codziennych zwisów. Limit Twojego planu (maks. 3 obciążenia palców na 7 dni, wliczając wspinanie) obowiązuje nadal, dopóki sam świadomie go nie zmienisz — przeczytaj sekcję o częstotliwości poniżej.',
+    warn:'Protokół NISKOINTENSYWNY: nie zużywa limitu 3 intensywnych ekspozycji na tydzień i może wchodzić także dzień po wspinaniu lub ciężkiej tablicy — pod warunkiem, że naprawdę jest lekki. Szczegóły w sekcji o częstotliwości poniżej.',
     tech:[
       {t:'Po co ten protokół', h:'To najlżejsza forma pracy palców w całej aplikacji. Cel nie jest siłowy ani wytrzymałościowy w klasycznym sensie — chodzi o <b>przepływ krwi przez ścięgna i pobudzenie syntezy kolagenu</b> przy obciążeniu na tyle niskim, że nie zjada zapasu regeneracyjnego. Używaj go jako uzupełnienia lub w tygodniu, w którym nie robisz Protokołu A/B/C.'},
       {t:'Jak ustawić obciążenie — konkretnie', h:'Stopa na szczeblu, taborecie albo krześle pod tablicą przejmuje część ciężaru. <b>Zmierz to raz wagą łazienkową:</b> postaw wagę tam, gdzie opierasz stopę, zawiśnij i odczytaj, ile kilogramów bierze stopa. Twoja masa ciała minus ten odczyt = realne obciążenie palców. Celuj w <b>40–50% masy ciała</b> na palcach. Zapisz wynik w polu „Odciążenie stopą" — dzięki temu następnym razem powtórzysz to samo, zamiast zgadywać.'},
       {t:'Wykonanie', h:'<ol><li>Największa dostępna listwa lub szczebel, chwyt <b>otwarty</b>.</li><li>10 sekund zwisu — spokojnie, bez napinania całego ciała.</li><li>Schodzisz i odpoczywasz <b>50 sekund</b> (w przeciwieństwie do Protokołu A, gdzie zostajesz przy tablicy).</li><li>6 zwisów = 1 seria, potem 3 minuty przerwy.</li></ol>'},
       {t:'Skąd ten pomysł i jakie ma ograniczenia', h:'Analiza danych użytkowników aplikacji treningowej (Gilmore i wsp. 2024) pokazała, że lekkie, częste zwisy około 40% maksimum dawały przyrost siły chwytu porównywalny z max hangs (rzędu 2,5–3,2%), a połączenie obu metod działało addytywnie (ok. 6%). <b>Uczciwie o sile dowodu:</b> to analiza retrospektywna danych z aplikacji, nie badanie z randomizacją — efekt jest realny, ale umiarkowany i nie tak pewny jak przy klasycznych protokołach.'},
-      {t:'A czy można to robić częściej?', h:'To najważniejsze pytanie przy tym protokole i odpowiedź jest niejednoznaczna. <b>Za:</b> obciążenie jest niskie, a przytoczone dane sugerują, że częsta lekka praca działa. <b>Przeciw:</b> limit w Twoim planie (3 obciążenia palców na 7 dni) nie wynika wyłącznie z wysokości obciążenia — ścięgna i troczki odbudowują kolagen wolno, a limit liczy też wspinanie, które obciąża palce najbardziej. Aplikacja <b>domyślnie liczy ten protokół jak każde inne obciążenie palców</b>. Jeśli chcesz to zmienić, potraktuj to jako zmianę w planie, nie w ustawieniach aplikacji — i najlepiej skonsultuj z osobą, która plan układała.'},
+      {t:'A czy można to robić częściej?', h:'Tak — i to jest właśnie rola tego protokołu po Twojej analizie dowodów (sierpień 2026). Zasady:<ul><li>Protokół D <b>nie zużywa</b> limitu 3 intensywnych ekspozycji palców na tydzień.</li><li>Może wchodzić <b>dzień po wspinaniu albo po ciężkiej tablicy</b> — jako „dzień niskointensywny" w układzie: dzień intensywny → dzień lekki. Dwa lekkie dni z rzędu też są w porządku.</li><li>Warunki twarde: chwyt otwarty (możesz rotować z half-crimpem i chwytem trójpalczastym między seriami — byle lekko), <b>nigdy zamknięty crimp</b>, duża listwa, całość ma być ŁATWA od pierwszego do ostatniego zwisu.</li><li>Dni objawowe (poranna sztywność, jakikolwiek ból punktowy) = bez tablicy, także tej lekkiej.</li></ul><b>Uczciwie:</b> schemat dni z rzędu nie ma badań z randomizacją — to ekstrapolacja z kinetyki tkanek i danych obserwacyjnych. Dlatego intensywne sesje pozostają twardo limitowane, a ten protokół jest wentylem częstotliwości, nie furtką do „więcej ciężko".'},
       ...HANGBOARD_SAFETY,
     ]
   },
@@ -1104,7 +1108,7 @@ const YT_DIFFS = {
   hangboard:'Niezależnie od filmu: zero full crimpu, wejście i zejście przez stopień.',
   hangboard_B:'Niezależnie od filmu: zero full crimpu; Twoje serie wg aplikacji.',
   hangboard_C:'Dawka podtrzymująca — nie goń rekordów z filmów.',
-  hangboard_D:'U Ciebie to protokół uzupełniający, liczy się do limitu obciążeń palców.',
+  hangboard_D:'U Ciebie to protokół NISKOINTENSYWNY: może wchodzić dzień po intensywnej sesji i nie zużywa limitu 3 intensywnych ekspozycji na tydzień.',
   E3:'Pilnuj pięty na podłożu — na filmach często się odrywa.',
   G07:'Pilnuj pięty na podłożu — na filmach często się odrywa.',
   E8:'Na filmach często pełna głębokość — Ty masz stop na 100–110° (Twoja stacja jest szersza niż barki).',
@@ -2098,6 +2102,14 @@ function scheduleFor(iso){
   day.pos = pos;
   return day;
 }
+/* Klasyfikacja obciążeń palców wg analizy dowodów (08.2026):
+   INTENSYWNE = wspinanie, Protokół B (repeatery), Protokół C (max hangs),
+   tablica własna (nie wiemy, jak ciężka — liczymy ostrożnie).
+   NISKOINTENSYWNE = Protokół A i Protokół D (oba z odciążeniem stopą,
+   ~40–50% obciążenia, z założenia ŁATWE). */
+function isHbIntensive(hbId){
+  return !(hbId === 'hangboard' || hbId === 'hangboard_D');
+}
 function fingerLoadInfo(){
   const byDate = {};
   for(const k of store.keys('entries:')){
@@ -2105,56 +2117,83 @@ function fingerLoadInfo(){
     const e = store.get(k, {});
     const info = {};
     if(e.climb && e.climb.savedAt) info.climb = e.climb.savedAt;
-    // każdy wariant tablicy (A/B/C/własny) liczy się jako obciążenie palców
     if(e.exercises){
       for(const exId in e.exercises){
         if(!exId.startsWith('hangboard')) continue;
         const hb = e.exercises[exId];
         const ts = hb && (hb.completedAt || hb.loggedAt);
-        if(ts && (!info.hangboard || ts > info.hangboard)) info.hangboard = ts;
+        if(!ts) continue;
+        const slot = isHbIntensive(exId) ? 'hbHigh' : 'hbLow';
+        if(!info[slot] || ts > info[slot]) info[slot] = ts;
       }
     }
-    if(info.climb || info.hangboard) byDate[iso] = info;
+    if(info.climb || info.hbHigh || info.hbLow) byDate[iso] = info;
   }
   return byDate;
 }
+function dayIntensive(info){ return !!(info && (info.climb || info.hbHigh)); }
 
-function checkFingerLimits(forWhat){ // 'hangboard' | 'climb'
+function checkFingerLimits(forWhat, hbId){ // forWhat: 'hangboard' | 'climb'; hbId tylko dla tablicy
   const loads = fingerLoadInfo();
   const today = todayISO();
-  const out = { blocks:[], warns:[] };
+  const out = { blocks:[], warns:[], infos:[] };
+  // Czy DZISIEJSZA sesja jest intensywna: wspinanie zawsze; tablica wg protokołu
+  const sessionIntensive = forWhat === 'climb' || isHbIntensive(hbId);
 
-  // Nigdy dwa dni pracy palców pod rząd
   const y = new Date(); y.setDate(y.getDate()-1);
   const yIso = isoOf(y);
-  if(loads[yIso] && !loads[today]){
-    out.blocks.push({t:'Wczoraj pracowały palce', b:'Wczoraj było wspinanie albo tablica. Dwa dni obciążania palców pod rząd są w tym planie zabronione — ścięgna i troczki regenerują się wolniej niż mięśnie i potrzebują pełnej doby przerwy.'});
+  const yesterday = loads[yIso];
+
+  // Dzień po dniu intensywnym: druga sesja intensywna ZABRONIONA,
+  // niskointensywna (A/D) dozwolona pod warunkami — wg analizy dowodów:
+  // siła mięśni wraca w ~24 h, ale bilans kolagenu ścięgna jest we wczesnej
+  // fazie (~24–72 h) przejściowo ujemny, więc różnicujemy intensywność
+  // zamiast układać dwa ciężkie dni z rzędu.
+  if(!loads[today] && dayIntensive(yesterday)){
+    if(sessionIntensive){
+      out.blocks.push({t:'Wczoraj intensywna praca palców', b:'Wczoraj było wspinanie albo intensywna tablica (Protokół B/C/własny). Dwie <b>intensywne</b> ekspozycje palców dzień po dniu są w tym planie zabronione — wczesny bilans kolagenu w ścięgnie jest po ciężkiej sesji przejściowo ujemny, mimo że siła mięśni wraca szybciej. Dziś najwyżej praca niskointensywna (Protokół A lub D) albo przerwa.'});
+    } else {
+      out.warns.push({t:'Dzień po intensywnej sesji — dziś tylko LEKKO', b:'Taki układ (dzień intensywny → dzień niskointensywny) jest dopuszczalny, ale warunki są twarde: chwyt otwarty lub half-crimp (zero zamkniętego crimpu), duża listwa, wyraźne odciążenie — ma być ŁATWO od pierwszego do ostatniego zwisu. Jeśli czujesz wczorajszą sesję w palcach, po prostu odpuść.'});
+    }
   }
 
-  // Maks. 3 obciążenia palców na 7 dni
+  // Wczoraj tylko lekka praca, dziś sesja intensywna — dozwolone, z uwagą.
+  if(!loads[today] && yesterday && !dayIntensive(yesterday) && sessionIntensive){
+    out.infos.push({t:'Wczoraj lekka praca palców', b:'Intensywna sesja najlepiej wychodzi na świeżych palcach. Wczorajszy Protokół A/D był z założenia podprogowy, więc plan na dziś zostaje — ale jeśli cokolwiek czujesz w palcach lub przedramionach, przełóż sesję.'});
+  }
+
+  // Maks. 3 INTENSYWNE ekspozycje na 7 dni (wspinanie + tablica B/C/własna).
+  // Praca niskointensywna nie zużywa tego limitu.
   if(!loads[today]){
     let count = 0;
     for(let i=1;i<=6;i++){
       const d = new Date(); d.setDate(d.getDate()-i);
-      if(loads[isoOf(d)]) count++;
+      if(dayIntensive(loads[isoOf(d)])) count++;
     }
     if(count >= 3){
-      out.blocks.push({t:'Limit obciążeń palców wyczerpany ('+count+'/3)', b:'Palce pracowały już '+count+' razy w ostatnich 7 dniach (wspinanie + tablica łącznie). Limit planu to 3 — dzisiejsza sesja byłaby czwarta. Ten limit nie rośnie niezależnie od samopoczucia.'});
+      if(sessionIntensive){
+        out.blocks.push({t:'Limit intensywnych ekspozycji wyczerpany ('+count+'/3)', b:'Palce miały już '+count+' intensywne ekspozycje w ostatnich 7 dniach (wspinanie + tablica B/C łącznie). Limit planu to 3 — dzisiejsza sesja byłaby czwarta. Ten limit nie rośnie niezależnie od samopoczucia.'});
+      } else {
+        out.infos.push({t:'Limit intensywnych wyczerpany — dobrze, że wybierasz lekką pracę', b:'W ostatnich 7 dniach były już '+count+' intensywne ekspozycje palców. Wersja niskointensywna nie zużywa tego limitu, ale pilnuj, żeby naprawdę była lekka — to nie jest sposób na przemycenie czwartej ciężkiej sesji.'});
+      }
     }
   }
 
-  // Min. 48 h między tablicą a wspinaniem
-  const otherKind = forWhat === 'hangboard' ? 'climb' : 'hangboard';
-  const otherName = forWhat === 'hangboard' ? 'wspinania' : 'sesji na tablicy';
-  let lastOther = null;
-  for(const iso in loads){
-    const ts = loads[iso][otherKind];
-    if(ts && (!lastOther || ts > lastOther)) lastOther = ts;
-  }
-  if(lastOther){
-    const hours = (Date.now() - new Date(lastOther).getTime()) / 3600000;
-    if(hours < 48 && hours >= 0){
-      out.warns.push({t:'Za mały odstęp — '+Math.round(hours)+' godz. od '+otherName, b:'Plan wymaga co najmniej 48 godzin odstępu między tablicą a wspinaniem, żeby ścięgna palców zdążyły się odbudować. Jeśli się da, przesuń dzisiejszą sesję na później.'});
+  // Min. 48 h między wspinaniem a INTENSYWNĄ tablicą (w obie strony).
+  // Lekka tablica dzień po wspinaniu jest dozwolona (obsłużona wyżej).
+  if(sessionIntensive){
+    const otherKind = forWhat === 'hangboard' ? 'climb' : 'hbHigh';
+    const otherName = forWhat === 'hangboard' ? 'wspinania' : 'intensywnej tablicy';
+    let lastOther = null;
+    for(const iso in loads){
+      const ts = loads[iso][otherKind];
+      if(ts && (!lastOther || ts > lastOther)) lastOther = ts;
+    }
+    if(lastOther){
+      const hours = (Date.now() - new Date(lastOther).getTime()) / 3600000;
+      if(hours < 48 && hours >= 0){
+        out.warns.push({t:'Za mały odstęp — '+Math.round(hours)+' godz. od '+otherName, b:'Plan wymaga co najmniej 48 godzin między wspinaniem a intensywną tablicą (B/C), żeby ścięgna palców zdążyły się odbudować. Jeśli się da, przesuń dzisiejszą sesję — albo zamień ją na wersję niskointensywną (Protokół A lub D).'});
+      }
     }
   }
 
@@ -2179,6 +2218,7 @@ function limitsBannerHTML(res){
   let html = '';
   for(const b of res.blocks) html += bannerHTML('block', '⛔', b.t, b.b);
   for(const w of res.warns) html += bannerHTML('warn', '⚠️', w.t, w.b);
+  for(const i of (res.infos || [])) html += bannerHTML('info', 'ℹ️', i.t, i.b);
   return html;
 }
 
@@ -2666,7 +2706,7 @@ function extraExercisesHTML(units, entry){
   html += `<details class="tech" id="extraPicker" style="margin-top:12px;"${state.extraPickerOpen?' open':''} ontoggle="state.extraPickerOpen=this.open">
     <summary>Dołóż pojedyncze ćwiczenie do tego dnia</summary>
     <div class="inner">
-      <div class="meta" style="margin-bottom:12px;">Dokładasz <b>dowolną liczbę</b> pojedynczych ćwiczeń — bez zmieniania całej jednostki. Wyniki zapisują się tak samo jak przy ćwiczeniach z planu. Zasady bezpieczeństwa planu obowiązują nadal (np. dipy nigdy w dobie po mocnym wspinaniu, palce maks. 3 obciążenia na 7 dni).</div>
+      <div class="meta" style="margin-bottom:12px;">Dokładasz <b>dowolną liczbę</b> pojedynczych ćwiczeń — bez zmieniania całej jednostki. Wyniki zapisują się tak samo jak przy ćwiczeniach z planu. Zasady bezpieczeństwa planu obowiązują nadal (np. dipy nigdy w dobie po mocnym wspinaniu, palce maks. 3 intensywne ekspozycje na 7 dni).</div>
       ${opts}
     </div>
   </details>`;
@@ -2729,7 +2769,7 @@ function dayPickerHTML(planned, day, overridden, extras){
       ${opt('setDayOverride','gumC','🎒','Gumy C — Pull + kondycja')}
       ${(overridden || extras.length) ? `<button class="btn btn-primary" style="margin-top:4px;" onclick="setDayOverride('plan')">✓ Wróć do planu (${planned.title})</button>` : ''}
       ${addSection}
-      <div class="meta" style="margin-top:10px;">Limity bezpieczeństwa palców (max 3 obciążenia / 7 dni, nie dwa dni pod rząd, 48 h tablica↔wspinanie) obowiązują niezależnie od tych zmian.</div>
+      <div class="meta" style="margin-top:10px;">Limity bezpieczeństwa palców obowiązują niezależnie od tych zmian: maks. 3 <b>intensywne</b> ekspozycje / 7 dni (wspinanie + tablica B/C), dzień po intensywnej sesji najwyżej lekka tablica (Protokół A/D), 48 h między wspinaniem a intensywną tablicą.</div>
     </div>
   </details>`;
 }
@@ -3150,7 +3190,7 @@ function resetOverride(id){
 }
 
 function renderHangboardBody(data){
-  const res = checkFingerLimits('hangboard');
+  const res = checkFingerLimits('hangboard', data.id);
   const blocked = res.blocks.length > 0;
 
   let html = limitsBannerHTML(res);
@@ -3464,9 +3504,16 @@ function deletePreset(id){
 function renderTools(){
   rebuildRegistry();
   const cfg = store.get('customHangboard', {hang:7, hangRest:3, reps:6, series:5, seriesRest:180});
-  const res = checkFingerLimits('hangboard');
+  // Baner na górze zakładki: stan dla sesji INTENSYWNEJ; gdy intensywna jest
+  // zablokowana, a lekka nie — dopisz, że A/D pozostają dozwolone.
+  const res = checkFingerLimits('hangboard', 'hangboard_C');
+  const resLow = checkFingerLimits('hangboard', 'hangboard_D');
 
   let html = limitsBannerHTML(res);
+  if(res.blocks.length && !resLow.blocks.length){
+    html += bannerHTML('info', 'ℹ️', 'Protokoły niskointensywne (A i D) są dziś dozwolone',
+      'Powyższa blokada dotyczy sesji <b>intensywnych</b> (wspinanie, Protokół B/C, tablica własna). Lekka praca z odciążeniem stopą — Protokół A albo D — jest dziś w porządku, pod warunkiem że naprawdę będzie lekka: chwyt otwarty lub half-crimp, zero zamkniętego crimpu, a przy jakimkolwiek odczuciu w palcach kończysz.');
+  }
 
   /* ---------- 1. Ulubione — zawsze na samej górze ---------- */
   const favs = getFavs().map(t=>({token:t, data:favResolve(t)})).filter(f=>f.data);
