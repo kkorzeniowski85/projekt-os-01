@@ -225,6 +225,12 @@
   details.tech .inner ol, details.tech .inner ul{ margin:6px 0 0; padding-left:20px; display:flex; flex-direction:column; gap:7px; }
   .tech-head{ margin:18px 0 8px; font-size:0.85rem; color:var(--chalk-500); text-transform:uppercase; letter-spacing:0.08em; font-weight:600; }
 
+  /* Schemat wykonania wewnątrz sekcji „Wykonanie" */
+  .schemat{ display:flex; gap:8px; margin-top:12px; }
+  .schemat img{ display:block; width:100%; min-width:0; border-radius:10px; background:#fff; }
+  .schemat.schemat-2 img{ width:calc(50% - 4px); }
+  .schemat-podpis{ font-size:0.72rem; color:var(--chalk-500); margin-top:5px; }
+
   .log-row{ display:flex; gap:8px; margin-top:14px; }
   .log-row > div{ flex:1; min-width:0; }
   .log-row input{
@@ -488,7 +494,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.17.0';
+const APP_VERSION = '1.18.0';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -1150,6 +1156,75 @@ const ART_LINKS = {
   G12: {u:'https://gmb.io/hollow-body/', t:'GMB — hollow body, pełny samouczek'},
 };
 
+/* =========================================================================
+   SCHEMATY WYKONANIA — obrazki w zwijanej sekcji „Wykonanie" ćwiczenia.
+   Wyłącznie materiały na wolnych licencjach (baza wger.de — licencje
+   CC BY-SA z autorem przy każdym pliku — oraz Wikimedia Commons); każdy
+   obrazek obejrzałem i odrzuciłem te, które pokazywały inny wariant niż
+   w planie. Zwykłych grafik z wyszukiwarki nie wolno wkleić do publicznie
+   hostowanej aplikacji — są chronione prawem autorskim. Pola: imgs (pliki
+   w img/), uwaga (czym schemat różni się od Twojej wersji — rozstrzyga
+   opis w aplikacji), autor/lic/zrodlo (podpis wymagany licencją).
+   ========================================================================= */
+const SCHEMATY = {
+  E3:  {imgs:['img/E3.jpg'], autor:'wakanda90', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
+        uwaga:'Na zdjęciu ciężarek trzymany przed sobą to tylko przeciwwaga — u Ciebie wystarczą wyciągnięte ręce. Pięta pracującej nogi cały czas na podłożu.'},
+  G07: {imgs:['img/E3.jpg'], autor:'wakanda90', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
+        uwaga:'Na zdjęciu ciężarek trzymany przed sobą to tylko przeciwwaga — u Ciebie wystarczą wyciągnięte ręce. Pięta pracującej nogi cały czas na podłożu.'},
+  E6:  {imgs:['img/E6.jpg'], autor:'wger.de (grafika generowana)', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
+        uwaga:'Kluczowe jak na schemacie: głowa schodzi PRZED linię dłoni, łokcie ok. 45° od tułowia.'},
+  G01: {imgs:['img/E6.jpg'], autor:'wger.de (grafika generowana)', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
+        uwaga:'Kluczowe jak na schemacie: głowa schodzi PRZED linię dłoni, łokcie ok. 45° od tułowia.'},
+  E26: {imgs:['img/E6.jpg'], autor:'wger.de (grafika generowana)', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
+        uwaga:'Schemat pokazuje wersję z podłogi — u Ciebie dłonie na podwyższeniu (deficyt), więc głowa schodzi niżej poziomu dłoni.'},
+  E8:  {imgs:['img/E8.jpg'], autor:'cshep442', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
+        uwaga:'Rysunek pokazuje pełne zejście — u Ciebie STOP na 100–110° zgięcia łokcia (Twoja stacja jest szersza niż barki).'},
+  E27: {imgs:['img/E8.jpg'], autor:'cshep442', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
+        uwaga:'Rysunek pokazuje pełne zejście — u Ciebie STOP na 100–110° i pauza 1 s na dole.'},
+  E9:  {imgs:['img/E9.jpg'], autor:'wger.de', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
+        uwaga:'Schemat pokazuje pozycję wytoczoną z prostymi nogami — u Ciebie start z klęku, a zakres kończy się tam, gdzie lędźwie zaczynają uciekać w łuk.'},
+  G04: {imgs:['img/E9.jpg'], autor:'wger.de', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
+        uwaga:'Schemat pokazuje pozycję wytoczoną z prostymi nogami — u Ciebie start z klęku, a zakres kończy się tam, gdzie lędźwie zaczynają uciekać w łuk.'},
+  E29: {imgs:['img/E9.jpg'], autor:'wger.de', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
+        uwaga:'Pozycja wytoczona jak na schemacie — u Ciebie ze stania; zakres buduj stopniowo, lędźwie nie mogą uciec w łuk.'},
+  E10: {imgs:['img/E10.jpg'], autor:'erikocobra', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
+        uwaga:'Jak na schemacie: płaskie podłoże, pełne wspięcie, bez schodzenia pięt niżej palców. U Ciebie tempo 3-1-3 z planu.'},
+  G10: {imgs:['img/E10.jpg'], autor:'erikocobra', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
+        uwaga:'Na schemacie wersja obunóż — u Ciebie jednonóż, w wolnym tempie z planu.'},
+  E13: {imgs:['img/E13a.png','img/E13b.png'], autor:'Everkinetic', lic:'CC BY-SA 3.0', zrodlo:'wger.de',
+        uwaga:'Dwie fazy: zejście i wyprost TYLKO do linii ciała — druga pozycja na rysunku (tułów w linii nóg) to Twój STOP, ani stopnia wyżej.'},
+  E14: {imgs:['img/E14.jpg'], autor:'Imobard', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
+        uwaga:'Klasyczne podciąganie jak na rysunku — u Ciebie z pauzą 2 s na górze i wolnym opuszczaniem.'},
+  E23: {imgs:['img/E14.jpg'], autor:'Imobard', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
+        uwaga:'Na rysunku chwyt na szerokość barków — u Ciebie wyraźnie szerszy, nachwytem.'},
+  E15: {imgs:['img/E15.jpg'], autor:'Franpol', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
+        uwaga:'Na schemacie wersja z hantlami — u Ciebie bez obciążenia albo z plecakiem.'},
+  E16: {imgs:['img/E16.jpg'], autor:'wger.de', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
+        uwaga:'Na zdjęciach mostek obunóż — u Ciebie jedna noga wyprostowana w powietrzu, biodra przez cały czas równo.'},
+  E17: {imgs:['img/E17.jpg'], autor:'wger.de (grafika generowana)', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
+        uwaga:'U Ciebie TYLKO statyczne utrzymanie jak w pozycji z lewej — bez schodzenia głową w dół pokazanego z prawej (to inne, trudniejsze ćwiczenie).'},
+  E19: {imgs:['img/E19.jpg'], autor:'wger.de (grafika generowana)', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
+        uwaga:'Dokładnie jak na schemacie: ze spokojnego zwisu, bez bujania, nogi do poziomu.'},
+  E20: {imgs:['img/E20.jpg'], autor:'prevail90', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
+        uwaga:'Na schemacie wyciąg na siłowni — u Ciebie taśma zaczepiona na drabince na wysokości klatki. Ustawienie ciała i ruch identyczne.'},
+  G05: {imgs:['img/E20.jpg'], autor:'prevail90', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
+        uwaga:'Na schemacie wyciąg na siłowni — u Ciebie taśma zaczepiona na drabince na wysokości klatki. Ustawienie ciała i ruch identyczne.'},
+  E21: {imgs:['img/E21.jpg'], autor:'AlucardEvil40', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
+        uwaga:'Jak na schemacie: siad, kolana zgięte ~90°, obciążenie położone na kolanie (u Ciebie plecak zamiast hantli).'},
+  E24: {imgs:['img/E24.jpg'], autor:'wger.de (grafika generowana)', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
+        uwaga:'Na schemacie step na ławkę — u Ciebie szczebel drabinki, a najważniejsza jest faza SCHODZENIA przez 4 sekundy.'},
+  E25: {imgs:['img/E25.jpg'], autor:'Tierrasverdes', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
+        uwaga:'Na rysunku wersja z hantlą i podparciem ręki o ławkę — u Ciebie wolnostojąca (ewentualnie plecak). Najważniejsze jak na rysunku: tułów i tylna noga w jednej linii.'},
+  E28: {imgs:['img/E28.jpg'], autor:'fot. West Point Public Affairs', lic:'domena publiczna', zrodlo:'Wikimedia Commons',
+        uwaga:'Na zdjęciu L-sit na kółkach gimnastycznych — u Ciebie na poręczach stacji. Pozycja ta sama: proste ręce, barki z dala od uszu, nogi do poziomu (na początku wystarczy tuck).'},
+  G09: {imgs:['img/G09.webp'], autor:'AlucardEvil40', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
+        uwaga:'Na schemacie wersja z hantlą, obunóż — u Ciebie bez obciążenia, jednonóż, plecy oparte o domowe podwyższenie.'},
+  G14: {imgs:['img/G14a.png','img/G14b.png'], autor:'Everkinetic', lic:'CC BY-SA 3.0', zrodlo:'wger.de',
+        uwaga:'Na rysunkach wyciąg na siłowni — u Ciebie taśma zaczepiona nisko. Pozycja i tor ruchu te same, u Ciebie dodatkowo pauza 2 s przy klatce.'},
+  G16: {imgs:['img/G16.jpg'], autor:'Franpol', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
+        uwaga:'Na schemacie wersja stojąca przy wyciągu górnym — tor ruchu ten sam: proste ręce prowadzą opór łukiem w stronę bioder. U Ciebie leżąc lub w klęku, taśma przy niskiej kotwicy.'},
+};
+
 function getVideoLinks(){ return store.get('videoLinks', {}); }
 function setCustomVideo(id){
   const cur = getVideoLinks()[id] || '';
@@ -1201,7 +1276,7 @@ function openVideos(){
 function renderVideos(){
   rebuildRegistry();
   let html = `<div class="notes-box" style="margin-top:0;">
-    <b>Jak korzystać:</b> „▶" otwiera film w YouTube, a „📄" artykuł lub poradnik ze zdjęciami i schematami na stronie internetowej (jedno i drugie wymaga internetu). Wszystkie propozycje to linki znalezione wyszukiwarką — istnienie sprawdzone, ale <b>treści nie oglądałem ani nie czytałem w całości</b>, więc oceń sam, czy technika pasuje do opisu w aplikacji; przy różnicy <b>rozstrzyga opis w aplikacji</b> (jest dopasowany do Twojego planu i historii urazów). „🔍" szuka na YouTube po dobranym zapytaniu. „✎" zapisuje Twój własny wybór (film albo artykuł) — od tej pory to on będzie pod „▶".
+    <b>Jak korzystać:</b> „▶" otwiera film w YouTube, a „📄" artykuł lub poradnik ze zdjęciami i schematami na stronie internetowej (jedno i drugie wymaga internetu). Wszystkie propozycje to linki znalezione wyszukiwarką — istnienie sprawdzone, ale <b>treści nie oglądałem ani nie czytałem w całości</b>, więc oceń sam, czy technika pasuje do opisu w aplikacji; przy różnicy <b>rozstrzyga opis w aplikacji</b> (jest dopasowany do Twojego planu i historii urazów). „🔍" szuka na YouTube po dobranym zapytaniu. „✎" zapisuje Twój własny wybór (film albo artykuł) — od tej pory to on będzie pod „▶". Te same linki (oraz schematy wykonania, tam gdzie są) znajdziesz też przy każdym ćwiczeniu, w zwijanej części „Wykonanie".
   </div>`;
 
   const groups = [
@@ -2903,11 +2978,45 @@ function cueBlock(data){
   return html;
 }
 
+/* Dodatek do sekcji „Wykonanie": schemat (jeśli jest) + linki do filmu,
+   poradnika i szukajki. Schemat i jego podpis działają offline; linki
+   wymagają internetu. */
+function techExtrasHTML(id, name){
+  if(!id) return '';
+  let html = '';
+  const s = SCHEMATY[id];
+  if(s){
+    const imgs = s.imgs.map(p=>`<img src="${p}" alt="Schemat wykonania: ${esc(name||id)}" loading="lazy">`).join('');
+    html += `<div class="schemat${s.imgs.length>1?' schemat-2':''}">${imgs}</div>`;
+    if(s.uwaga) html += `<div class="meta" style="margin-top:8px;color:var(--rope-400);">⚠ ${s.uwaga}</div>`;
+    html += `<div class="schemat-podpis">Schemat: ${esc(s.autor)} · ${esc(s.lic)} · ${esc(s.zrodlo)}</div>`;
+  }
+  const custom = getVideoLinks()[id];
+  const cur = YT_LINKS[id];
+  const art = ART_LINKS[id];
+  let btns = '';
+  if(custom){
+    btns += `<a class="btn btn-ghost" style="flex:1 1 45%;text-align:center;text-decoration:none;" href="${esc(custom)}" target="_blank" rel="noopener">▶ Twój link</a>`;
+  } else if(cur){
+    btns += `<a class="btn btn-ghost" style="flex:1 1 45%;text-align:center;text-decoration:none;" href="https://www.youtube.com/watch?v=${cur.v}" target="_blank" rel="noopener">▶ Film</a>`;
+  }
+  if(art){
+    btns += `<a class="btn btn-ghost" style="flex:1 1 45%;text-align:center;text-decoration:none;" href="${art.u}" target="_blank" rel="noopener">📄 Poradnik</a>`;
+  }
+  btns += `<a class="btn btn-ghost" style="flex:1 1 45%;text-align:center;text-decoration:none;" href="${ytSearchUrl(id, name||'')}" target="_blank" rel="noopener">🔍 Szukaj</a>`;
+  html += `<div class="btn-row" style="flex-wrap:wrap;margin-top:12px;">${btns}</div>
+    <div class="meta" style="margin-top:6px;font-size:0.72rem;">Linki wymagają internetu. Pełna lista z opisami i miejscem na własne linki: Ustawienia → Wideo i poradniki.</div>`;
+  return html;
+}
+
 function techBlock(data, openFirst){
   if(!data.tech || !data.tech.length) return '';
   let html = `<div class="tech-head">Technika — przeczytaj przed pierwszym razem</div>`;
+  let extrasIdx = data.tech.findIndex(sec=>sec.t === 'Wykonanie');
+  if(extrasIdx === -1) extrasIdx = 0;
+  const extras = techExtrasHTML(data.id, data.name);
   data.tech.forEach((sec, i)=>{
-    html += `<details class="tech"${openFirst && i===0?' open':''}><summary>${sec.t}</summary><div class="inner">${sec.h}</div></details>`;
+    html += `<details class="tech"${openFirst && i===0?' open':''}><summary>${sec.t}</summary><div class="inner">${sec.h}${i===extrasIdx?extras:''}</div></details>`;
   });
   return html;
 }

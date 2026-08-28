@@ -1,12 +1,18 @@
 /* Service worker — offline-first, aktualizacja w tle.
    Przy każdej nowej wersji aplikacji podbij CACHE_VERSION. */
-const CACHE_VERSION = 'trener-fbw-v26';
+const CACHE_VERSION = 'trener-fbw-v27';
 const ASSETS = [
   './',
   './index.html',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',
+  /* schematy wykonania (sekcja „Wykonanie" przy ćwiczeniach) — offline */
+  './img/E3.jpg', './img/E6.jpg', './img/E8.jpg', './img/E9.jpg', './img/E10.jpg',
+  './img/E13a.png', './img/E13b.png', './img/E14.jpg', './img/E15.jpg', './img/E16.jpg',
+  './img/E17.jpg', './img/E19.jpg', './img/E20.jpg', './img/E21.jpg', './img/E24.jpg',
+  './img/E25.jpg', './img/E28.jpg', './img/G09.webp', './img/G14a.png', './img/G14b.png',
+  './img/G16.jpg',
 ];
 
 self.addEventListener('install', (e) => {
