@@ -495,7 +495,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.19.0';
+const APP_VERSION = '1.20.0';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -737,32 +737,44 @@ const HANGBOARD_SAFETY = [
   {t:'Skąd te zasady i jak mocny to dowód', h:'Reguły częstotliwości pochodzą z Twojej analizy dowodów (sierpień 2026). Uczciwie: <b>nie istnieje badanie z randomizacją testujące tablicę w dni następujące po sobie</b> — cała baza badań to 2–3 sesje tygodniowo z dniami przerwy, a schemat „dzień intensywny + dzień lekki" to ekstrapolacja z kinetyki regeneracji tkanek i danych obserwacyjnych (m.in. retrospektywna analiza lekkich częstych zwisów), nie protokół z badań. Dlatego reguły są konserwatywne, a Twój profil (powrót po ~10 latach przerwy — nerwowo-mięśniowa adaptacja niemal na pewno wyprzedza adaptację tkanki łącznej) uzasadnia dodatkową ostrożność. Opcjonalny dodatek: 15 g żelatyny z witaminą C ~1 h przed sesją podnosi marker syntezy kolagenu, ale <b>nie ma dowodu, że zmniejsza liczbę urazów</b> — tani zakład o niskim ryzyku, decyzja Twoja.'},
 ];
 
+/* Wspólna sekcja modułu „Wytrzymałość siłowa" (Protokoły A + B) —
+   przebudowa i nazwa na prośbę użytkownika (09.2026). */
+const WS_MODUL = [
+  {t:'Moduł „Wytrzymałość siłowa" — jak A i B grają razem', h:'Wytrzymałość siłowa palców to dwie różne adaptacje i dlatego moduł ma dwie części:<ul><li><b>Protokół A (baza, niskointensywny)</b> — buduje kapilary i zaplecze tlenowe, czyli <b>zdolność do wypłukiwania metabolitów</b> między chwytami. Robisz go częściej, zawsze lekko.</li><li><b>Protokół B (repeatery 7/3, intensywny)</b> — uczy mięsień <b>pracować w zakwaszeniu</b>: buforowanie i tolerancja „palenia". Robisz go rzadko (to intensywna ekspozycja z limitu 3/tydzień) i tylko na bazie zbudowanej przez A.</li></ul>Uwaga o „kwasie mlekowym": to, co pali w przedramionach, to nie sam mleczan, lecz narastające jony wodorowe i fosforany przy pracy bez dopływu krwi — mleczan jest w dużej mierze paliwem, które sprawniejsza sieć naczyń i mitochondria potrafią z powrotem zużyć. Efekt praktyczny obu części jest jednak dokładnie ten, o który chodzi: <b>później „zalewasz się" i szybciej odpuszcza</b>.<br><br>Trzeci, cichy składnik wytrzymałości to <b>siła maksymalna (Protokół C)</b>: im mocniejsze palce, tym mniejszy procent maksimum kosztuje ten sam chwyt — dłużej pozostajesz poniżej progu, przy którym mięsień zaciska sobie dopływ krwi. Dlatego nawet trenując wytrzymałość, nie porzuca się siły całkiem.<br><br><b>Rytm tygodnia w praktyce:</b> A możesz robić 2–3× w tygodniu (także dzień po wspinaniu), B najwyżej 1× — osobno od wspinania o co najmniej 48 h. Uzupełnieniem, nie zamiennikiem, jest łatwe wspinanie ciągiem z dni wspinaczkowych planu.'},
+];
+
 const HANGBOARD_PROTOCOLS = {
   A: {
     id:'hangboard', key:'A', kind:'hangboard',
-    name:'Protokół A — wytrzymałość tlenowa',
+    name:'Protokół A — wytrzymałość siłowa: baza (kapilaryzacja)',
     series:3, reps:8, hang:10, hangRest:5, seriesRest:240,
-    qualNote:'Trening z założenia LEKKI — budujesz ukrwienie i wytrzymałość, nie siłę.',
-    cue:'8 × (10 s zwisu / 5 s luzu) = 1 seria. Trening z założenia LEKKI — budujesz ukrwienie i wytrzymałość, nie siłę.',
+    qualNote:'Trening z założenia LEKKI — budujesz sieć naczyń i wytrzymałość, nie siłę.',
+    cue:'8 × (10 s zwisu / 5 s luzu) = 1 seria. Trening z założenia LEKKI — budujesz sieć naczyń i wytrzymałość, nie siłę.',
     warn:'Protokół NISKOINTENSYWNY (jeśli jest dobrze skalibrowany): nie zużywa limitu 3 intensywnych ekspozycji na tydzień i może wchodzić dzień po wspinaniu. Jeśli „pompa" w przedramionach utrzymuje się do następnego dnia — intensywność była za wysoka; mocniej odciąż stopą, nie skracaj serii.',
     tech:[
+      {t:'Co dokładnie budujesz w tym protokole', h:'To jest <b>fundament wytrzymałości siłowej</b>: rozbudowa drobnych naczyń (kapilar) i „elektrowni" tlenowych (mitochondriów) w zginaczach przedramienia. Fizjologia jest prosta: powyżej ok. 40% maksymalnego ściśnięcia mięsień przedramienia <b>zaciska własne naczynia</b> i pracuje bez dopływu krwi. Rytm 10 s pracy / 5 s luzu robi z każdej przerwy <b>okno przepływu</b> — krew wraca falą, wypłukuje metabolity i dostarcza tlen, a powtarzany co kilkanaście sekund skok przepływu to właśnie bodziec do rozrostu naczyń. Warunek działa tylko przy NISKIEJ intensywności: gdy wisisz za ciężko, naczynia są zaciśnięte także „z rozpędu" w przerwach i cały mechanizm znika. Dlatego za ciężkie robienie tego protokołu to nie „więcej treningu", tylko <b>inny, gorszy trening</b>.'},
       {t:'Ustawienie', h:'Największa dostępna listwa albo szczebel (w planie: 25–30 mm). Chwyt <b>otwarty</b>: palce lekko zgięte, bez dociskania kciukiem. Odciążenie: stopa oparta na szczeblu drabinki. W 5-sekundowej przerwie <b>nie schodzisz</b> — tylko zdejmujesz ciężar z palców i zostajesz przy tablicy.'},
       {t:'Kalibracja — najważniejsza rzecz w tym protokole', h:'Dobierz odciążenie stopą tak, żeby po ósmym zwisie pierwszej serii czuć, że <b>spokojnie zwisałbyś drugie tyle</b>. Kontrola po fakcie: jeśli w ostatniej serii palce zaczynają się otwierać — było za ciężko; następnym razem mocniej odciąż.'},
+      {t:'Progresja — w tej kolejności, nie innej', h:'Dla wytrzymałości progresuje się <b>objętością i gęstością, nie ciężarem</b>:<ol><li>Najpierw dokładaj <b>serie</b>: 3 → 4 → 5 (przez „✎").</li><li>Potem <b>powtórzenia w serii</b>: 8 → 10.</li><li>Potem <b>gęstość</b>: luz 5 s → 4 s.</li><li>Intensywność (mniejsza listwa, mniej odciążenia) ruszasz na SAMYM końcu — i tylko jeśli całość nadal spełnia regułę „spokojnie drugie tyle".</li></ol>Każdy krok utrzymaj przez ok. 2 tygodnie, zanim zrobisz następny.'},
       {t:'Po czym poznać, że było dobrze', h:'<ul><li>Lekka pompa na końcu serii, znikająca w czasie przerwy.</li><li>Po treningu przedramiona sprawne, bez uczucia „nabitych".</li><li>Pompa do następnego dnia = za ciężko (najczęstszy błąd w tym protokole).</li></ul>'},
+      ...WS_MODUL,
       ...HANGBOARD_SAFETY,
     ]
   },
   B: {
     id:'hangboard_B', key:'B', kind:'hangboard',
-    name:'Protokół B — repeatery',
+    name:'Protokół B — wytrzymałość siłowa: repeatery 7/3',
     series:4, reps:6, hang:7, hangRest:3, seriesRest:150,
     qualNote:'Ostatnie powtórzenie ma być trudne, ale wykonane w pełni.',
     cue:'6 × (7 s zwisu / 3 s przerwy) = 1 seria (60 s). Ostatnie powtórzenie ma być trudne, ale wykonane w pełni.',
     warn:'Wg Twojego planu Protokół B wchodzi dopiero od 3. tygodnia (w skróconej formie, 3 serie). W tygodniach 1–2 robisz wyłącznie Protokół A.',
     tech:[
+      {t:'Co dokładnie budujesz w tym protokole', h:'To „kwaśna" połowa modułu wytrzymałości siłowej. Minutowa seria 6 × (7 s / 3 s) przy wyraźnym obciążeniu zmusza zginacze do pracy, gdy metabolity już narastają — trzysekundowe okna nie wystarczają na pełne wypłukanie. Tego właśnie chcesz: mięsień uczy się <b>buforować zakwaszenie i utrzymywać chwyt mimo „palenia"</b>, a głowa uczy się, że pompa to jeszcze nie koniec. To dokładnie ten rodzaj zmęczenia, który kończy przechwyty na dłuższych bulderach i drogach. Warunek sensu: wszystkie serie <b>ukończone</b> — repeatery zrywane w połowie trenują głównie frustrację.'},
       {t:'Ustawienie', h:'Listwa 20–25 mm. Chwyt: <b>half-crimp i otwarty naprzemiennie</b> — zmieniasz między seriami, żeby nie obciążać w kółko tej samej struktury. Half-crimp = palce zgięte ok. 90° w środkowym stawie, kciuk swobodny (nie na palcach!).'},
-      {t:'Jak dobrać ciężar', h:'Intensywność wyższa niż w Protokole A: ostatnie powtórzenie serii ma być wyraźnie trudne, ale wykonane w pełnym czasie i bez otwierania się palców. Jeśli nie kończysz serii — odciąż. Jeśli kończysz z dużym zapasem — zmniejsz odciążenie.'},
+      {t:'Jak dobrać ciężar', h:'Intensywność wyższa niż w Protokole A: ostatnie powtórzenie serii ma być wyraźnie trudne, ale wykonane w pełnym czasie i bez otwierania się palców. Jeśli nie kończysz serii — odciąż. Jeśli kończysz z dużym zapasem — zmniejsz odciążenie. Orientacyjnie to praca rzędu 60–75% maksimum — pompa na końcu serii MA być.'},
       {t:'Przerwy', h:'Między seriami 2–3 minuty. W 3-sekundowej przerwie wewnątrz serii zdejmujesz ciężar z palców, ale zostajesz przy tablicy.'},
+      {t:'Progresja', h:'<ol><li>Najpierw <b>serie</b>: 3 → 4 → 5 (przez „✎").</li><li>Potem minimalnie <b>mniejsze odciążenie</b> (ta sama listwa).</li><li>Listwę zmniejszasz na końcu — i nigdy „na siłę": kryterium zawsze brzmi „ostatnie powtórzenie trudne, ale pełne".</li></ol>Pamiętaj: to ekspozycja INTENSYWNA — 1× w tygodniu wystarczy, a limit 3 intensywnych na tydzień liczy też wspinanie.'},
+      ...WS_MODUL,
       ...HANGBOARD_SAFETY,
     ]
   },
@@ -784,14 +796,16 @@ const HANGBOARD_PROTOCOLS = {
   },
   C: {
     id:'hangboard_C', key:'C', kind:'hangboard',
-    name:'Protokół C — max hangs (siła podtrzymująca)',
+    name:'Protokół C — siła maksymalna (max hangs, bouldering)',
     series:4, reps:1, hang:9, hangRest:0, seriesRest:240,
-    qualNote:'Dawka PODTRZYMUJĄCA — nie gonisz rekordów.',
-    cue:'4 pojedyncze zwisy po 8–10 s, przerwa 3–5 min. Dawka PODTRZYMUJĄCA — nie gonisz rekordów.',
+    qualNote:'Domyślnie dawka PODTRZYMUJĄCA — tryb budujący opisany niżej.',
+    cue:'4 pojedyncze zwisy po 8–10 s, przerwa 3–5 min. Domyślnie dawka PODTRZYMUJĄCA — tryb budujący opisany w technice.',
     warn:'Wg Twojego planu Protokół C wchodzi od 5. tygodnia, a z kamizelką nie wcześniej niż od 11. tygodnia (start 2,5% masy ciała). W tygodniach 1–2 robisz wyłącznie Protokół A.',
     tech:[
-      {t:'Ustawienie', h:'Listwa 20 mm, chwyt <b>half-crimp</b> (palce zgięte ok. 90° w środkowym stawie, kciuk swobodny). Pojedyncze zwisy, pełna przerwa między nimi.'},
-      {t:'Dlaczego „nie gonisz rekordów"', h:'W Twoim planie siła maksymalna palców ma priorytet niski — to dawka <b>podtrzymująca</b>, która ma utrzymać poziom, a nie go budować. Cel główny to wytrzymałość (Protokół A). Ściganie się z sobą na tym protokole zjada zapas regeneracyjny potrzebny na wspinanie.'},
+      {t:'Co dokładnie budujesz w tym protokole', h:'Czystą <b>siłę maksymalną palców</b> — walutę boulderingu. Bulder to kilka–kilkanaście maksymalnych przechwytów: o utrzymaniu chwytu decyduje siła szczytowa, nie zaplecze tlenowe. Pojedyncze krótkie zwisy przy wysokim obciążeniu i PEŁNYCH przerwach uczą układ nerwowy rekrutować włókna na raz, bez zakwaszenia — dlatego przerwy 3–5 min są częścią treningu, nie stratą czasu. Bonus dla wytrzymałości: mocniejsze palce trzymają ten sam chwyt na niższym procencie maksimum, więc później przekraczasz próg, przy którym mięsień zaciska sobie dopływ krwi.'},
+      {t:'Ustawienie', h:'Listwa 20 mm, chwyt <b>half-crimp</b> (palce zgięte ok. 90° w środkowym stawie, kciuk swobodny; możesz rotować z chwytem otwartym między sesjami). Pojedyncze zwisy, pełna przerwa między nimi. Nigdy na zmęczonych palcach i nigdy bez pełnej rozgrzewki.'},
+      {t:'Tryb 1 — dawka podtrzymująca (domyślna w planie)', h:'4 pojedyncze zwisy po 8–10 s z wyraźnym zapasem, 1× w tygodniu. Ma utrzymać poziom siły w sezonie, w którym priorytetem planu jest wytrzymałość siłowa (moduł A+B). W tym trybie <b>nie gonisz rekordów</b> — ściganie się zjada zapas regeneracyjny potrzebny na wspinanie.'},
+      {t:'Tryb 2 — budowanie siły pod bouldering (Twoja decyzja, 09.2026)', h:'Kiedy chcesz przez blok treningowy realnie BUDOWAĆ siłę, ustaw przez „✎": <b>5 serii × 7–10 s</b>, przerwy 3–5 min, intensywność dobrana tak, żeby na końcu zwisu zostawały <b>2–3 sekundy zapasu</b> — ciężko, ale nigdy do zerwania. Prowadzenie bloku:<ol><li>Progresja czasem: 7 s → 10 s przy stałym obciążeniu.</li><li>Gdy 5 × 10 s wychodzi z zapasem — dodaj obciążenie (start 2,5% masy ciała, dalej ok. +1–2% na tydzień) ALBO zmniejsz listwę. Nigdy obie zmiany naraz.</li><li>Częstotliwość: 1–2× w tygodniu. Uwaga na księgowość: przy 2× C zostaje Ci w limicie tylko JEDNA sesja wspinania w tygodniu — to realny koszt tego trybu.</li><li>Blok prowadź 4–6 tygodni, potem wróć do dawki podtrzymującej; tydzień deloadu z makrocyklu obowiązuje normalnie (zero tablicy).</li></ol><b>Uczciwie:</b> parametry max hangs (krótki zwis, wysokie obciążenie, długie przerwy, progresja ciężaru) mają wsparcie w badaniach wspinaczy; konkretna liczba serii i tempo progresji to praktyka trenerska, nie twardy dowód. Ból, „pop" albo poranna sztywność = natychmiast koniec bloku i powrót do zasad z sekcji progów.'},
       {t:'Kiedy przerwać', h:'Zwis kończysz, gdy palce zaczynają się otwierać — nie „na maksa". Ból lub trzask w podstawie palca = <span class="warn">natychmiastowy koniec pracy palców i konsultacja</span>.'},
       ...HANGBOARD_SAFETY,
     ]
@@ -1908,7 +1922,7 @@ function buildWeek(){
       GENERAL_WARMUP,
       FINGER_WARMUP,
       {...getProtocol('A'),
-        name:'Chwytotablica — Protokół A (wytrzymałość)',
+        name:'Chwytotablica — Protokół A (wytrzymałość siłowa: baza)',
         warn:'Jeśli rano palce były sztywne lub bolały — dziś bez tablicy, reszta treningu zostaje. Jeśli „pompa" w przedramionach utrzymuje się do następnego dnia — intensywność była za wysoka, następnym razem mocniej odciąż.'},
       { id:'measure_pullups', name:'Pomiar: maks. podciągnięć', kind:'measure',
         cue:'Jednorazowy test przed podciąganiem archer.',
