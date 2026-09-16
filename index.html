@@ -495,7 +495,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.20.0';
+const APP_VERSION = '1.21.0';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -805,7 +805,25 @@ const HANGBOARD_PROTOCOLS = {
       {t:'Co dokładnie budujesz w tym protokole', h:'Czystą <b>siłę maksymalną palców</b> — walutę boulderingu. Bulder to kilka–kilkanaście maksymalnych przechwytów: o utrzymaniu chwytu decyduje siła szczytowa, nie zaplecze tlenowe. Pojedyncze krótkie zwisy przy wysokim obciążeniu i PEŁNYCH przerwach uczą układ nerwowy rekrutować włókna na raz, bez zakwaszenia — dlatego przerwy 3–5 min są częścią treningu, nie stratą czasu. Bonus dla wytrzymałości: mocniejsze palce trzymają ten sam chwyt na niższym procencie maksimum, więc później przekraczasz próg, przy którym mięsień zaciska sobie dopływ krwi.'},
       {t:'Ustawienie', h:'Listwa 20 mm, chwyt <b>half-crimp</b> (palce zgięte ok. 90° w środkowym stawie, kciuk swobodny; możesz rotować z chwytem otwartym między sesjami). Pojedyncze zwisy, pełna przerwa między nimi. Nigdy na zmęczonych palcach i nigdy bez pełnej rozgrzewki.'},
       {t:'Tryb 1 — dawka podtrzymująca (domyślna w planie)', h:'4 pojedyncze zwisy po 8–10 s z wyraźnym zapasem, 1× w tygodniu. Ma utrzymać poziom siły w sezonie, w którym priorytetem planu jest wytrzymałość siłowa (moduł A+B). W tym trybie <b>nie gonisz rekordów</b> — ściganie się zjada zapas regeneracyjny potrzebny na wspinanie.'},
-      {t:'Tryb 2 — budowanie siły pod bouldering (Twoja decyzja, 09.2026)', h:'Kiedy chcesz przez blok treningowy realnie BUDOWAĆ siłę, ustaw przez „✎": <b>5 serii × 7–10 s</b>, przerwy 3–5 min, intensywność dobrana tak, żeby na końcu zwisu zostawały <b>2–3 sekundy zapasu</b> — ciężko, ale nigdy do zerwania. Prowadzenie bloku:<ol><li>Progresja czasem: 7 s → 10 s przy stałym obciążeniu.</li><li>Gdy 5 × 10 s wychodzi z zapasem — dodaj obciążenie (start 2,5% masy ciała, dalej ok. +1–2% na tydzień) ALBO zmniejsz listwę. Nigdy obie zmiany naraz.</li><li>Częstotliwość: 1–2× w tygodniu. Uwaga na księgowość: przy 2× C zostaje Ci w limicie tylko JEDNA sesja wspinania w tygodniu — to realny koszt tego trybu.</li><li>Blok prowadź 4–6 tygodni, potem wróć do dawki podtrzymującej; tydzień deloadu z makrocyklu obowiązuje normalnie (zero tablicy).</li></ol><b>Uczciwie:</b> parametry max hangs (krótki zwis, wysokie obciążenie, długie przerwy, progresja ciężaru) mają wsparcie w badaniach wspinaczy; konkretna liczba serii i tempo progresji to praktyka trenerska, nie twardy dowód. Ból, „pop" albo poranna sztywność = natychmiast koniec bloku i powrót do zasad z sekcji progów.'},
+      {t:'Tryb 2 — budowanie siły pod bouldering (Twoja decyzja, 09.2026)', h:'Kiedy chcesz przez blok treningowy realnie BUDOWAĆ siłę, użyj osobnej pozycji <b>„Protokół C+ — budowanie siły (bouldering)"</b> w zakładce <b>Timery</b>: 5 pojedynczych zwisów po 7–10 s, przerwy 3–5 min, na końcu zwisu 2–3 sekundy zapasu. Ma własny timer, własną edycję „✎" i osobną historię, więc dawka podtrzymująca (C) i blok budujący (C+) się nie mieszają. Pełne prowadzenie bloku — progresja czas → obciążenie, częstotliwość, koszt w limicie intensywnych ekspozycji — jest opisane przy C+.'},
+      {t:'Kiedy przerwać', h:'Zwis kończysz, gdy palce zaczynają się otwierać — nie „na maksa". Ból lub trzask w podstawie palca = <span class="warn">natychmiastowy koniec pracy palców i konsultacja</span>.'},
+      ...HANGBOARD_SAFETY,
+    ]
+  },
+  CP: {
+    id:'hangboard_Cbud', key:'CP', kind:'hangboard',
+    name:'Protokół C+ — budowanie siły (bouldering)',
+    series:5, reps:1, hang:7, hangRest:0, seriesRest:240,
+    qualNote:'Na końcu zwisu 2–3 sekundy zapasu — ciężko, ale nigdy do zerwania.',
+    cue:'5 pojedynczych zwisów po 7–10 s, przerwa 3–5 min. Na końcu zwisu 2–3 sekundy zapasu — ciężko, ale nigdy do zerwania.',
+    warn:'Tryb INTENSYWNY — liczy się do limitu 3 ekspozycji palców na tydzień; przy 2× w tygodniu zostaje Ci JEDNA sesja wspinania. Blok prowadź 4–6 tygodni, potem wróć do dawki podtrzymującej (Protokół C). Obciążenie zewnętrzne wg planu nie wcześniej niż od 11. tygodnia (start 2,5% masy ciała).',
+    tech:[
+      {t:'Czym to się różni od Protokołu C', h:'Protokół C to dawka <b>podtrzymująca</b> wpisana w plan (4 zwisy, wyraźny zapas, bez gonienia rekordów). C+ to jego wersja <b>budująca</b> — świadomie wybierany blok, w którym siła maksymalna palców na kilka tygodni staje się priorytetem, np. pod bouldering. Ma osobny timer, osobną edycję „✎" i osobną historię wyników, żeby nie mieszać dawki podtrzymującej z blokiem budującym.'},
+      {t:'Co dokładnie budujesz', h:'Czystą <b>siłę maksymalną palców</b> — walutę boulderingu. Bulder to kilka–kilkanaście maksymalnych przechwytów: o utrzymaniu decyduje siła szczytowa, nie zaplecze tlenowe. Krótkie zwisy przy wysokim obciążeniu i PEŁNYCH przerwach uczą układ nerwowy rekrutować jak najwięcej włókien na raz, bez zakwaszenia — dlatego przerwy 3–5 minut są częścią treningu, nie stratą czasu. Bonus: mocniejsze palce trzymają ten sam chwyt na niższym procencie maksimum, co wspiera też wytrzymałość.'},
+      {t:'Ustawienie', h:'Listwa 20 mm, chwyt <b>half-crimp</b> (palce zgięte ok. 90° w środkowym stawie, kciuk swobodny; możesz rotować z chwytem otwartym między sesjami). Pojedyncze zwisy, pełna przerwa między nimi. Zawsze po pełnej rozgrzewce palców, nigdy na zmęczonych palcach i tylko na początku treningu.'},
+      {t:'Intensywność — jak ją ustawić', h:'Dobierz obciążenie tak, żeby na końcu każdego zwisu zostawały <b>2–3 sekundy zapasu</b>: ciężko, ale nigdy do zerwania i nigdy do otwierania się palców. Regulujesz dwiema śrubami: mniejszym odciążeniem stopą albo — gdy zwisasz już z pełną masą ciała — dodatkowym obciążeniem (plecak/kamizelka, start 2,5% masy ciała).'},
+      {t:'Prowadzenie bloku — progresja', h:'<ol><li>Najpierw progresja <b>czasem</b>: 7 s → 8 s → 10 s przy stałym obciążeniu (zmieniasz przez „✎").</li><li>Gdy 5 × 10 s wychodzi z zapasem — <b>dodaj obciążenie</b> (ok. +1–2% masy ciała na tydzień) ALBO zmniejsz listwę. Nigdy obie zmiany naraz.</li><li>Częstotliwość: 1–2× w tygodniu, zawsze na świeżych palcach i co najmniej 48 h od wspinania.</li><li>Po 4–6 tygodniach zakończ blok i wróć do Protokołu C; tydzień deloadu z makrocyklu obowiązuje normalnie (zero tablicy).</li></ol>'},
+      {t:'Uczciwie o dowodach', h:'Sama struktura max hangs (krótki zwis, wysokie obciążenie, długie przerwy, progresja ciężaru) ma wsparcie w badaniach wspinaczy — m.in. progresywne dokładanie obciążenia poprawiało siłę chwytu w badaniu z randomizacją. Konkretna liczba serii i tempo progresji to już praktyka trenerska, nie twardy dowód. Ból, „pop" albo poranna sztywność = natychmiast koniec bloku i powrót do zasad z sekcji progów.'},
       {t:'Kiedy przerwać', h:'Zwis kończysz, gdy palce zaczynają się otwierać — nie „na maksa". Ból lub trzask w podstawie palca = <span class="warn">natychmiastowy koniec pracy palców i konsultacja</span>.'},
       ...HANGBOARD_SAFETY,
     ]
@@ -1093,12 +1111,14 @@ const YT_LINKS = {
   hangboard:   {v:'I3_QdtwFyqY', t:'Hangboard Endurance — lekkie repeatery ~40%'},
   hangboard_B: {v:'vyhdpNGtF78', t:'Protokół 7/3 Repeater (Hörst)'},
   hangboard_C: {v:'1XVmaFtaBkc', t:'Max Hangs for Finger Strength (How To)'},
+  hangboard_Cbud: {v:'1XVmaFtaBkc', t:'Max Hangs for Finger Strength (How To)'},
   hangboard_D: {v:'sBTI9qiH4UE', t:'Emil Abrahamsson — lekkie zwisy 2× dziennie (oryginał)'},
 };
 
 const YT_QUERIES = {
   hangboard:'hangboard endurance repeaters low intensity', hangboard_B:'hangboard 7 3 repeaters protocol',
-  hangboard_C:'max hangs hangboard tutorial', hangboard_D:'submaximal hangs hangboard daily low intensity',
+  hangboard_C:'max hangs hangboard tutorial', hangboard_Cbud:'max hangs progression added weight',
+  hangboard_D:'submaximal hangs hangboard daily low intensity',
   E2:'archer pull up tutorial', E3:'pistol squat tutorial progression', E4:'front lever progression tutorial',
   E5:'nordic curl no partner setup', E6:'pike push up form tutorial', E7:'archer push up feet elevated tutorial',
   E8:'parallel bar dips shoulder safe form', E9:'ab wheel rollout knees form', E10:'slow heavy calf raise achilles tendon',
@@ -1122,6 +1142,7 @@ const YT_DIFFS = {
   hangboard:'Niezależnie od filmu: zero full crimpu, wejście i zejście przez stopień.',
   hangboard_B:'Niezależnie od filmu: zero full crimpu; Twoje serie wg aplikacji.',
   hangboard_C:'Dawka podtrzymująca — nie goń rekordów z filmów.',
+  hangboard_Cbud:'Tryb budujący: zawsze 2–3 s zapasu na końcu zwisu; progresja czas → obciążenie wg opisu w aplikacji, nie wg filmu.',
   hangboard_D:'U Ciebie to protokół NISKOINTENSYWNY: może wchodzić dzień po intensywnej sesji i nie zużywa limitu 3 intensywnych ekspozycji na tydzień.',
   E3:'Pilnuj pięty na podłożu — na filmach często się odrywa.',
   G07:'Pilnuj pięty na podłożu — na filmach często się odrywa.',
@@ -1143,6 +1164,7 @@ const ART_LINKS = {
   hangboard:   {u:'https://www.99boulders.com/beginner-hangboard-training', t:'99Boulders — poradnik chwytotablicy dla początkujących'},
   hangboard_B: {u:'https://www.hoopersbeta.com/library/hangboarding-routine-training-for-climbing', t:'Hooper’s Beta — rutyny na chwytotablicy (fizjoterapeuta)'},
   hangboard_C: {u:'https://www.hoopersbeta.com/library/hangboarding-routine-training-for-climbing', t:'Hooper’s Beta — rutyny, w tym max hangs (fizjoterapeuta)'},
+  hangboard_Cbud: {u:'https://www.hoopersbeta.com/library/hangboarding-routine-training-for-climbing', t:'Hooper’s Beta — rutyny, w tym max hangs (fizjoterapeuta)'},
   hangboard_D: {u:'https://thehangboard.com/blogs/news/beginner-hangboard-workout', t:'TheHangboard — lekkie zwisy dla początkujących'},
   E2:  {u:'https://www.hybridcalisthenics.com/archer-pullups', t:'Hybrid Calisthenics — podciąganie łucznikiem ze zdjęciami'},
   E3:  {u:'https://gmb.io/pistol/', t:'GMB — pistol od podstaw, ze zdjęciami'},
@@ -1298,8 +1320,8 @@ function renderVideos(){
   </div>`;
 
   const groups = [
-    {title:'Chwytotablica', ids:['hangboard','hangboard_B','hangboard_C','hangboard_D'],
-     names:{hangboard:HANGBOARD_PROTOCOLS.A.name, hangboard_B:HANGBOARD_PROTOCOLS.B.name, hangboard_C:HANGBOARD_PROTOCOLS.C.name, hangboard_D:HANGBOARD_PROTOCOLS.D.name}},
+    {title:'Chwytotablica', ids:['hangboard','hangboard_B','hangboard_C','hangboard_Cbud','hangboard_D'],
+     names:{hangboard:HANGBOARD_PROTOCOLS.A.name, hangboard_B:HANGBOARD_PROTOCOLS.B.name, hangboard_C:HANGBOARD_PROTOCOLS.C.name, hangboard_Cbud:HANGBOARD_PROTOCOLS.CP.name, hangboard_D:HANGBOARD_PROTOCOLS.D.name}},
     {title:'Plan FBW — ćwiczenia', ids:['E2','E3','E4','E5','E6','E7','E8','E9','E10','E11','E12','E13']},
     {title:'Moduły B i C', ids:['E14','E15','E16','E17','E18','E19','E20','E21','E22','E23','E24','E25','E26','E27','E28','E29','E30']},
     {title:'Program gumowy', ids:['G01','G02','G03','G04','G05','G06','G07','G08','G09','G10','G11','G12','G13','G14','G15','G16','G17','G18','G19']},
@@ -3436,7 +3458,7 @@ function findPreset(id){ return getPresets().find(p=>p.id===id) || null; }
 function protoSummary(p){
   return p.reps > 1
     ? `${serie(p.series)} po ${p.reps} × (${p.hang} s / ${p.hangRest} s) · przerwa ${fmtTime(p.seriesRest)}`
-    : `${p.series} zwisy po ${p.hang} s · przerwa ${fmtTime(p.seriesRest)}`;
+    : `${p.series} ${plural(p.series,'zwis','zwisy','zwisów')} po ${p.hang} s · przerwa ${fmtTime(p.seriesRest)}`;
 }
 function exSummary(ex){
   if(ex.steps) return kroki(ex.steps.length);
@@ -3546,7 +3568,7 @@ function renderTools(){
 
   /* ---------- 2. Chwytotablica ---------- */
   html += `<div class="block-title"><div class="idx">1</div><h3>Chwytotablica</h3></div>`;
-  ['A','B','C','D'].forEach(k=>{
+  ['A','B','C','CP','D'].forEach(k=>{
     const p = getProtocol(k);
     html += launchRow('proto:'+k, p.name, protoSummary(p), `openProtocol('${k}')`);
   });
