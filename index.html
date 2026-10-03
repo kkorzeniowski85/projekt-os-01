@@ -239,6 +239,18 @@
     color:var(--chalk-100); padding:11px 12px; font-size:0.92rem; min-width:0;
   }
   .log-row label{ font-size:0.7rem; color:var(--chalk-500); display:block; margin-bottom:4px; }
+  /* RPE jako przyciski: puste = „nie oceniam" (suwak zawsze coś zapisywał) */
+  .rpe-row{ display:flex; gap:6px; }
+  .rpe-chip{
+    flex:1; min-width:0; min-height:44px; border-radius:10px; cursor:pointer;
+    background:var(--stone-900); border:1px solid var(--stone-700); color:var(--chalk-300);
+    font-weight:700; font-size:0.95rem;
+  }
+  .rpe-chip.on{ background:var(--lichen-900); border-color:var(--lichen-500); color:var(--lichen-400); }
+  /* Propozycje progresji */
+  .prop-card{ border-color:var(--lichen-500); }
+  .prop-up{ color:var(--lichen-400); font-weight:700; }
+  .prop-down{ color:var(--rope-400); font-weight:700; }
 
   .slider-card{ margin-bottom:16px; }
   .slider-row{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
@@ -367,8 +379,9 @@
       <div style="margin-top:12px;">
         <label style="font-size:0.7rem;color:var(--chalk-500);display:block;margin-bottom:4px;">Jak wypadła wytrzymałość (czy przedramiona „puchły" szybciej/wolniej niż zwykle)</label>
         <select id="climbFeel">
+          <option value="">— nie oceniam —</option>
           <option value="better">Lepiej niż zwykle</option>
-          <option value="same" selected>Bez zmian</option>
+          <option value="same">Bez zmian</option>
           <option value="worse">Gorzej niż zwykle</option>
         </select>
       </div>
@@ -495,7 +508,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.21.0';
+const APP_VERSION = '1.22.0';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -966,6 +979,90 @@ function applyLevel(ex){
 function prepEx(ex){ return applyExerciseOverride(applyLevel(ex)); }
 
 /* =========================================================================
+   PROPOZYCJE PROGRESJI — aplikacja sprawdza Twoje zapisy i PROPONUJE stopień
+   wyżej albo niżej. Nic nie zmienia się samo: propozycję przyjmujesz albo
+   odkładasz jednym dotknięciem. Reguły są jawne (bez AI):
+   - liczą się tylko sesje na OBECNYM poziomie, poza deloadem, z wpisanymi
+     powtórzeniami (albo sekundami przy utrzymaniach);
+   - „wyżej": dwie ostatnie ocenione sesje = komplet serii, górny zakres
+     w każdej serii i żadnej serii z RPE 9–10 (zapas min. dwóch powtórzeń);
+   - „niżej": w dwóch ostatnich ocenionych sesjach seria poniżej dolnego
+     zakresu albo RPE 10 jeszcze przed ostatnią serią;
+   - palce (tablica nie ma drabinki) i pistol (Achilles) nigdy nie dostają
+     propozycji „wyżej" — tam podnosisz poziom wyłącznie świadomie sam.
+   Zapisy sprzed wersji 1.22.0 nie mają poziomu ani zakresu, więc aplikacja
+   ich nie ocenia (nie wie, na jakim wariancie powstały).
+   ========================================================================= */
+const PROGRESS_NO_UP = new Set(['E3']);   // pistol obciąża ścięgno Achillesa
+
+/* „8–12 powt." → [8,12]; „5 powt." → [5,5]; tekst bez liczb → null. */
+function parseRange(txt){
+  const nums = String(txt == null ? '' : txt).match(/\d+(?:[.,]\d+)?/g);
+  if(!nums) return null;
+  const a = Number(nums[0].replace(',', '.'));
+  const b = Number((nums[1] || nums[0]).replace(',', '.'));
+  return [Math.min(a, b), Math.max(a, b)];
+}
+
+/* Co zapisać razem z serią, żeby później dało się ją ocenić. */
+function progressMeta(ex){
+  return {
+    lvl: ex.levelIdx == null ? null : ex.levelIdx,
+    rng: ex.holdBased ? [ex.holdRange[0], ex.holdRange[1]] : parseRange(ex.repsRange),
+    planned: ex.sets,
+    deload: !!ex.deload,
+  };
+}
+
+/* Wpisana liczba powtórzeń (albo sekund) z zapisu serii; null = nie wpisano. */
+function setValue(s){
+  if(!s || s.reps == null || String(s.reps).trim() === '') return null;
+  const n = Number(String(s.reps).replace(',', '.'));
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+/* Ocena jednej sesji: 'gora' | 'za_trudno' | 'srodek' | null (nie do oceny). */
+function sessionVerdict(log){
+  if(!log || !Array.isArray(log.sets) || !log.sets.length) return null;
+  if(log.deload || !Array.isArray(log.rng)) return null;
+  const lo = log.rng[0], hi = log.rng[1];
+  const planned = log.planned || log.sets.length;
+  const vals = log.sets.map(setValue);
+  const tooHard = vals.some(v => v != null && v < lo)
+    || log.sets.some((s, i) => i < planned - 1 && s.rpe === 10);
+  if(tooHard) return 'za_trudno';
+  const complete = log.sets.length >= planned && vals.every(v => v != null);
+  if(!complete) return null;                 // sesja w toku albo bez wpisanych liczb
+  const top = vals.every(v => v >= hi) && !log.sets.some(s => s.rpe >= 9);
+  return top ? 'gora' : 'srodek';
+}
+
+/* entries: {data: wpis dnia}; dismissed: {id: {dir, lvl, until}} z „Jeszcze nie". */
+function progressionProposal(ex, entries, dismissed){
+  if(ex.levelIdx == null || ex.deload) return null;
+  const judged = [];
+  for(const iso of Object.keys(entries).sort().reverse()){
+    const day = entries[iso];
+    const log = day && day.exercises && day.exercises[ex.id];
+    if(!log || log.lvl !== ex.levelIdx) continue;
+    const v = sessionVerdict(log);
+    if(!v) continue;
+    judged.push({iso, v, rpe: log.sets.some(s => s.rpe != null)});
+    if(judged.length === 2) break;
+  }
+  if(judged.length < 2) return null;
+  const [last, prev] = judged;
+  let dir = null;
+  if(last.v === 'gora' && prev.v === 'gora' && ex.levelIdx < ex.levelMax && !PROGRESS_NO_UP.has(ex.id)) dir = 'up';
+  else if(last.v === 'za_trudno' && prev.v === 'za_trudno' && ex.levelIdx > 0) dir = 'down';
+  if(!dir) return null;
+  const d = dismissed && dismissed[ex.id];
+  if(d && d.dir === dir && d.lvl === ex.levelIdx && d.until >= last.iso) return null;   // odłożona do następnej sesji
+  return {dir, dates:[prev.iso, last.iso], noRpe: !(last.rpe && prev.rpe), lvl: ex.levelIdx};
+}
+/* koniec: propozycje progresji */
+
+/* =========================================================================
    TEST SPRAWNOŚCI — jednorazowy (powtarzalny) test dobierający poziom
    startowy każdej drabinki. Wynik nigdy nie przekracza poziomu z planu
    (progresja ponad plan zostaje decyzją ręczną) — wyjątek: front lever,
@@ -1366,7 +1463,59 @@ function levelBarHTML(ex){
     </div>
     ${onPlan ? '' : `<button class="btn btn-ghost" style="margin-top:10px;" onclick="resetLevelUI('${ex.id}')">Wróć do wariantu z planu</button>`}
     <div class="meta" style="margin-top:10px;">Kiedy wyżej? Gdy w dwóch kolejnych sesjach robisz górny zakres powtórzeń we wszystkich seriach i czujesz zapas. Kiedy niżej? Gdy nie domykasz dolnego zakresu albo technika się sypie.</div>
+    <div class="meta" style="margin-top:8px;">Aplikacja sama podpowie zmianę, gdy zobaczy to w Twoich zapisach. Warunek: przy każdej serii wpisujesz liczbę powtórzeń${ex.holdBased ? ' (tu: sekund)' : ''}. RPE pomaga, ale nie jest konieczne.</div>
   </div>`;
+}
+
+/* ---- Propozycje progresji: wszystkie wpisy dni, karta na ekranie ćwiczenia ---- */
+function allEntries(){
+  const out = {};
+  for(const k of store.keys('entries:')) out[k.slice('entries:'.length)] = store.get(k, {});
+  return out;
+}
+function fmtDayLong(iso){
+  return new Date(iso+'T00:00:00').toLocaleDateString('pl-PL', {day:'numeric', month:'long'});
+}
+function proposalHTML(ex){
+  const p = progressionProposal(ex, allEntries(), store.get('progressDismissed', {}));
+  if(!p) return '';
+  const target = LADDERS[ex.id].steps[ex.levelIdx + (p.dir === 'up' ? 1 : -1)];
+  const kiedy = fmtDayLong(p.dates[0]) + ' i ' + fmtDayLong(p.dates[1]);
+  let tytul, tekst;
+  if(p.dir === 'up'){
+    tytul = '📈 Propozycja: stopień wyżej';
+    tekst = `W dwóch ostatnich sesjach na tym poziomie (${kiedy}) zrobiłeś górny zakres we wszystkich seriach`
+      + (p.noRpe ? '.' : ' i żadna seria nie miała RPE 9–10, czyli zostawał zapas.')
+      + ` Następny wariant: <b>${target.name}</b>.`
+      + (p.noRpe ? '<br><br>W tych sesjach nie było wpisanego RPE. Zanim przejdziesz, oceń sam, czy w ostatnich seriach zostawały co najmniej dwa powtórzenia zapasu.' : '')
+      + (ex.levelIdx + 1 > ex.levelDef ? '<br><br><b>To wariant trudniejszy niż w Twoim planie.</b> Plan go nie wymaga — przechodzisz tylko przy pewnej technice.' : '');
+  } else {
+    tytul = '📉 Propozycja: stopień niżej';
+    tekst = `W dwóch ostatnich sesjach na tym poziomie (${kiedy}) przynajmniej jedna seria nie domknęła dolnego zakresu albo któraś seria przed ostatnią była już na granicy (RPE 10). Łatwiejszy wariant: <b>${target.name}</b>.`
+      + '<br><br>To nie krok w tył: robisz pełne serie z dobrą techniką, a gdy wrócą zapas i górny zakres, aplikacja sama zaproponuje powrót.';
+  }
+  return `<div class="card prop-card">
+    <b>${tytul}</b>
+    <div class="meta" style="margin:6px 0 12px;line-height:1.5;">${tekst}</div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="acceptProposal('${ex.id}','${p.dir}')">${p.dir === 'up' ? '⬆ Przejdź wyżej' : '⬇ Przejdź niżej'}</button>
+      <button class="btn btn-ghost" onclick="dismissProposal('${ex.id}','${p.dir}',${p.lvl},'${p.dates[1]}')">Jeszcze nie</button>
+    </div>
+    <div class="meta" style="margin-top:8px;">„Jeszcze nie" chowa propozycję do następnej sesji tego ćwiczenia.</div>
+  </div>`;
+}
+function acceptProposal(id, dir){
+  const d = store.get('progressDismissed', {});
+  delete d[id];
+  store.set('progressDismissed', d);
+  changeLevel(id, dir === 'up' ? 1 : -1);
+}
+function dismissProposal(id, dir, lvl, until){
+  const d = store.get('progressDismissed', {});
+  d[id] = {dir, lvl, until};
+  store.set('progressDismissed', d);
+  vibrate(20);
+  reopenExercise();
 }
 /* Opis na górze ekranu: dla wariantu spoza planu pokazuje instrukcję TEGO wariantu. */
 function levelAwareCue(ex){
@@ -2570,7 +2719,7 @@ function openClimb(){
   const c = e.climb || {};
   document.getElementById('climbRoutes').value = c.routes || '';
   document.getElementById('climbBoulders').value = c.boulders || '';
-  document.getElementById('climbFeel').value = c.feel || 'same';
+  document.getElementById('climbFeel').value = c.feel || '';
   document.getElementById('climbNote').value = c.note || '';
   const res = checkFingerLimits('climb');
   document.getElementById('climbLimitBanner').innerHTML = limitsBannerHTML(res);
@@ -2878,12 +3027,23 @@ function dayComponentHTML(dayObj, entry){
         const sub = ex.holdBased
           ? `${serie(ex.sets)} × utrzymanie ${holdTxt(ex)}`
           : `${serie(ex.sets)} × ${esc(ex.repsRange)}`;
-        html += rowHTML(ex.id, ex.name, sub + loadTxt(ex) + (partial ? ` · zrobione ${log.sets.length}/${ex.sets}` : ''), done);
+        html += rowHTML(ex.id, ex.name, sub + loadTxt(ex) + (partial ? ` · zrobione ${log.sets.length}/${ex.sets}` : '') + propTag(rowProposal(ex)), done);
       });
     }
   });
   html += `<div class="meta" style="margin-top:14px;">Kolejność na liście jest celowa: rozgrzewki → palce (na świeżo) → reszta. Jeśli zabraknie czasu, jako pierwsze odpuszczasz pompki archer, potem ab wheel — nigdy chwytotablicy, podciągania, dipów ani pracy łopatek.</div>`;
   return html;
+}
+
+/* Propozycja dla wiersza na ekranie Dziś (liczona z jednego odczytu wpisów na ekran). */
+function rowProposal(ex){
+  const ctx = state.progressCtx;
+  return ctx && ex.levelIdx != null ? progressionProposal(ex, ctx.entries, ctx.dismissed) : null;
+}
+function propTag(p){
+  if(!p) return '';
+  return p.dir === 'up' ? ' · <span class="prop-up">⬆ propozycja: stopień wyżej</span>'
+                        : ' · <span class="prop-down">⬇ propozycja: stopień niżej</span>';
 }
 
 function renderToday(){
@@ -2894,6 +3054,7 @@ function renderToday(){
   state.currentDay = day;
   state.registry = {};
   const entry = loadEntry(iso);
+  state.progressCtx = {entries: allEntries(), dismissed: store.get('progressDismissed', {})};
 
   const meta = TYPE_META[day.type];
   const cont = document.getElementById('todayContent');
@@ -2931,6 +3092,17 @@ function renderToday(){
 
 
   const units = [day, ...extras];
+  // propozycje progresji dla ćwiczeń z dzisiejszego planu — jedno zbiorcze miejsce
+  const props = [];
+  units.forEach(u => (u.blocks || []).forEach(b => {
+    if(b.kind === 'exercises') b.items.forEach(ex => { const p = rowProposal(ex); if(p) props.push({ex, p}); });
+  }));
+  if(props.length){
+    html += bannerHTML('info', '📈', props.length === 1 ? 'Propozycja zmiany poziomu' : `Propozycje zmiany poziomu (${props.length})`,
+      'Na podstawie Twoich ostatnich zapisów:<br>'
+      + props.map(({ex, p}) => `• ${ex.name} — ${p.dir === 'up' ? 'stopień wyżej' : 'stopień niżej'}`).join('<br>')
+      + '<br><br>Szczegóły i decyzja po otwarciu ćwiczenia. Nic nie zmienia się bez Twojego potwierdzenia.');
+  }
   units.forEach((u, i)=>{
     if(units.length > 1){
       html += `<div class="unit-head"><span class="badge ${TYPE_META[u.type].badge}">Jednostka ${i+1} z ${units.length}</span><h3>${u.title}</h3></div>`;
@@ -3238,7 +3410,13 @@ function renderHangboardBody(data){
     <div><label>Listwa (mm albo „szczebel")</label><input type="text" id="log_edge" placeholder="np. szczebel"></div>
     <div><label>Odciążenie stopą (kg z wagi)</label><input type="text" id="log_assist" placeholder="np. 30 kg"></div>
   </div>`;
-  html += `<div class="log-row"><div><label>Zapas po 1. serii — czy zwisałbyś drugie tyle?</label><input type="text" id="log_reserve" placeholder="np. tak, spory zapas"></div></div>`;
+  html += `<div class="log-row"><div><label>Zapas po 1. serii — czy zwisałbyś drugie tyle?</label>
+    <select id="log_reserve">
+      <option value="">— nie oceniam —</option>
+      <option value="duzy">Tak — spory zapas, zwisałbym drugie tyle</option>
+      <option value="maly">Trochę — kilka sekund więcej</option>
+      <option value="brak">Nie — to było blisko maksimum</option>
+    </select></div></div>`;
   html += `<button class="btn btn-secondary" style="margin-top:12px;" onclick="saveHangboardLog('${data.id}')">Zapisz parametry sesji</button>`;
   html += techBlock(data, true);
 
@@ -3313,12 +3491,28 @@ function saveMeasure(id){
 /* ---- Zwykłe ćwiczenie: serie + tempo/izometria + przerwa ---- */
 let exState = { setIndex:0, totalSets:0, logs:[] };
 
+/* RPE: przyciski zamiast suwaka — brak wyboru zapisuje się jako brak oceny. */
+const RPE_CHIPS = [5, 6, 7, 8, 9, 10];
+let rpePicked = null;
+function pickRpe(btn){
+  const v = Number(btn.dataset.v);
+  rpePicked = (rpePicked === v) ? null : v;          // drugie dotknięcie odznacza
+  document.querySelectorAll('#rpeRow .rpe-chip').forEach(b => b.classList.toggle('on', Number(b.dataset.v) === rpePicked));
+}
+function resetRpe(){
+  rpePicked = null;
+  document.querySelectorAll('#rpeRow .rpe-chip').forEach(b => b.classList.remove('on'));
+}
+
 function renderExerciseBody(ex){
   const prior = loadEntry(state.selectedDate).exercises;
   const priorLog = prior && prior[ex.id] && prior[ex.id].sets ? prior[ex.id].sets : [];
-  exState = { setIndex: priorLog.length, totalSets: ex.sets, logs: [...priorLog] };
+  // meta: poziom, zakres i liczba serii z TEJ sesji — bez tego nie da się jej później ocenić
+  exState = { setIndex: priorLog.length, totalSets: ex.sets, logs: [...priorLog], meta: progressMeta(ex) };
+  rpePicked = null;
 
-  let html = levelAwareCue(ex);
+  let html = proposalHTML(ex);
+  html += levelAwareCue(ex);
   html += levelBarHTML(ex);
   html += exerciseEditPanel(ex);
   html += `<div class="card">`;
@@ -3335,8 +3529,8 @@ function renderExerciseBody(ex){
     <div><label>Dociążenie / asysta</label><input type="text" id="log_load" placeholder="bez"${ex.loadKg > 0 ? ` value="${fmtKg(ex.loadKg)} kg"` : ''}></div>
   </div>`;
   html += `<div class="log-row"><div>
-    <label>Jak ciężko było? (RPE <span id="rpeVal" class="tabnum">7</span>/10 — 10 = nic więcej bym nie zrobił)</label>
-    <input type="range" id="log_rpe" min="1" max="10" value="7" oninput="document.getElementById('rpeVal').textContent=this.value">
+    <label>Jak ciężko było? RPE: 10 = nic więcej bym nie zrobił, 8 = zostały dwa powtórzenia zapasu. Nie musisz zaznaczać — puste znaczy „nie oceniam".</label>
+    <div class="rpe-row" id="rpeRow">${RPE_CHIPS.map(v => `<button type="button" class="rpe-chip" data-v="${v}" onclick="pickRpe(this)">${v === 5 ? '≤5' : v}</button>`).join('')}</div>
   </div></div>`;
   html += `<div class="log-row"><div><label>Notatka do serii (opcjonalnie)</label><input type="text" id="log_note" placeholder="np. lewa strona słabsza"></div></div>`;
   html += `<div class="btn-row" style="margin-top:14px;">
@@ -3396,7 +3590,7 @@ function logCurrentSet(exId){
   if(exState.setIndex >= exState.totalSets) return;
   const reps = document.getElementById('log_reps').value;
   const load = document.getElementById('log_load').value;
-  const rpe = numOr('log_rpe', null);
+  const rpe = rpePicked;
   const note = (document.getElementById('log_note') && document.getElementById('log_note').value.trim()) || '';
   const rec = {set:exState.setIndex+1, reps, load, at:new Date().toISOString()};
   if(rpe != null) rec.rpe = rpe;
@@ -3406,11 +3600,12 @@ function logCurrentSet(exId){
   exState.logs.push(rec);
   exState.setIndex++;
   document.getElementById('log_reps').value = '';
+  resetRpe();
   vibrate(25);
 
   const entry = loadEntry(state.selectedDate);
   const exercises = entry.exercises || {};
-  exercises[exId] = {sets:exState.logs, updatedAt:new Date().toISOString()};
+  exercises[exId] = {sets:exState.logs, updatedAt:new Date().toISOString(), ...(exState.meta || {})};
   mergeEntry(state.selectedDate, {exercises});
 
   updateSetTracker();
@@ -3429,7 +3624,7 @@ function saveClimb(){
   const data = {
     routes: document.getElementById('climbRoutes').value,
     boulders: document.getElementById('climbBoulders').value,
-    feel: document.getElementById('climbFeel').value,
+    feel: document.getElementById('climbFeel').value || undefined,   // brak wyboru = brak oceny
     note: document.getElementById('climbNote').value,
     savedAt: new Date().toISOString(),
   };
