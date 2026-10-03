@@ -285,6 +285,12 @@
   .hist-item .date{ font-weight:700; white-space:nowrap; }
   .hist-item .tags{ display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
   .pill{ font-size:0.7rem; padding:2px 7px; border-radius:20px; background:var(--stone-800); color:var(--chalk-300); }
+  /* Analiza z Claude: podgląd tekstu do skopiowania */
+  textarea.ai-preview{
+    width:100%; min-height:240px; resize:vertical; margin-top:4px;
+    background:var(--stone-900); border:1px solid var(--stone-700); border-radius:10px;
+    color:var(--chalk-300); padding:10px 12px; font:0.72rem/1.45 ui-monospace, Menlo, Consolas, monospace;
+  }
 
   /* ---------- Ulubione (szybki dostęp na górze zakładki Timery) ---------- */
   .fav-card{
@@ -405,6 +411,25 @@
   <!-- ===================== EKRAN: DZIENNIK / HISTORIA ===================== -->
   <section class="screen" id="screen-history">
     <h2 style="margin-bottom:14px;">Dziennik</h2>
+    <div class="card">
+      <h2 style="margin-bottom:6px;">🤖 Analiza z Claude</h2>
+      <div class="meta" style="margin-bottom:12px;">Aplikacja zbiera Twoje ostatnie treningi, plan na najbliższe dni i zasady bezpieczeństwa, a na końcu dopisuje gotową prośbę. Kopiujesz to, wklejasz w aplikacji Claude i wysyłasz. Nic nie wysyła się samo.</div>
+      <div class="setting-row">
+        <label for="aiDays">Okres</label>
+        <select id="aiDays" onchange="renderAiPreview()">
+          <option value="14">ostatnie 2 tygodnie</option>
+          <option value="28" selected>ostatnie 4 tygodnie</option>
+          <option value="56">ostatnie 8 tygodni</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="copyForClaude()">📋 Kopiuj dla Claude</button>
+      <button class="btn btn-secondary" id="aiShareBtn" style="display:none;margin-top:8px;" onclick="shareForClaude()">Udostępnij…</button>
+      <div class="meta" id="aiStatus" style="margin-top:10px;"></div>
+      <details class="tech" id="aiPreviewBox" style="margin:10px 0 0;">
+        <summary>Zobacz, co zostanie skopiowane</summary>
+        <div class="inner"><textarea id="aiPreview" class="ai-preview" readonly></textarea></div>
+      </details>
+    </div>
     <div class="card" style="padding:0;">
       <div id="historyList"><div class="empty-hint">Wczytywanie…</div></div>
     </div>
@@ -508,7 +533,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.22.0';
+const APP_VERSION = '1.23.0';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -3828,6 +3853,7 @@ function renderTools(){
    HISTORIA
    ========================================================================= */
 function renderHistory(){
+  renderAiPreview();
   const list = document.getElementById('historyList');
   const keys = store.keys('entries:').sort().reverse().slice(0,14);
   if(!keys.length){
@@ -3848,6 +3874,240 @@ function renderHistory(){
     html += `<div class="hist-item"><span class="date">${iso}</span><div class="tags">${tags.join('')}</div></div>`;
   }
   list.innerHTML = html || '<div class="empty-hint">Brak danych.</div>';
+}
+
+/* =========================================================================
+   ANALIZA Z CLAUDE — tekst do skopiowania i wklejenia w aplikacji Claude.
+   Aplikacja niczego nie wysyła (bez klucza API, bez dodatkowych opłat).
+   Claude tylko proponuje: zasady palców i Achillesa idą w tekście jako
+   nienaruszalne, a zmiany i tak wprowadza użytkownik.
+   ========================================================================= */
+const AI_FEEL = {better:'lepiej niż zwykle', same:'bez zmian', worse:'gorzej niż zwykle'};
+const AI_RESERVE = {duzy:'spory zapas', maly:'trochę zapasu', brak:'blisko maksimum'};
+const AI_DOW = ['nd','pon','wt','śr','czw','pt','sob'];
+
+function aiDate(iso){ return iso.slice(8,10)+'.'+iso.slice(5,7); }
+function aiDay(iso){ return AI_DOW[new Date(iso+'T00:00:00').getDay()]+' '+aiDate(iso); }
+function aiShift(iso, n){ const d = new Date(iso+'T00:00:00'); d.setDate(d.getDate()+n); return isoOf(d); }
+function aiTxt(v){ return String(v == null ? '' : v).trim(); }
+function aiHbName(name){ return /^Chwytotablica/.test(name) ? name : 'Chwytotablica — '+name; }
+
+function aiHangboardLine(id, log){
+  const p = Object.values(HANGBOARD_PROTOCOLS).find(x => x.id === id);
+  const bits = [];
+  if(log.completedAt) bits.push('protokół ukończony');
+  if(aiTxt(log.edge)) bits.push('listwa: '+aiTxt(log.edge));
+  if(aiTxt(log.assist)) bits.push('odciążenie: '+aiTxt(log.assist));
+  if(aiTxt(log.reserve)) bits.push('zapas po 1. serii: '+(AI_RESERVE[log.reserve] || aiTxt(log.reserve)));
+  return '• '+aiHbName(p ? p.name : 'ustawienie własne')+(bits.length ? ': '+bits.join('; ') : '');
+}
+function aiSetTxt(s){
+  let t = aiTxt(s.reps) || '—';
+  if(aiTxt(s.load)) t += ' [dociążenie/asysta: '+aiTxt(s.load)+']';
+  if(s.rpe != null) t += ' RPE '+s.rpe;
+  if(aiTxt(s.note)) t += ' „'+aiTxt(s.note)+'"';
+  return t;
+}
+function aiExerciseLine(id, log){
+  if(id.startsWith('hangboard')) return aiHangboardLine(id, log);
+  const found = GLOBAL_REGISTRY[id];
+  const ex = found ? found.data : null;
+  const baseName = (ex && ex.name) || id;
+  if(log.result != null) return '• '+baseName+' — wynik: '+aiTxt(log.result);
+  if(!Array.isArray(log.sets) || !log.sets.length) return '• '+baseName+' — zapisane';
+  const L = LADDERS[id];
+  const step = L && log.lvl != null ? L.steps[log.lvl] : null;
+  const fresh = 'planned' in log;            // zapis z wersji 1.22+ (poziom, zakres, liczba serii)
+  let name = step ? step.name+' (poziom '+(log.lvl+1)+' z '+L.steps.length+')' : baseName;
+  if(!fresh) name += '*';
+  let plan = '';
+  if(fresh && log.planned && Array.isArray(log.rng)){
+    const r = log.rng[0] === log.rng[1] ? String(log.rng[0]) : log.rng[0]+'–'+log.rng[1];
+    const side = /na (stronę|nogę)/.exec((step && step.repsRange) || (ex && ex.repsRange) || '');
+    plan = ', plan '+log.planned+' × '+r+(ex && ex.holdBased ? ' s' : ' powt.'+(side ? ' '+side[0] : ''))+(log.deload ? ' (deload)' : '');
+  }
+  const short = fresh && log.planned && log.sets.length < log.planned ? ' ('+log.sets.length+' z '+log.planned+' serii)' : '';
+  return '• '+name+plan+': '+log.sets.map(aiSetTxt).join(' · ')+short;
+}
+/* Dni od najstarszego: plan dnia + to, co zapisane. Dni wolne bez zapisów pomijane. */
+function aiHistory(days, today){
+  const lines = [];
+  const sum = {logged:0, missed:0, climb:0, strength:0, hb:0, old:false};
+  for(let i = days - 1; i >= 0; i--){
+    const iso = aiShift(today, -i);
+    const r = resolveDay(iso);
+    const units = [r.day, ...r.extras];
+    const before = planPos(iso).beforeStart;
+    const planned = !before && units.some(u => u.type !== 'rest');
+    const entry = loadEntry(iso);
+    const items = [];
+    if(entry.climb){
+      const c = entry.climb;
+      const bits = [(aiTxt(c.routes) || '0')+' dróg', (aiTxt(c.boulders) || '0')+' bulderów'];
+      if(c.feel) bits.push('wytrzymałość: '+(AI_FEEL[c.feel] || c.feel));
+      if(aiTxt(c.note)) bits.push('notatka: „'+aiTxt(c.note)+'"');
+      items.push('• Wspinanie: '+bits.join(', '));
+      sum.climb++;
+    }
+    let strength = false;
+    for(const id of Object.keys(entry.exercises || {})){
+      const log = entry.exercises[id];
+      if(!log) continue;
+      if(id.startsWith('hangboard')) sum.hb++;
+      else {
+        strength = true;
+        if(Array.isArray(log.sets) && log.sets.length && !('planned' in log)) sum.old = true;
+      }
+      items.push(aiExerciseLine(id, log));
+    }
+    if(strength) sum.strength++;
+    if(!items.length && !planned) continue;
+    const label = before ? 'przed startem planu' : (planned ? units.map(u => u.title).join(' + ') : 'odpoczynek');
+    let head = aiDay(iso)+(iso === today ? ' (dziś)' : '')+' — plan: '+label;
+    if(r.overridden) head += ' (zmienione przeze mnie; pierwotnie: '+r.planned.title+')';
+    lines.push(head);
+    if(items.length){ sum.logged++; lines.push(...items); }
+    else if(iso === today) lines.push('• jeszcze bez zapisu');
+    else { sum.missed++; lines.push('• brak zapisu (trening pominięty albo niezapisany)'); }
+  }
+  return {lines, sum};
+}
+function aiLevels(){
+  return Object.keys(LADDERS).map(id => {
+    const L = LADDERS[id], s = L.steps;
+    const idx = Math.min(Math.max(0, getLevel(id, L.def)), s.length - 1);
+    let t = '• '+s[idx].name+': poziom '+(idx+1)+' z '+s.length+(idx === L.def ? ' (jak w planie)' : ' (w planie: '+s[L.def].name+')');
+    t += '; niżej: '+(idx > 0 ? s[idx-1].name : '—')+'; wyżej: '+(idx < s.length - 1 ? s[idx+1].name : '—');
+    if(PROGRESS_NO_UP.has(id)) t += ' [bez przechodzenia wyżej — Achilles]';
+    return t;
+  });
+}
+function aiProposals(){
+  const entries = allEntries(), dismissed = store.get('progressDismissed', {});
+  const out = [];
+  for(const id of Object.keys(LADDERS)){
+    const f = GLOBAL_REGISTRY[id];
+    const p = f ? progressionProposal(f.data, entries, dismissed) : null;
+    if(p) out.push('• '+f.data.name+': '+(p.dir === 'up' ? 'stopień wyżej' : 'stopień niżej')+' (sesje '+aiDate(p.dates[0])+' i '+aiDate(p.dates[1])+')');
+  }
+  return out;
+}
+function aiUpcoming(today){
+  const out = [];
+  for(let i = 1; i <= 7; i++){
+    const iso = aiShift(today, i);
+    const r = resolveDay(iso);
+    const units = [r.day, ...r.extras];
+    const parts = [];
+    units.forEach(u => (u.blocks || []).forEach(b => {
+      if(b.kind === 'hangboard') parts.push(aiHbName(b.name)+' ('+b.series+' '+plural(b.series,'seria','serie','serii')+' × '+b.reps+' zwisów, '+b.hang+' s / '+b.hangRest+' s)');
+      else if(b.kind === 'exercises') b.items.forEach(ex => parts.push(ex.name+' '+ex.sets+' × '+(ex.holdBased ? holdTxt(ex) : ex.repsRange)));
+    }));
+    out.push('• '+aiDay(iso)+' — '+units.map(u => u.title).join(' + ')+(r.overridden ? ' (zmienione przeze mnie)' : '')+(parts.length ? ': '+parts.join('; ') : ''));
+  }
+  return out;
+}
+function aiFingerWeek(today){
+  const loads = fingerLoadInfo();
+  const days = [];
+  for(let i = 6; i >= 0; i--){
+    const iso = aiShift(today, -i), l = loads[iso];
+    if(dayIntensive(l)) days.push(aiDate(iso)+' '+[l.climb ? 'wspinanie' : '', l.hbHigh ? 'intensywna tablica' : ''].filter(Boolean).join(' + '));
+  }
+  return days.length+' z 3'+(days.length ? ' ('+days.join(', ')+')' : '');
+}
+function claudeSummary(days, today){
+  today = today || todayISO();
+  rebuildRegistry();
+  const p = planPos(today);
+  const hist = aiHistory(days, today);
+  const s = hist.sum;
+  const props = aiProposals();
+  const L = [];
+  L.push('Poniżej dane z mojej aplikacji treningowej (Trener FBW '+APP_VERSION+'): wspinaczka, trening siłowy z masą ciała i chwytotablica. Prośba jest na końcu.');
+  L.push('', '=== POZYCJA W PLANIE ===');
+  L.push('Dziś ('+aiDay(today)+'): cykl '+(p.cycleIndex+1)+', tydzień '+p.weekInCycle+' z 2 ('+p.planWeek+'. tydzień planu)'+(p.deload ? ' — tydzień odciążeniowy (deload)' : '')+'.');
+  L.push('Układ planu: makrocykl 14 dni. Tydzień 1: pon — blok nóg + core; wt i sob — wspinanie; czw — moduł siłowy + chwytotablica; pozostałe dni wolne. Tydzień 2: pon, śr, pt — moduły siłowe (kolejka A→B→C) + chwytotablica, bez wspinania. Co trzeci cykl tydzień 2 to deload: połowa serii, bez chwytotablicy.');
+  L.push('', '=== POZIOMY ĆWICZEŃ (warianty dostępne w aplikacji) ===', ...aiLevels());
+  L.push('', '=== MOJE TRENINGI: ostatnie '+days+' dni ('+aiDate(aiShift(today, -(days - 1)))+'–'+aiDate(today)+') ===');
+  L.push('Liczby przy seriach to powtórzenia albo sekundy (ćwiczenia na utrzymanie). RPE: 10 = nic więcej bym nie zrobił, 8 = zostały 2 powtórzenia zapasu; brak RPE = nie oceniałem.');
+  if(s.old) L.push('* zapis sprzed wersji 1.22 aplikacji: wariant mógł być inny niż podany, a RPE 7 mogło być ustawieniem domyślnym suwaka, a nie oceną.');
+  L.push(...(hist.lines.length ? hist.lines : ['(brak zapisów w tym okresie)']));
+  L.push('Razem: '+s.logged+' dni z zapisem (wspinanie: '+s.climb+', dni z ćwiczeniami siłowymi: '+s.strength+', sesje na chwytotablicy: '+s.hb+'); zaplanowane treningi bez zapisu: '+s.missed+'.');
+  L.push('', '=== PROPOZYCJE APLIKACJI ===');
+  L.push('(reguła: 2 kolejne sesje na górze zakresu bez RPE 9–10 → stopień wyżej; 2 kolejne za ciężkie → stopień niżej)');
+  L.push(...(props.length ? props : ['• brak']));
+  L.push('', '=== PLAN NA NAJBLIŻSZE 7 DNI ===', ...aiUpcoming(today));
+  L.push('', '=== ZASADY BEZPIECZEŃSTWA (nienaruszalne) ===');
+  L.push('• Palce: maks. 3 intensywne ekspozycje na 7 dni (wspinanie + chwytotablica B, C, C+ lub własna). Dwie intensywne dzień po dniu są zabronione; dzień po intensywnej najwyżej lekka tablica (protokół A lub D). Co najmniej 48 h między wspinaniem a intensywną tablicą. Tablica tylko na początku jednostki, na świeżych palcach.');
+  L.push('• Intensywne ekspozycje palców w ostatnich 7 dniach: '+aiFingerWeek(today)+'.');
+  L.push('• Achilles (przebyte zapalenie ścięgna): z bulderów schodzę po chwytach, bez zeskoków; żadnych ćwiczeń z wyskokami; pistol squat bez przechodzenia wyżej; wspięcia na palce: '+(SETTINGS.achillesTrack === 'fast' ? 'jednonóż' : 'obunóż (ostrożnie)')+'.');
+  L.push('• Dipy: '+(SETTINGS.dipsDepth === '90' ? 'do kąta prostego' : 'stop na 100–110°')+'; nie w dobie po mocnym wspinaniu.');
+  L.push('• Maks. 5 jednostek siłowych na 14 dni.');
+  L.push('', '=== PROŚBA ===');
+  L.push('Jesteś doświadczonym trenerem wspinaczki i treningu siłowego. Na podstawie tych danych:');
+  L.push('1. Oceń krótko ostatnie tygodnie: co idzie do przodu, co stoi w miejscu, co wygląda na za ciężkie albo za lekkie.');
+  L.push('2. Czy warto zmienić poziom któregoś ćwiczenia? Wybieraj tylko spośród wariantów z sekcji POZIOMY ĆWICZEŃ.');
+  L.push('3. Jak najlepiej przejść najbliższe 7 dni, biorąc pod uwagę pominięte i dodatkowe treningi?');
+  L.push('Zasady bezpieczeństwa są nienaruszalne — nie proponuj niczego, co je łamie. Jeśli brakuje Ci jakiejś informacji, najpierw zapytaj.');
+  L.push('Odpowiedz po polsku, prostymi słowami, w punktach. Na końcu podaj krótką listę konkretnych zmian do wprowadzenia w aplikacji (np. „Podciąganie archer: stopień wyżej").');
+  return L.join('\n');
+}
+
+function aiDaysChosen(){
+  const el = document.getElementById('aiDays');
+  const n = el ? Number(el.value) : 28;
+  return [14, 28, 56].indexOf(n) !== -1 ? n : 28;
+}
+function renderAiPreview(){
+  const box = document.getElementById('aiPreview');
+  if(box){
+    try{ box.value = claudeSummary(aiDaysChosen()); }
+    catch(e){ box.value = 'Nie udało się przygotować podsumowania: '+e.message; }
+  }
+  const share = document.getElementById('aiShareBtn');
+  if(share) share.style.display = navigator.share ? '' : 'none';
+  const st = document.getElementById('aiStatus');
+  if(st) st.textContent = '';
+}
+/* Zapas dla przeglądarek bez navigator.clipboard (np. plik otwarty z dysku). */
+function aiLegacyCopy(text){
+  try{
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed'; ta.style.top = '0'; ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    return !!ok;
+  }catch(e){ return false; }
+}
+async function copyForClaude(){
+  const st = document.getElementById('aiStatus');
+  let text;
+  try{ text = claudeSummary(aiDaysChosen()); }
+  catch(e){ st.textContent = 'Nie udało się przygotować podsumowania: '+e.message; return; }
+  const box = document.getElementById('aiPreview');
+  if(box) box.value = text;
+  let ok = false;
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){ await navigator.clipboard.writeText(text); ok = true; }
+  }catch(e){}
+  if(!ok) ok = aiLegacyCopy(text);
+  if(ok){
+    st.textContent = '✓ Skopiowane. Otwórz aplikację Claude, przytrzymaj pole wiadomości, wybierz „Wklej" i wyślij.';
+    vibrate(30);
+  } else {
+    st.textContent = 'Nie udało się skopiować automatycznie. Rozwiń podgląd poniżej, zaznacz cały tekst i skopiuj go ręcznie.';
+    const det = document.getElementById('aiPreviewBox');
+    if(det) det.open = true;
+  }
+}
+async function shareForClaude(){
+  let text;
+  try{ text = claudeSummary(aiDaysChosen()); }catch(e){ return; }
+  try{ await navigator.share({text}); }catch(e){ /* anulowane — nic nie rób */ }
 }
 
 /* =========================================================================
