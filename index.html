@@ -247,6 +247,8 @@
     font-weight:700; font-size:0.95rem;
   }
   .rpe-chip.on{ background:var(--lichen-900); border-color:var(--lichen-500); color:var(--lichen-400); }
+  /* Zapis wspinania: osobne części lina / bouldering */
+  .climb-part{ font-size:0.95rem; margin:18px 0 0; padding-top:14px; border-top:1px solid var(--stone-800); }
   /* Propozycje progresji */
   .prop-card{ border-color:var(--lichen-500); }
   .prop-up{ color:var(--lichen-400); font-weight:700; }
@@ -378,9 +380,10 @@
     </div>
     <div class="card" style="margin-top:14px;">
       <h2>Zapis sesji</h2>
+      <div class="meta">Wypełnij to, co dziś robiłeś: linę, bouldering albo jedno i drugie.</div>
+      <h3 class="climb-part">🧗 Lina</h3>
       <div class="log-row">
         <div><label>Ile dróg</label><input type="number" id="climbRoutes" placeholder="np. 6"></div>
-        <div><label>Ile bulderów</label><input type="number" id="climbBoulders" placeholder="np. 9"></div>
       </div>
       <div style="margin-top:12px;">
         <label style="font-size:0.7rem;color:var(--chalk-500);display:block;margin-bottom:4px;">Jak wypadła wytrzymałość (czy przedramiona „puchły" szybciej/wolniej niż zwykle)</label>
@@ -390,6 +393,19 @@
           <option value="same">Bez zmian</option>
           <option value="worse">Gorzej niż zwykle</option>
         </select>
+      </div>
+      <h3 class="climb-part">🪨 Bouldering</h3>
+      <div class="log-row">
+        <div><label>Ile bulderów</label><input type="number" id="climbBoulders" placeholder="np. 9"></div>
+      </div>
+      <div style="margin-top:12px;">
+        <label style="font-size:0.7rem;color:var(--chalk-500);display:block;margin-bottom:6px;">Jak ciężka była sesja — jak bardzo jesteś zmęczony?</label>
+        <div class="rpe-row" id="boulderEffortRow">
+          <button type="button" class="rpe-chip" data-v="1" onclick="pickBoulderEffort(this)">1 · lekko</button>
+          <button type="button" class="rpe-chip" data-v="2" onclick="pickBoulderEffort(this)">2 · średnio</button>
+          <button type="button" class="rpe-chip" data-v="3" onclick="pickBoulderEffort(this)">3 · ciężko</button>
+        </div>
+        <div class="meta" style="margin-top:6px;font-size:0.78rem;">1 — mógłbym jeszcze długo się wspinać · 2 — porządnie zmęczony, ale z zapasem · 3 — wyczerpany, pod koniec nic już nie szło. Nie musisz zaznaczać.</div>
       </div>
       <div style="margin-top:12px;">
         <label style="font-size:0.7rem;color:var(--chalk-500);display:block;margin-bottom:4px;">Notatka</label>
@@ -533,7 +549,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.23.0';
+const APP_VERSION = '1.24.0';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -2745,6 +2761,8 @@ function openClimb(){
   document.getElementById('climbRoutes').value = c.routes || '';
   document.getElementById('climbBoulders').value = c.boulders || '';
   document.getElementById('climbFeel').value = c.feel || '';
+  boulderEffortPicked = c.boulderEffort || null;
+  showBoulderEffort();
   document.getElementById('climbNote').value = c.note || '';
   const res = checkFingerLimits('climb');
   document.getElementById('climbLimitBanner').innerHTML = limitsBannerHTML(res);
@@ -2760,6 +2778,8 @@ function dayFromKey(key, label){
     return {...GUM_PROGRAM[key.slice(3)], label, gumProgram:true};
   }
   if(key === 'climb') return {key:'ovr_climb', label, type:'climb', title:'Wspinanie'};
+  // jednostka była w planie, ale nie została zrobiona — usunięta z dnia
+  if(key === 'skip') return {key:'ovr_skip', label, type:'rest', title:'Nie zrobione', skipped:true};
   return {key:'ovr_rest', label, type:'rest', title:'Odpoczynek (pauza)'};
 }
 
@@ -2770,11 +2790,13 @@ function resolveDay(iso){
 
   let day = planned, overridden = false;
   // wybór pokrywający się z planem traktuj jak brak zmiany
+  // (także „nie zrobione" w dniu, który po zmianie startu planu wypada wolny)
   const sameAsPlan = ovr && (ovr === planned.key ||
     (ovr === 'climb' && planned.type === 'climb') ||
-    (ovr === 'rest' && planned.type === 'rest'));
+    ((ovr === 'rest' || ovr === 'skip') && planned.type === 'rest'));
   if(ovr && !sameAsPlan){
     day = dayFromKey(ovr, planned.label);
+    if(day.skipped) day.title = 'Nie zrobione: ' + planned.title;
     overridden = true;
   }
 
@@ -2809,6 +2831,62 @@ function setDayExtra(key){
   if(key === 'none') delete entry.dayExtra;
   else entry.dayExtra = key;
   saveEntry(state.selectedDate, entry);
+  vibrate(25);
+  renderAll();
+}
+
+/* =========================================================================
+   USUWANIE JEDNOSTKI, KTÓREJ NIE ZROBIŁEŚ — dziś albo w dniu, który minął.
+   Główna jednostka → dayOverride 'skip' (a gdy dzień ma drugą jednostkę,
+   ona staje się główną); druga jednostka → usunięcie dayExtra. Zapisy z
+   usuwanej jednostki kasujemy po potwierdzeniu, żeby nie zostały osierocone
+   w dzienniku. „Przywróć jednostkę z planu" = setDayOverride('plan').
+   ========================================================================= */
+function dayIcon(d){ return d.skipped ? '✕' : TYPE_META[d.type].icon; }
+
+/* Klucze zapisów jednostki: 'climb', 'w:<rozgrzewka>', 'x:<ćwiczenie/tablica/pomiar>'. */
+function unitRecordKeys(unit){
+  const keys = [];
+  if(unit.type === 'climb') keys.push('climb', 'w:'+COOLDOWN.id);
+  (unit.blocks || []).forEach(b=>{
+    if(b.kind === 'exercises') b.items.forEach(ex=>keys.push('x:'+ex.id));
+    else if(b.kind === 'warmup') keys.push('w:'+b.id);
+    else keys.push('x:'+b.id);
+  });
+  return keys;
+}
+function deleteUnitButtonsHTML(units){
+  const btn = (which, label) => `<button class="btn btn-ghost" style="width:auto;margin:12px 8px 0 0;padding:9px 14px;font-weight:600;font-size:0.85rem;" onclick="deleteUnit('${which}')">🗑 ${label}</button>`;
+  if(units.length === 1) return btn('main', 'Nie zrobiłem — usuń tę jednostkę');
+  return units.map((u, i)=>btn(i === 0 ? 'main' : 'extra', `Usuń „${u.title}" (nie zrobiłem)`)).join('');
+}
+function deleteUnit(which){
+  const iso = state.selectedDate;
+  const {day, extras} = resolveDay(iso);
+  const unit = which === 'extra' ? extras[0] : day;
+  if(!unit || unit.type === 'rest') return;
+  const other = which === 'extra' ? day : extras[0];
+  const keep = new Set(other ? unitRecordKeys(other) : []);   // wspólne wyciszenie zostaje przy drugiej jednostce
+  const entry = loadEntry(iso);
+  const has = k => k === 'climb' ? !!entry.climb
+    : k.startsWith('w:') ? !!(entry.warmups && entry.warmups[k.slice(2)])
+    : !!(entry.exercises && entry.exercises[k.slice(2)]);
+  const drop = unitRecordKeys(unit).filter(k=>!keep.has(k) && has(k));
+  const msg = `Usunąć „${unit.title}" z dnia ${fmtDayLong(iso)}?\n\n` + (drop.length
+    ? `W tej jednostce są już zapisy (${drop.length}) — zostaną skasowane.`
+    : 'W dzienniku i w analizie dla Claude ten dzień będzie oznaczony jako niezrobiony. Możesz to cofnąć.');
+  if(!confirm(msg)) return;
+  drop.forEach(k=>{
+    if(k === 'climb') delete entry.climb;
+    else if(k.startsWith('w:')) delete entry.warmups[k.slice(2)];
+    else delete entry.exercises[k.slice(2)];
+  });
+  if(entry.warmups && !Object.keys(entry.warmups).length) delete entry.warmups;
+  if(entry.exercises && !Object.keys(entry.exercises).length) delete entry.exercises;
+  if(which === 'extra') delete entry.dayExtra;
+  else if(extras.length){ entry.dayOverride = entry.dayExtra; delete entry.dayExtra; }
+  else { entry.dayOverride = 'skip'; delete entry.dayExtra; }
+  saveEntry(iso, entry);
   vibrate(25);
   renderAll();
 }
@@ -2998,7 +3076,7 @@ function renderWeekStrip(){
     d.setDate(base.getDate()+mondayOffset+i);
     const iso = isoOf(d);
     const resolved = resolveDay(iso);
-    const icons = [TYPE_META[resolved.day.type].icon, ...resolved.extras.map(x=>TYPE_META[x.type].icon)];
+    const icons = [dayIcon(resolved.day), ...resolved.extras.map(dayIcon)];
     const modified = resolved.overridden || resolved.extras.length > 0 || resolved.extraExercises.length > 0;
     const chip = document.createElement('div');
     chip.className = 'day-chip' + (modified?' ovr':'') + (iso===todayISO()?' today':'') + (iso===state.selectedDate?' selected':'');
@@ -3017,7 +3095,7 @@ function dayComponentHTML(dayObj, entry){
     html += limitsBannerHTML(res);
     html += `<div class="notes-box"><b>Plan na sesję:</b> długie łatwe wspinanie ciągiem (20–30 min), powtarzane przewiązki, trening odpoczywania na drodze. <span class="warn">Z bulderów schodź po chwytach — nigdy nie zeskakuj.</span></div>`;
     html += `<div style="margin-top:12px;"><button class="btn btn-primary" onclick="openClimb()">Otwórz zapis sesji</button></div>`;
-    if(entry.climb) html += `<div class="meta" style="margin-top:10px;text-align:center;">✓ Sesja zapisana: ${entry.climb.routes||0} dróg, ${entry.climb.boulders||0} bulderów</div>`;
+    if(entry.climb) html += `<div class="meta" style="margin-top:10px;text-align:center;">✓ Sesja zapisana: ${climbSummaryTxt(entry.climb)}</div>`;
     // wyciszenie po wspinaniu — przedramiona po sesji na ścianie to priorytet
     state.registry[COOLDOWN.id] = {type:'warmup', data:COOLDOWN};
     const cdDone = !!(entry.warmups && entry.warmups[COOLDOWN.id]);
@@ -3025,6 +3103,7 @@ function dayComponentHTML(dayObj, entry){
     html += rowHTML(COOLDOWN.id, COOLDOWN.name, kroki(COOLDOWN.steps.length), cdDone);
     return html;
   }
+  if(dayObj.skipped) return '';   // opis i „Przywróć" są w banerze nad listą
   if(dayObj.type==='rest'){
     html += `<div class="notes-box">Dziś nic nie trenujesz — regeneracja jest częścią planu, nie przerwą w nim. Jeśli chcesz, możesz dołożyć lekką mobilność albo wyciszenie.</div>`;
     return html;
@@ -3081,15 +3160,19 @@ function renderToday(){
   const entry = loadEntry(iso);
   state.progressCtx = {entries: allEntries(), dismissed: store.get('progressDismissed', {})};
 
-  const meta = TYPE_META[day.type];
+  const meta = day.skipped ? {badge:'rest', label:'Nie zrobione'} : TYPE_META[day.type];
   const cont = document.getElementById('todayContent');
   const niceDate = d.toLocaleDateString('pl-PL', {weekday:'long', day:'numeric', month:'long'});
   const allTitles = [day.title, ...extras.map(x=>x.title)];
+  // „Nie zrobiłem — usuń": tylko dziś i w dniach, które minęły, i tylko dla jednostek treningowych
+  const trainingUnits = [day, ...extras].filter(u=>u.type !== 'rest');
+  const canDelete = iso <= todayISO() && trainingUnits.length > 0;
 
   let html = `<div class="card">
     <span class="badge ${meta.badge}">${meta.label}</span>${extras.map(x=>` <span class="badge ${TYPE_META[x.type].badge}">${TYPE_META[x.type].label}</span>`).join('')}
     <h2 style="margin-top:8px;">${allTitles.join(' + ')}</h2>
     <div class="meta" style="text-transform:capitalize;">${niceDate}</div>
+    ${canDelete ? deleteUnitButtonsHTML(trainingUnits) : ''}
   </div>`;
 
   const pos = planned.pos;
@@ -3105,7 +3188,11 @@ function renderToday(){
     html += bannerHTML('warn', '🧩', day.title.split(' ').slice(0,2).join(' ') + ' — propozycja trenerska',
       'Ten moduł przygotowałem według założeń Twojego planu (te same wzorce ruchowe co Moduł A w innych wariantach, zakresy siłowe, soleus dla Achillesa). Nie pochodzi z Twojego projektu treningowego — jeśli kiedyś dostaniesz „oficjalne" moduły B/C, podmienimy treść.');
   }
-  if(overridden){
+  if(overridden && day.skipped){
+    html += bannerHTML('info', '✕', 'Jednostka usunięta — nie zrobiona',
+      `Według planu w tym dniu był trening „${planned.title}". Usunąłeś go jako niezrobiony — tak jest oznaczony w dzienniku i w analizie dla Claude.
+       <button class="btn btn-ghost" style="margin-top:10px;" onclick="setDayOverride('plan')">↩ Przywróć jednostkę z planu</button>`, true);
+  } else if(overridden){
     const tail = day.type === 'rest'
       ? 'Pauza zamiast treningu jest zawsze w porządku — regeneracja też buduje formę.'
       : 'Pamiętaj, że dzień odpoczynku w planie nie jest przypadkowy — traktuj tę zmianę jako wyjątek, nie regułę.';
@@ -3643,13 +3730,33 @@ function logCurrentSet(exId){
 }
 
 /* =========================================================================
-   ZAPIS WSPINANIA
+   ZAPIS WSPINANIA — dwie części: lina (drogi + wytrzymałość) i bouldering
+   (buldery + 3-stopniowa skala zmęczenia po sesji)
    ========================================================================= */
+const BOULDER_EFFORT = {1:'lekko', 2:'średnio', 3:'ciężko'};
+let boulderEffortPicked = null;
+function pickBoulderEffort(btn){
+  const v = Number(btn.dataset.v);
+  boulderEffortPicked = (boulderEffortPicked === v) ? null : v;   // drugie dotknięcie odznacza
+  showBoulderEffort();
+}
+function showBoulderEffort(){
+  document.querySelectorAll('#boulderEffortRow .rpe-chip').forEach(b => b.classList.toggle('on', Number(b.dataset.v) === boulderEffortPicked));
+}
+/* Krótki opis zapisanej sesji: „lina: 6 dróg · bouldering: 9 bulderów (ciężko)". */
+function climbSummaryTxt(c){
+  const r = Number(c.routes) || 0, b = Number(c.boulders) || 0;
+  const parts = [];
+  if(r) parts.push(`lina: ${r} ${plural(r,'droga','drogi','dróg')}`);
+  if(b || c.boulderEffort) parts.push(`bouldering: ${b} ${plural(b,'bulder','buldery','bulderów')}` + (c.boulderEffort ? ` (${BOULDER_EFFORT[c.boulderEffort]})` : ''));
+  return parts.length ? parts.join(' · ') : 'bez liczb';
+}
 function saveClimb(){
   const data = {
     routes: document.getElementById('climbRoutes').value,
     boulders: document.getElementById('climbBoulders').value,
     feel: document.getElementById('climbFeel').value || undefined,   // brak wyboru = brak oceny
+    boulderEffort: boulderEffortPicked || undefined,                  // 1 lekko · 2 średnio · 3 ciężko
     note: document.getElementById('climbNote').value,
     savedAt: new Date().toISOString(),
   };
@@ -3865,11 +3972,17 @@ function renderHistory(){
     const iso = k.replace('entries:','');
     const entry = store.get(k, {});
     const tags = [];
-    if(entry.climb) tags.push(`<span class="pill">🧗 ${entry.climb.routes||0} dróg / ${entry.climb.boulders||0} buld.</span>`);
+    if(entry.climb){
+      const c = entry.climb, r = Number(c.routes) || 0, b = Number(c.boulders) || 0;
+      if(r) tags.push(`<span class="pill">🧗 ${r} ${plural(r,'droga','drogi','dróg')}</span>`);
+      if(b || c.boulderEffort) tags.push(`<span class="pill">🪨 ${b} buld.${c.boulderEffort ? ' · '+BOULDER_EFFORT[c.boulderEffort] : ''}</span>`);
+      if(!r && !b && !c.boulderEffort) tags.push('<span class="pill">🧗 wspinanie</span>');
+    }
     if(entry.exercises){
       const n = Object.keys(entry.exercises).length;
       if(n) tags.push(`<span class="pill">✓ ${n} poz.</span>`);
     }
+    if(entry.dayOverride === 'skip') tags.push('<span class="pill">✕ nie zrobione</span>');
     if(!tags.length) continue;   // wpis bez treści (np. sama zmiana typu dnia) — nie pokazuj pustego wiersza
     html += `<div class="hist-item"><span class="date">${iso}</span><div class="tags">${tags.join('')}</div></div>`;
   }
@@ -3932,21 +4045,25 @@ function aiExerciseLine(id, log){
 /* Dni od najstarszego: plan dnia + to, co zapisane. Dni wolne bez zapisów pomijane. */
 function aiHistory(days, today){
   const lines = [];
-  const sum = {logged:0, missed:0, climb:0, strength:0, hb:0, old:false};
+  const sum = {logged:0, missed:0, skipped:0, climb:0, strength:0, hb:0, old:false};
   for(let i = days - 1; i >= 0; i--){
     const iso = aiShift(today, -i);
     const r = resolveDay(iso);
     const units = [r.day, ...r.extras];
     const before = planPos(iso).beforeStart;
     const planned = !before && units.some(u => u.type !== 'rest');
+    const skipped = !before && !!r.day.skipped;
     const entry = loadEntry(iso);
     const items = [];
     if(entry.climb){
-      const c = entry.climb;
-      const bits = [(aiTxt(c.routes) || '0')+' dróg', (aiTxt(c.boulders) || '0')+' bulderów'];
-      if(c.feel) bits.push('wytrzymałość: '+(AI_FEEL[c.feel] || c.feel));
-      if(aiTxt(c.note)) bits.push('notatka: „'+aiTxt(c.note)+'"');
-      items.push('• Wspinanie: '+bits.join(', '));
+      const c = entry.climb, rt = Number(c.routes) || 0, bl = Number(c.boulders) || 0;
+      const feel = c.feel ? 'wytrzymałość: '+(AI_FEEL[c.feel] || c.feel) : '';
+      if(rt) items.push('• Wspinanie na linie: '+rt+' '+plural(rt,'droga','drogi','dróg')+(feel ? ', '+feel : ''));
+      if(bl || c.boulderEffort) items.push('• Bouldering: '+bl+' '+plural(bl,'bulder','buldery','bulderów')
+        +(c.boulderEffort ? ', zmęczenie po sesji: '+c.boulderEffort+'/3 ('+BOULDER_EFFORT[c.boulderEffort]+')' : '')
+        +(!rt && feel ? ', '+feel : ''));
+      if(!rt && !bl && !c.boulderEffort) items.push('• Wspinanie (bez liczb)'+(feel ? ': '+feel : ''));
+      if(aiTxt(c.note)) items.push('• Notatka ze wspinania: „'+aiTxt(c.note)+'"');
       sum.climb++;
     }
     let strength = false;
@@ -3961,12 +4078,16 @@ function aiHistory(days, today){
       items.push(aiExerciseLine(id, log));
     }
     if(strength) sum.strength++;
-    if(!items.length && !planned) continue;
-    const label = before ? 'przed startem planu' : (planned ? units.map(u => u.title).join(' + ') : 'odpoczynek');
+    if(!items.length && !planned && !skipped) continue;
+    const label = before ? 'przed startem planu'
+      : skipped ? r.planned.title
+      : (planned ? units.map(u => u.title).join(' + ') : 'odpoczynek');
     let head = aiDay(iso)+(iso === today ? ' (dziś)' : '')+' — plan: '+label;
-    if(r.overridden) head += ' (zmienione przeze mnie; pierwotnie: '+r.planned.title+')';
+    if(r.overridden && !skipped) head += ' (zmienione przeze mnie; pierwotnie: '+r.planned.title+')';
     lines.push(head);
+    if(skipped){ sum.skipped++; lines.push('• nie zrobiłem — jednostkę usunąłem z planu'); }
     if(items.length){ sum.logged++; lines.push(...items); }
+    else if(skipped){ /* opisane wyżej */ }
     else if(iso === today) lines.push('• jeszcze bez zapisu');
     else { sum.missed++; lines.push('• brak zapisu (trening pominięty albo niezapisany)'); }
   }
@@ -4027,13 +4148,14 @@ function claudeSummary(days, today){
   L.push('Poniżej dane z mojej aplikacji treningowej (Trener FBW '+APP_VERSION+'): wspinaczka, trening siłowy z masą ciała i chwytotablica. Prośba jest na końcu.');
   L.push('', '=== POZYCJA W PLANIE ===');
   L.push('Dziś ('+aiDay(today)+'): cykl '+(p.cycleIndex+1)+', tydzień '+p.weekInCycle+' z 2 ('+p.planWeek+'. tydzień planu)'+(p.deload ? ' — tydzień odciążeniowy (deload)' : '')+'.');
-  L.push('Układ planu: makrocykl 14 dni. Tydzień 1: pon — blok nóg + core; wt i sob — wspinanie; czw — moduł siłowy + chwytotablica; pozostałe dni wolne. Tydzień 2: pon, śr, pt — moduły siłowe (kolejka A→B→C) + chwytotablica, bez wspinania. Co trzeci cykl tydzień 2 to deload: połowa serii, bez chwytotablicy.');
+  L.push('Układ planu: makrocykl 14 dni. Tydzień 1: pon — blok nóg + core; wt i sob — wspinanie (lina i/lub bouldering); czw — moduł siłowy + chwytotablica; pozostałe dni wolne. Tydzień 2: pon, śr, pt — moduły siłowe (kolejka A→B→C) + chwytotablica, bez wspinania. Co trzeci cykl tydzień 2 to deload: połowa serii, bez chwytotablicy.');
   L.push('', '=== POZIOMY ĆWICZEŃ (warianty dostępne w aplikacji) ===', ...aiLevels());
   L.push('', '=== MOJE TRENINGI: ostatnie '+days+' dni ('+aiDate(aiShift(today, -(days - 1)))+'–'+aiDate(today)+') ===');
   L.push('Liczby przy seriach to powtórzenia albo sekundy (ćwiczenia na utrzymanie). RPE: 10 = nic więcej bym nie zrobił, 8 = zostały 2 powtórzenia zapasu; brak RPE = nie oceniałem.');
+  L.push('Wspinanie: lina = liczba dróg i wytrzymałość przedramion w porównaniu ze zwykłą sesją; bouldering = liczba bulderów i zmęczenie po sesji w skali 1–3 (1 lekko, 2 średnio, 3 ciężko — wyczerpany).');
   if(s.old) L.push('* zapis sprzed wersji 1.22 aplikacji: wariant mógł być inny niż podany, a RPE 7 mogło być ustawieniem domyślnym suwaka, a nie oceną.');
   L.push(...(hist.lines.length ? hist.lines : ['(brak zapisów w tym okresie)']));
-  L.push('Razem: '+s.logged+' dni z zapisem (wspinanie: '+s.climb+', dni z ćwiczeniami siłowymi: '+s.strength+', sesje na chwytotablicy: '+s.hb+'); zaplanowane treningi bez zapisu: '+s.missed+'.');
+  L.push('Razem: '+s.logged+' dni z zapisem (wspinanie: '+s.climb+', dni z ćwiczeniami siłowymi: '+s.strength+', sesje na chwytotablicy: '+s.hb+'); zaplanowane treningi bez zapisu: '+s.missed+'; usunięte jako niezrobione: '+s.skipped+'.');
   L.push('', '=== PROPOZYCJE APLIKACJI ===');
   L.push('(reguła: 2 kolejne sesje na górze zakresu bez RPE 9–10 → stopień wyżej; 2 kolejne za ciężkie → stopień niżej)');
   L.push(...(props.length ? props : ['• brak']));
