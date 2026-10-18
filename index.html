@@ -667,7 +667,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.26.0';
+const APP_VERSION = '1.26.1';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -3706,25 +3706,16 @@ function linaPlanWeek(mon){
 }
 
 /* ---------- Treść sesji ---------- */
-const LINA_AUTO_CHECK = [
-  'Wyciągnij kawałek taśmy i puść — powinna się sama zwinąć.',
-  'Karabinek w łączniku uprzęży, zamek zamknięty i zablokowany. Dotknij go i powiedz na głos „wpięty".',
-  'Nikt nie wspina się w Twojej linii ani ok. 6 m nad Tobą.',
-  'Nie wspinasz się w bok ani powyżej linii automatu. Przed zjazdem sprawdzasz, czy strefa pod Tobą jest wolna.',
-  'Przy zmęczeniu nie skracasz kontroli. Po odpięciu zostawiasz karabinek tak, jak każe ściana.',
-];
-const LINA_AUTO_CHECK_NOTE = 'Kontrola wpięcia przed każdym wejściem jest nienegocjowalna — brak wpięcia to ok. połowa incydentów na automatach zgłaszanych do brytyjskiego stowarzyszenia ścian wspinaczkowych (CWA). Kolejność według instrukcji automatu TRUBLUE i regulaminu ściany.';
-
 const LINA_WALL_WARMUP = {
   id:'lw_warm', name:'Rozgrzewka na ścianie (12 min)', kind:'warmup',
-  intro:'Kolejność od lekkiej taśmy do jednego spokojnego wejścia na automacie. Zanim pierwszy raz się wepniesz — kontrola z listy przy serii na automacie.',
+  intro:'Kolejność od lekkiej taśmy do jednego spokojnego wejścia na automacie.',
   steps:[
     {label:'Taśma — 3 min', seconds:180,
      desc:'Rotacje zewnętrzne przy boku 1 × 12 na stronę (łokieć przyklejony do tułowia), rozciąganie taśmy przed klatką (pull-aparts) 1 × 15, krążenia nadgarstków.'},
     {label:'Obwody: 2 × 3 min bardzo łatwo, 1 min przerwy', seconds:420,
      desc:'Duże chwyty, zero pompy. Zadanie: ciche stopy albo zawieszenie dłoni ok. 2 cm nad chwytem na 2–3 s, zanim go złapiesz. Timer liczy całe 7 minut (3 + 1 + 3).'},
     {label:'Automat: 1 spokojne wejście na najlżejszą 5A', reps:'1 wejście',
-     desc:'Kontrola wpięcia przed wejściem. Zjazd z opuszczonymi rękami — potrząsasz nimi w trakcie zjazdu.'},
+     desc:'Zjazd z opuszczonymi rękami — potrząsasz nimi w trakcie zjazdu.'},
     {label:'Oddech: 1 min (4 s wdech, 6 s wydech)', seconds:60,
      desc:'Wydech dłuższy niż wdech. To ustawia spokojny rytm na całą sesję.'},
   ]
@@ -3749,16 +3740,14 @@ function linaCircuits(n){
     id:'lw_obw', kind:'guided', climbKind:'wytrz', pumpLog:true,
     name:`Część 1: obwody — ${n} × 5 min bez schodzenia`,
     sub:`${n} × 5 min, przerwa 3 min · pompa najwyżej 3/10`,
-    intro:`Wspinanie ciągłe po dużych chwytach, ${n} serie po 5 minut bez schodzenia, 3 minuty przerwy. Trudność ustalasz doborem chwytów — <b>pompa najwyżej 3/10</b>. Każda seria ma jedno zadanie: seria 1 — ciche stopy, seria 2 — wydech na każdy przechwyt${n > 2 ? ', seria 3 — proste ramiona' : ''}.<br><br><b>Gdy obwody są tylko strome</b> (przewieszenie z małymi chwytami): zamiast tego zrób 1 serię 4–5 wejść na 5A na automacie — przerwa między wejściami to sam zjazd i rzut oka na zamek, pompa najwyżej 4/10.`,
+    intro:`Wspinanie ciągłe po dużych chwytach, ${n} serie po 5 minut bez schodzenia, 3 minuty przerwy. Trudność ustalasz doborem chwytów — <b>pompa najwyżej 3/10</b>. Każda seria ma jedno zadanie: seria 1 — ciche stopy, seria 2 — wydech na każdy przechwyt${n > 2 ? ', seria 3 — proste ramiona' : ''}.<br><br><b>Gdy obwody są tylko strome</b> (przewieszenie z małymi chwytami): zamiast tego zrób 1 serię 4–5 wejść na 5A na automacie — przerwa między wejściami to sam zjazd, pompa najwyżej 4/10.`,
     phases,
   };
 }
 function linaAutoPhases(n, rest, labels){
-  const p = [{label:'Kontrola wpięcia (lista powyżej)', tap:true, tapLabel:'Wpięty ✓', kind:'work'},
-             {label:'Wejdź ok. 1 m i usiądź w uprzęży', tap:true, tapLabel:'Automat trzyma ✓', kind:'work'}];
+  const p = [{label:'Wejdź ok. 1 m i usiądź w uprzęży', tap:true, tapLabel:'Automat trzyma ✓', kind:'work'}];
   for(let i = 1; i <= n; i++){
     p.push({label:(labels && labels[i-1]) || `Wejście ${i}/${n} — dotknij po wylądowaniu`, tap:true, tapLabel:'Wylądowałem ✓', kind:'work'});
-    if(i < n) p.push({label:'Rzut oka na zamek — i od razu dalej', seconds:15, kind:'rest'});
   }
   p.push({label:'Przerwa od lądowania', seconds:rest, kind:'seriesRest'});
   return p;
@@ -3772,8 +3761,7 @@ function linaAutoSeries(k, n, route, task){
     id:'lw_auto'+k, kind:'guided', climbKind:'wytrz', pumpLog:true,
     name:`Część 2: automat — seria ${k} (${n} ${plural(n,'wejście','wejścia','wejść')})`,
     sub:`${route.split(' (')[0]} · ${n} ${plural(n,'wejście','wejścia','wejść')} · przerwa 4 min od lądowania`,
-    intro:`<b>Droga:</b> ${route}.<br><b>Każde wejście:</b> 2 shake-outy (ok. 1/3 i 2/3 wysokości) i 2 symulowane wpinki — puszczasz chwyt na 2–3 s na wysokości pasa, na wydechu. Zjazd ok. 45 s z opuszczonymi rękami, potrząsasz nimi. Po wylądowaniu rzut oka na zamek karabinka (ok. 15 s) i od razu kolejne wejście.<br><b>Zadanie na całą serię:</b> ${task}.<br><br>Pompa pod koniec serii ok. 5–6/10. Odpadasz albo ruchy robią się nerwowe → łatwiejsza droga albo o jedno wejście mniej. Wejścia krótsze niż 1,5 min → dodaj 1 wejście albo wchodź wolniej z dodatkowym shake-outem.<br><br>Przed pierwszym wejściem serii: wejdź ok. 1 m i usiądź w uprzęży, czując, że automat trzyma — jeśli regulamin ściany na to pozwala.`,
-    checklist:LINA_AUTO_CHECK, checklistNote:LINA_AUTO_CHECK_NOTE,
+    intro:`<b>Droga:</b> ${route}.<br><b>Każde wejście:</b> 2 shake-outy (ok. 1/3 i 2/3 wysokości) i 2 symulowane wpinki — puszczasz chwyt na 2–3 s na wysokości pasa, na wydechu. Zjazd ok. 45 s z opuszczonymi rękami, potrząsasz nimi. Po wylądowaniu od razu kolejne wejście.<br><b>Zadanie na całą serię:</b> ${task}.<br><br>Pompa pod koniec serii ok. 5–6/10. Odpadasz albo ruchy robią się nerwowe → łatwiejsza droga albo o jedno wejście mniej. Wejścia krótsze niż 1,5 min → dodaj 1 wejście albo wchodź wolniej z dodatkowym shake-outem.<br><br>Przed pierwszym wejściem serii: wejdź ok. 1 m i usiądź w uprzęży, czując, że automat trzyma — jeśli regulamin ściany na to pozwala.`,
     phases:linaAutoPhases(n, 240),
   };
 }
@@ -3787,8 +3775,7 @@ function linaApSeries(k, n){
     id:'lw_ap'+k, kind:'guided', climbKind:'wytrz', pumpLog:true,
     name:`Automat — para ${k} z ${n} (5B+/6A → 5B)`,
     sub:'2 wejścia · przerwa 4–5 min od lądowania · pompa 7–8/10',
-    intro:'<b>Wejście 1:</b> 5B+ lub 6A — najtrudniejsza droga, którą robisz bez odpadania. Zjazd z opuszczonymi rękami i rzut oka na zamek, razem ok. 1 min.<br><b>Wejście 2:</b> 5B. <b>Drop-set:</b> jeśli po wejściu 1 pompa jest 8/10 lub wyżej, wejście 2 robisz na 5A.<br><br>Pompa pod koniec pary 7–8/10, ale <b>bez odpadania w połowie drogi</b>. Oddech: mocny, krótki wydech tylko na najtrudniejszym ruchu, wpinka na wydechu, na odpoczynkach 3 wolne wydechy.',
-    checklist:LINA_AUTO_CHECK, checklistNote:LINA_AUTO_CHECK_NOTE,
+    intro:'<b>Wejście 1:</b> 5B+ lub 6A — najtrudniejsza droga, którą robisz bez odpadania. Zjazd z opuszczonymi rękami, ok. 1 min.<br><b>Wejście 2:</b> 5B. <b>Drop-set:</b> jeśli po wejściu 1 pompa jest 8/10 lub wyżej, wejście 2 robisz na 5A.<br><br>Pompa pod koniec pary 7–8/10, ale <b>bez odpadania w połowie drogi</b>. Oddech: mocny, krótki wydech tylko na najtrudniejszym ruchu, wpinka na wydechu, na odpoczynkach 3 wolne wydechy.',
     phases:linaAutoPhases(2, 270, ['Wejście 1 — 5B+ lub 6A, dotknij po wylądowaniu', 'Wejście 2 — 5B (albo 5A przy pompie ≥8), dotknij po wylądowaniu']),
   };
 }
@@ -3831,10 +3818,10 @@ function linaWallNote(st){
 
 function linaLightBlocks(){
   const drills = ['zawieszenie dłoni nad chwytem', 'ciche stopy', 'wysoki stopień bez ciągnięcia rękami', 'wydech na każdy ruch'];
-  const phases = [{label:'Kontrola wpięcia (lista powyżej)', tap:true, tapLabel:'Wpięty ✓', kind:'work'}];
+  const phases = [{label:'Wejdź ok. 1 m i usiądź w uprzęży', tap:true, tapLabel:'Automat trzyma ✓', kind:'work'}];
   drills.forEach((dr, i) => {
     phases.push({label:`Wejście ${i+1}/4 — ${dr}`, tap:true, tapLabel:'Wylądowałem ✓', kind:'work'});
-    if(i < 3) phases.push({label:'Przerwa 3 min (potem kontrola wpięcia)', seconds:180, kind:'rest'});
+    if(i < 3) phases.push({label:'Przerwa 3 min', seconds:180, kind:'rest'});
   });
   return [
     {id:'lw_light_warm', name:'Rozgrzewka (12 min)', kind:'warmup',
@@ -3847,7 +3834,7 @@ function linaLightBlocks(){
      name:'Automat: 4 pojedyncze wejścia na najlżejszą 5A',
      sub:'4 × ok. 3 min, przerwa 3 min · pompa najwyżej 2–3/10',
      intro:'Technika i rozruszanie, <b>nie bodziec wytrzymałościowy</b>: pompa najwyżej 2–3/10, każde wejście osobno, z pełną przerwą. Najlepiej pion albo połóg z dużymi chwytami. Każde wejście wolno, ok. 3 min, z 2–3 shake-outami; zjazd z opuszczonymi rękami.<br><br>Zadania: wejście 1 — zawieszenie dłoni ok. 2 cm nad chwytem na 2–3 s; wejście 2 — ciche stopy; wejście 3 — wysoki stopień bez ciągnięcia rękami (rozluźnij dłonie, barki nad kolano, wstań z nogi); wejście 4 — wydech na każdy ruch.<br><br><b>Uczciwie:</b> sesje regeneracyjne robi się zwykle ok. 4 stopnie poniżej możliwości — przy minimum 5A na automacie tego nie spełnisz, więc nadrabiasz wolnym tempem, długimi przerwami i małą liczbą wejść.',
-     checklist:LINA_AUTO_CHECK, checklistNote:LINA_AUTO_CHECK_NOTE, phases},
+     phases},
     {id:'lw_light_feet', name:'Obwody: praca stóp (5 min)', kind:'warmup',
      intro:'Duże chwyty, uwaga wyłącznie na stopach.',
      steps:[
@@ -4304,10 +4291,9 @@ function renderGuidedBody(data){
   pumpPicked = log && log.pump != null ? log.pump : null;
   let html = '';
   if(data.intro) html += `<div class="notes-box" style="margin-top:0;">${data.intro}</div>`;
-  if(data.checklist) html += `<details class="tech" open><summary>Bezpieczeństwo na automacie — przed każdym wejściem</summary><div class="inner"><ol>${data.checklist.map(x => '<li>'+x+'</li>').join('')}</ol>${data.checklistNote ? '<div class="meta" style="margin-top:8px;">'+data.checklistNote+'</div>' : ''}</div></details>`;
   if(data.phases && data.phases.length){
     html += `<div class="card">` + timerRingHTML() + `</div>`;
-    if(data.phases.some(p => p.tap)) html += `<div class="meta" style="margin:-4px 0 10px;">Przy wejściach timer czeka na Ciebie — dotknij przycisku po wylądowaniu, dopiero wtedy liczy kontrolę zamka i przerwę.</div>`;
+    if(data.phases.some(p => p.tap)) html += `<div class="meta" style="margin:-4px 0 10px;">Przy wejściach timer czeka na Ciebie — dotknij przycisku po wylądowaniu, dopiero wtedy liczy przerwę.</div>`;
   }
   if(data.pumpLog){
     html += `<div style="margin-top:12px;"><label style="font-size:0.7rem;color:var(--chalk-500);display:block;margin-bottom:6px;">Pompa pod koniec (0 = żadna, 10 = przedramiona „zalane")</label>${pumpChipsHTML('pumpRow','pickPump')}</div>`;
@@ -4349,7 +4335,6 @@ function renderLinaTestBody(data){
   const cur = ((loadEntry(state.selectedDate).exercises || {})[data.id]) || {};
   const cv = cur.values || {};
   let html = `<div class="notes-box" style="margin-top:0;">${data.how}<br><br><b>${data.change}</b></div>`;
-  if(data.climbKind) html += `<details class="tech"><summary>Bezpieczeństwo na automacie — przed każdym wejściem</summary><div class="inner"><ol>${LINA_AUTO_CHECK.map(x => '<li>'+x+'</li>').join('')}</ol></div></details>`;
   if(data.phases) html += `<div class="card">` + timerRingHTML() + `</div>`;
   data.fields.forEach(f => {
     html += `<div class="log-row"><div><label>${f.l}</label><input type="number" inputmode="decimal" id="lt_${f.k}" value="${cv[f.k] != null ? cv[f.k] : ''}"></div></div>`;
@@ -5580,7 +5565,6 @@ function claudeSummary(days, today){
   L.push('', '=== ZASADY BEZPIECZEŃSTWA (nienaruszalne) ===');
   if(lina) L.push('• Palce (plan na linę): maks. 3 intensywne dni na 7 (bouldering, sesja na ścianie, testy, prowadzenie, chwytotablica 10/5); sesja lekka na ścianie (pompa ≤2–3/10) się nie liczy, ale w jej dniu i nazajutrz bez tablicy. Ok. 48 h między intensywnymi dniami. Co najmniej jeden dzień w tygodniu całkiem wolny. Po 8 tygodniach zwisów 2 tygodnie przerwy od tablicy.');
   else L.push('• Palce: maks. 3 intensywne ekspozycje na 7 dni (wspinanie + chwytotablica B, C, C+ lub własna). Dwie intensywne dzień po dniu są zabronione; dzień po intensywnej najwyżej lekka tablica (protokół A lub D). Co najmniej 48 h między wspinaniem a intensywną tablicą. Tablica tylko na początku jednostki, na świeżych palcach.');
-  if(lina) L.push('• Automat: kontrola wpięcia przed każdym wejściem jest nienaruszalna.');
   L.push('• Intensywne ekspozycje palców w ostatnich 7 dniach: '+aiFingerWeek(today)+'.');
   L.push('• Achilles (przebyte zapalenie ścięgna): z bulderów schodzę po chwytach, bez zeskoków; żadnych ćwiczeń z wyskokami; pistol squat bez przechodzenia wyżej; wspięcia na palce: '+(SETTINGS.achillesTrack === 'fast' ? 'jednonóż' : 'obunóż (ostrożnie)')+'.');
   L.push('• Dipy: '+(SETTINGS.dipsDepth === '90' ? 'do kąta prostego' : 'stop na 100–110°')+'; nie w dobie po mocnym wspinaniu.');
