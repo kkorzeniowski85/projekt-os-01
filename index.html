@@ -562,13 +562,6 @@
     <h2 style="margin-bottom:14px;">Ustawienia</h2>
     <div class="card">
       <div class="setting-row">
-        <label>Wspięcia na palce</label>
-        <select id="setAchilles" onchange="saveSettings()">
-          <option value="slow">Obunóż (ostrożnie)</option>
-          <option value="fast">Jednonóż (szybsza progresja)</option>
-        </select>
-      </div>
-      <div class="setting-row">
         <label>Głębokość dipów</label>
         <select id="setDips" onchange="saveSettings()">
           <option value="100-110">Płycej: stop na 100–110°</option>
@@ -580,7 +573,7 @@
         <div><label>Szerokość barków, deltoid–deltoid (cm)</label><input type="number" id="setShoulderWidth" step="0.5" onchange="saveBodyMeasurements()"></div>
       </div>
       <div class="meta" id="dipsWidthInfo" style="margin-top:8px;"></div>
-      <div class="meta" style="margin-top:8px;">Wersja obunóż obowiązuje, dopóki nie potwierdzisz, ile epizodów zapalenia Achillesa przeszedłeś (jeden czy więcej, jedna noga czy obie).</div>
+      <div class="meta" style="margin-top:8px;" id="calfLevelInfo"></div>
     </div>
     <div class="card">
       <h2 style="margin-bottom:10px;">Dźwięki timera</h2>
@@ -702,7 +695,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.27.0';
+const APP_VERSION = '1.28.0';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -744,7 +737,6 @@ function stationWidthDelta(){
 }
 
 function saveSettings(){
-  SETTINGS.achillesTrack = document.getElementById('setAchilles').value;
   SETTINGS.dipsDepth = document.getElementById('setDips').value;
   store.set('settings', SETTINGS);
   vibrate(20);
@@ -896,24 +888,17 @@ const FINGER_WARMUP = {
 };
 
 function calfExercise(){
-  const common = {
-    id:'E10', sets:4, repsRange:'10–15 powt.', rest:120,
+  return {
+    id:'E10', name:'Wspięcia na palce obunóż', sets:4, repsRange:'10–15 powt.', rest:120,
     tempo:{label:'3-1-3', phases:[{l:'W górę',s:3},{l:'Pauza',s:1},{l:'W dół',s:3}]},
-    cue:'3 s w górę · 1 s pauzy w górze · 3 s w dół. Płasko, bez obciążenia, bez odbicia.',
-    warn:'Jeśli poranna sztywność Achillesa jest dłuższa niż zwykle — wróć do łatwiejszej wersji ćwiczenia, zanim pojawi się ból. Sztywność wyprzedza ból o tygodnie.',
+    cue:'3 s w górę · 1 s pauzy w górze · 3 s w dół, bez odbicia.',
+    warn:'Jeśli poranna sztywność Achillesa jest dłuższa niż zwykle — wróć o stopień niżej, zanim pojawi się ból. Sztywność wyprzedza ból o tygodnie.',
     tech:[
-      {t:'Wykonanie', h:'<ol><li>Stań przodostopiem na płaskim podłożu — pięta <b>nie schodzi</b> poniżej poziomu palców (bez deficytu w tej fazie).</li><li><b>3 sekundy w górę</b> — powolne, kontrolowane wspięcie na pełną wysokość.</li><li><b>1 sekunda pauzy</b> w górze.</li><li><b>3 sekundy w dół</b> do pozycji neutralnej stopy, nie niżej.</li><li>Bez odbicia i bez pauzy na dole — kolejne powtórzenie startuje płynnie.</li></ol>'},
+      {t:'Progresja — szybko, ale tylko bez objawów', h:'Wspięcia mają drabinkę 7 stopni: obunóż → obunóż z plecakiem → jednonóż → jednonóż z plecakiem → jednonóż z małym deficytem → z deficytem → z deficytem i obciążeniem. Po <b>dwóch sesjach z rzędu</b> na górze zakresu we wszystkich seriach (bez RPE 9–10) aplikacja zaproponuje stopień wyżej. Przechodzisz tylko, jeśli Achilles jest bez objawów: bez porannej sztywności, bez bólu przy ucisku ścięgna, bez bólu po treningu następnego dnia. Przy jakimkolwiek objawie — „stopień niżej" na pasku poziomu.'},
+      {t:'Wykonanie', h:'<ol><li>Stopnie 1–4: przodostopie płasko na podłodze — pięta <b>nie schodzi</b> poniżej poziomu palców. Stopnie 5–7: przodostopie na stopniu schodów, pięta schodzi poniżej (deficyt).</li><li><b>3 sekundy w górę</b> — powolne, kontrolowane wspięcie na pełną wysokość.</li><li><b>1 sekunda pauzy</b> w górze.</li><li><b>3 sekundy w dół</b> — bez deficytu do pozycji neutralnej stopy, z deficytem tak nisko, jak opisuje stopień.</li><li>Bez odbicia i bez pauzy na dole — kolejne powtórzenie startuje płynnie.</li></ol>'},
       {t:'Dlaczego tak wolno', h:'Powolna praca pod dużym napięciem (protokół Heavy Slow Resistance — badania Alfredsona i Kongsgaarda nad tendinopatią Achillesa) przebudowuje i wzmacnia ścięgno skuteczniej niż odpoczynek. U Ciebie, przy bezobjawowym ścięgnie po przebytych zapaleniach, działa profilaktycznie: buduje tolerancję na obciążenie, zanim wróci wspinanie z pełną intensywnością.'},
-      {t:'Najczęstsze błędy', h:'<ul><li>Skracanie fazy schodzenia w dół — „opadanie" zamiast opuszczania. Faza w dół to główna część bodźca — pełne 3 s.</li><li>Schodzenie piętą poniżej poziomu palców, „bo tak naturalniej" — obniżenie (deficyt) wejdzie dopiero od 5. tygodnia, stopniowo.</li></ul>'},
+      {t:'Najczęstsze błędy', h:'<ul><li>Skracanie fazy schodzenia w dół — „opadanie" zamiast opuszczania. Faza w dół to główna część bodźca — pełne 3 s.</li><li>Schodzenie piętą poniżej poziomu palców na stopniach bez deficytu — deficyt wchodzi dopiero na 5. stopniu drabinki.</li></ul>'},
     ]
-  };
-  if(SETTINGS.achillesTrack === 'fast'){
-    return {...common, name:'Wspięcia na palce jednonóż',
-      cue: common.cue + ' Jedna noga.',
-    };
-  }
-  return {...common, name:'Wspięcia na palce obunóż',
-    tech:[{t:'Uwaga: wersja tymczasowa', h:'Robisz wersję <b>obunóż</b> (ostrożniejszą), dopóki nie ustalisz, ile epizodów zapalenia Achillesa przeszedłeś. Jeśli był jeden, ponad 2 lata temu — przechodzisz na jednonóż (zmiana w Ustawieniach).'}, ...common.tech]
   };
 }
 
@@ -1142,19 +1127,52 @@ const LADDERS = {
     {name:'Scapular pull-ups z pauzą 2 s', sets:3, repsRange:'8–10 powt.', rest:60,
      how:'W górnej pozycji (łopatki maksymalnie ściągnięte w dół) zatrzymujesz się na <b>2 sekundy</b>. Buduje wytrzymałość mięśni utrzymujących bark w dobrej pozycji.'},
   ]},
+  /* Wspięcia na palce (Achilles): start od wersji bezpiecznej, stopień wyżej po dwóch
+     sesjach na górze zakresu — przechodzisz tylko bez objawów ze strony ścięgna. */
+  E10: { def:0, progressive:true, steps:[
+    {name:'Wspięcia na palce obunóż', sets:4, repsRange:'10–15 powt.', rest:120,
+     how:'Wersja bezpieczna — start. Płasko, bez obciążenia, tempo 3-1-3; pięta nie schodzi poniżej poziomu palców.'},
+    {name:'Wspięcia obunóż z obciążeniem', sets:4, repsRange:'10–12 powt.', rest:120,
+     how:'Jak wersja bezpieczna, ale z plecakiem 5–10 kg (albo hantlami). Płasko, tempo 3-1-3, pięta nie schodzi poniżej poziomu palców.'},
+    {name:'Wspięcia na palce jednonóż', sets:4, repsRange:'8–12 powt. na nogę', rest:120,
+     how:'Jedna noga, płasko, bez obciążenia, tempo 3-1-3. Dłoń o ścianę tylko dla równowagi.'},
+    {name:'Wspięcia jednonóż z obciążeniem', sets:4, repsRange:'8–10 powt. na nogę', rest:150,
+     how:'Jedna noga, płasko, plecak 5–10 kg, tempo 3-1-3. Ostatni stopień bez zejścia pięty poniżej poziomu palców.'},
+    {name:'Wspięcia jednonóż z małym deficytem', sets:3, repsRange:'8–12 powt. na nogę', rest:150,
+     how:'Przodostopie na stopniu; pięta schodzi tylko 2–3 cm poniżej poziomu stopnia. 3 s w górę z dociskiem palucha, 3 s w dół. <b>Ten i kolejne stopnie pomijasz, jeśli Twoja tendinopatia była przyczepowa</b> (przy kości piętowej) — zejście poniżej poziomu stopnia uciska wtedy przyczep.'},
+    {name:'Wspięcia jednonóż z deficytem', sets:3, repsRange:'10–12 powt. na nogę', rest:150,
+     how:'Wersja z planu na drogi z liną: 3 s w górę z dociskiem palucha, 3 s w dół poniżej poziomu stopnia, pełny zakres.'},
+    {name:'Wspięcia jednonóż z deficytem i obciążeniem', sets:3, repsRange:'8–10 powt. na nogę', rest:180,
+     how:'Jak wyżej, z plecakiem 5–10 kg. Obciążenie zwiększasz o 2–5 kg, gdy 3 × 10 wychodzi z zapasem.'},
+  ]},
 };
+// Wspięcia w programie z gumami: te same stopnie i wspólny stopień z planem głównym.
+LADDERS.G10 = LADDERS.E10;
+const LEVEL_SHARE = { G10:'E10' };
+const levelKey = (id) => LEVEL_SHARE[id] || id;
+// Dawne ustawienie „jednonóż" przechodzi raz na odpowiedni stopień drabinki wspięć.
+if(SETTINGS.achillesTrack === 'fast' && !store.get('e10Migrated', false)){
+  const lv = store.get('levels', {});
+  if(lv.E10 == null){ lv.E10 = 2; store.set('levels', lv); }
+  store.set('e10Migrated', true);
+}
+
+function calfLevelTxt(){
+  const L = LADDERS.E10, i = Math.min(Math.max(0, getLevel('E10', L.def)), L.steps.length - 1);
+  return `stopień ${i + 1} z ${L.steps.length} — „${L.steps[i].name}"`;
+}
 
 function getLevels(){ return store.get('levels', {}); }
 function getLevel(id, def){
-  const v = getLevels()[id];
+  const v = getLevels()[levelKey(id)];
   return (typeof v === 'number') ? v : def;
 }
 function setLevel(id, idx){
-  const l = getLevels(); l[id] = idx; store.set('levels', l);
+  const l = getLevels(); l[levelKey(id)] = idx; store.set('levels', l);
   clearOverride(id);   // liczby pochodzą teraz z nowego wariantu
 }
 function clearLevel(id){
-  const l = getLevels(); delete l[id]; store.set('levels', l);
+  const l = getLevels(); delete l[levelKey(id)]; store.set('levels', l);
   clearOverride(id);
 }
 
@@ -1166,7 +1184,7 @@ function applyLevel(ex){
   const s = L.steps[idx];
   const next = {...ex, levelIdx:idx, levelMax:L.steps.length - 1, levelDef:L.def, levelHow:s.how};
   next.name = s.name;
-  if(s.sets != null) next.sets = s.sets;
+  if(s.sets != null) next.sets = ex.setsCap ? Math.min(s.sets, ex.setsCap) : s.sets;
   if(s.rest != null) next.rest = s.rest;
   if(s.repsRange) next.repsRange = s.repsRange;
   if(s.holdRange) next.holdRange = s.holdRange;
@@ -1648,6 +1666,21 @@ function levelBarHTML(ex){
   const atMin = ex.levelIdx <= 0, atMax = ex.levelIdx >= ex.levelMax;
   const onPlan = ex.levelIdx === ex.levelDef;
   const planName = LADDERS[ex.id].steps[ex.levelDef].name;
+  if(LADDERS[ex.id].progressive){
+    return `<div class="card">
+    <div class="slider-row" style="margin-bottom:8px;"><b>Stopień progresji</b><span class="val tabnum">${ex.levelIdx+1} / ${ex.levelMax+1}</span></div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" ${atMin?'disabled':''} onclick="changeLevel('${ex.id}',-1)">⬇ Objawy albo za trudne — stopień niżej</button>
+      <button class="btn btn-ghost" ${atMax?'disabled':''} onclick="changeLevel('${ex.id}',1)">Stopień wyżej ⬆</button>
+    </div>
+    <div class="meta" style="margin-top:10px;">${onPlan
+      ? 'Stopień startowy — wersja bezpieczna.'
+      : `Stopień startowy (wersja bezpieczna): „${planName}". Wyniki zapisują się do tej samej pozycji, więc historia zostaje ciągła.`}
+    </div>
+    ${onPlan ? '' : `<button class="btn btn-ghost" style="margin-top:10px;" onclick="resetLevelUI('${ex.id}')">Wróć do wersji bezpiecznej</button>`}
+    <div class="meta" style="margin-top:10px;">Wyżej — po dwóch kolejnych sesjach z górnym zakresem we wszystkich seriach, przy ścięgnie bez objawów (propozycja pojawi się sama, jeśli wpisujesz powtórzenia przy seriach). Niżej — od razu przy objawach, bez czekania na dwie sesje.</div>
+  </div>`;
+  }
   return `<div class="card">
     <div class="slider-row" style="margin-bottom:8px;"><b>Poziom trudności</b><span class="val tabnum">${ex.levelIdx+1} / ${ex.levelMax+1}</span></div>
     <div class="btn-row">
@@ -1685,7 +1718,9 @@ function proposalHTML(ex){
       + (p.noRpe ? '.' : ' i żadna seria nie miała RPE 9–10, czyli zostawał zapas.')
       + ` Następny wariant: <b>${target.name}</b>.`
       + (p.noRpe ? '<br><br>W tych sesjach nie było wpisanego RPE. Zanim przejdziesz, oceń sam, czy w ostatnich seriach zostawały co najmniej dwa powtórzenia zapasu.' : '')
-      + (ex.levelIdx + 1 > ex.levelDef ? '<br><br><b>To wariant trudniejszy niż w Twoim planie.</b> Plan go nie wymaga — przechodzisz tylko przy pewnej technice.' : '');
+      + (LADDERS[ex.id].progressive
+        ? '<br><br><b>Achilles:</b> przechodzisz tylko, jeśli ścięgno jest bez objawów — bez porannej sztywności, bez bólu przy ucisku i bez bólu następnego dnia po treningu. Jeśli którykolwiek jest — zostań na tym stopniu albo zejdź niżej.'
+        : (ex.levelIdx + 1 > ex.levelDef ? '<br><br><b>To wariant trudniejszy niż w Twoim planie.</b> Plan go nie wymaga — przechodzisz tylko przy pewnej technice.' : ''));
   } else {
     tytul = '📉 Propozycja: stopień niżej';
     tekst = `W dwóch ostatnich sesjach na tym poziomie (${kiedy}) przynajmniej jedna seria nie domknęła dolnego zakresu albo któraś seria przed ostatnią była już na granicy (RPE 10). Łatwiejszy wariant: <b>${target.name}</b>.`
@@ -1716,6 +1751,13 @@ function dismissProposal(id, dir, lvl, until){
 }
 /* Opis na górze ekranu: dla wariantu spoza planu pokazuje instrukcję TEGO wariantu. */
 function levelAwareCue(ex){
+  if(ex.levelIdx != null && LADDERS[ex.id].progressive && !ex.modified){
+    return `<div class="notes-box" style="margin-top:0;">`
+      + `<span class="badge strength" style="margin-bottom:8px;display:inline-block;">Stopień ${ex.levelIdx+1} z ${ex.levelMax+1}</span><br>`
+      + ex.levelHow + (ex.cue ? '<br><br>' + ex.cue : '')
+      + (ex.warn ? `<br><br><span class="warn"><b>Uważaj:</b> ${ex.warn}</span>` : '')
+      + `</div>`;
+  }
   if(ex.levelIdx == null || ex.levelIdx === ex.levelDef) return cueBlock(ex);
   const dir = ex.levelIdx < ex.levelDef ? 'łatwiejszy' : 'trudniejszy';
   let html = `<div class="notes-box" style="margin-top:0;">`;
@@ -2138,17 +2180,8 @@ function buildWeek(){
       {t:'Najczęstsze błędy', h:'<ul><li>Przeprost w lędźwiach zamiast wyprostu biodra — żebra ściągnięte w dół.</li><li>Pchanie z palców zamiast z pięty.</li><li>Skracanie pauzy u góry.</li></ul>'},
     ]
   };
-  const G10 = {
-    id:'G10', name:'Wspięcia na palce jednonóż', sets:3, repsRange:'6–8 powt. na nogę', rest:120,
-    tempo:{label:'3-1-3', phases:[{l:'W górę',s:3},{l:'Pauza',s:1},{l:'W dół',s:3}]},
-    cue:'3 s w górę, 1 s pauzy, 3 s w dół. Płasko, bez deficytu, bez odbicia.',
-    warn:'Jeśli poranna sztywność Achillesa jest dłuższa niż zwykle — zmniejsz zakres albo odpuść tę pozycję. Powolna praca w dużym napięciu jest tu celowa i chroni ścięgno; szarpanie działa odwrotnie.',
-    tech:[
-      {t:'Wykonanie', h:'<ol><li>Przodostopie na płaskim podłożu, palce jednej ręki na ścianie dla równowagi. Pięta <b>nie schodzi poniżej poziomu palców</b>.</li><li>3 s powolnego wspięcia na pełny zakres.</li><li>1 s pauzy u góry.</li><li>3 s opuszczania do pozycji neutralnej, bez odbicia.</li></ol>'},
-      {t:'Dlaczego tak wolno', h:'Powolne obciążanie w dużym napięciu (protokół Heavy Slow Resistance) buduje tolerancję ścięgna Achillesa lepiej niż odpoczynek — u Ciebie, po przebytych zapaleniach, działa profilaktycznie. Faza opuszczania jest ważniejsza niż unoszenie.'},
-      {t:'Progresja', h:'Obunóż → jednonóż płasko → jednonóż z pauzą 2 s → jednonóż z plecakiem obciążonym (jeśli chcesz dołożyć opór). Deficyt (pięta poniżej poziomu palców) wchodzi tylko wtedy, gdy od dwóch tygodni nie masz zwiększonej sztywności porannej.'},
-    ]
-  };
+  // wspięcia: wspólna drabinka i stopień z planem głównym (od obunóż), w tym programie maks. 3 serie
+  const G10 = {...calfExercise(), id:'G10', setsCap:3};
   const G11 = {
     id:'G11', name:'Izometria pokonująca: przysiad w ścianę', sets:3, holdRange:[5,6], rest:150, tempo:null, holdBased:true,
     cue:'Maksymalne pchanie w nieruchomy opór przy kolanach zgiętych 90–100°. Szybkie dojście do maksimum, 5–6 s utrzymania.',
@@ -4183,7 +4216,8 @@ function linaHomeB(iso){
   const noDips = linaClimbedHard(addDaysISO(iso, -1));
   const items = [lx('E15', {sets:3, repsRange:'5 powt. na nogę'})];
   if(!noDips) items.push(lx('E8', {sets:3}));
-  items.push(lx('E14', {sets:3}), linaEx('L03'), linaEx('L04'), prepEx({...calfExercise(), sets:3}));
+  const calf = applyLevel(calfExercise());   // poziom z drabinki wspięć, w planie na linę maks. 3 serie
+  items.push(lx('E14', {sets:3}), linaEx('L03'), linaEx('L04'), applyExerciseOverride({...calf, sets:Math.min(calf.sets, 3)}));
   return {noDips, blocks:[GUM_WARMUP,
     {id:'block_main', name:'Noga, pchanie, podciąganie, łokcie, stopy', kind:'exercises', items:items.filter(Boolean)},
     LINA_ANKLE_HIPS, LINA_BREATH]};
@@ -5171,7 +5205,7 @@ function renderExerciseBody(ex){
     <button class="btn btn-secondary" id="logSetBtn" onclick="logCurrentSet('${ex.id}')">Zaliczona seria</button>
   </div>`;
   html += `<div class="meta" style="margin-top:8px;">Po zaliczeniu serii przerwa odlicza się sama (${fmtRestWords(ex.rest)}).</div>`;
-  if(ex.levelIdx != null && ex.levelIdx !== ex.levelDef){
+  if(ex.levelIdx != null && ex.levelIdx !== ex.levelDef && !LADDERS[ex.id].progressive){
     html += `<div class="meta" style="margin-top:14px;">Sekcje techniki poniżej opisują wariant z planu — ogólne zasady (pozycja barków, miednicy, tempo) obowiązują też w Twoim wariancie.</div>`;
   }
   html += techBlock(ex, false);
@@ -5655,10 +5689,12 @@ function aiHistory(days, today){
   return {lines, sum};
 }
 function aiLevels(){
-  return Object.keys(LADDERS).map(id => {
+  return Object.keys(LADDERS).filter(id => !LEVEL_SHARE[id]).map(id => {
     const L = LADDERS[id], s = L.steps;
     const idx = Math.min(Math.max(0, getLevel(id, L.def)), s.length - 1);
-    let t = '• '+s[idx].name+': poziom '+(idx+1)+' z '+s.length+(idx === L.def ? ' (jak w planie)' : ' (w planie: '+s[L.def].name+')');
+    let t = '• '+s[idx].name+': poziom '+(idx+1)+' z '+s.length+(L.progressive
+      ? (idx === L.def ? ' (stopień startowy)' : ' (start: '+s[L.def].name+'; wyżej tylko bez objawów ze strony ścięgna)')
+      : (idx === L.def ? ' (jak w planie)' : ' (w planie: '+s[L.def].name+')'));
     t += '; niżej: '+(idx > 0 ? s[idx-1].name : '—')+'; wyżej: '+(idx < s.length - 1 ? s[idx+1].name : '—');
     if(PROGRESS_NO_UP.has(id)) t += ' [bez przechodzenia wyżej — Achilles]';
     return t;
@@ -5733,7 +5769,7 @@ function claudeSummary(days, today){
   if(lina) L.push('• Palce (plan na linę): maks. 3 intensywne dni na 7 (bouldering, sesja na ścianie, testy, prowadzenie, chwytotablica 10/5); sesja lekka na ścianie (pompa ≤2–3/10) się nie liczy, ale w jej dniu i nazajutrz bez tablicy. Ok. 48 h między intensywnymi dniami. Co najmniej jeden dzień w tygodniu całkiem wolny. Po 8 tygodniach zwisów 2 tygodnie przerwy od tablicy.');
   else L.push('• Palce: maks. 3 intensywne dni na 7 (wspinanie + chwytotablica B, C, C+ lub własna). Dwie intensywne dzień po dniu są zabronione; dzień po intensywnej najwyżej lekka tablica (protokół A lub D). Co najmniej 48 h między wspinaniem a intensywną tablicą. Tablica tylko na początku jednostki, na świeżych palcach.');
   L.push('• Intensywne dni dla palców w ostatnich 7 dniach: '+aiFingerWeek(today)+'.');
-  L.push('• Achilles (przebyte zapalenie ścięgna): z bulderów schodzę po chwytach, bez zeskoków; żadnych ćwiczeń z wyskokami; pistol squat bez przechodzenia wyżej; wspięcia na palce: '+(SETTINGS.achillesTrack === 'fast' ? 'jednonóż' : 'obunóż (ostrożnie)')+'.');
+  L.push('• Achilles (przebyte zapalenie ścięgna): z bulderów schodzę po chwytach, bez zeskoków; żadnych ćwiczeń z wyskokami; pistol squat bez przechodzenia wyżej; wspięcia na palce: '+calfLevelTxt()+' (drabinka od obunóż do jednonóż z deficytem; stopień wyżej tylko bez objawów ze strony ścięgna).');
   L.push('• Dipy: '+(SETTINGS.dipsDepth === '90' ? 'do kąta prostego' : 'stop na 100–110°')+'; nie w dobie po mocnym wspinaniu.');
   if(!lina) L.push('• Maks. 5 jednostek siłowych na 14 dni.');
   L.push('', '=== PROŚBA ===');
@@ -5821,7 +5857,7 @@ function renderDipsWidthInfo(){
     : 'Wpisz obie wartości, żeby opis dipów pokazywał, o ile stacja różni się od Twoich barków.';
 }
 function loadSettingsForm(){
-  document.getElementById('setAchilles').value = SETTINGS.achillesTrack;
+  document.getElementById('calfLevelInfo').innerHTML = `<b>Wspięcia na palce (Achilles):</b> ${calfLevelTxt()}. Start od wersji obunóż; po dwóch sesjach na górze zakresu aplikacja zaproponuje stopień wyżej — przechodzisz tylko bez objawów ze strony ścięgna. Stopień zmieniasz też ręcznie przy samym ćwiczeniu.`;
   document.getElementById('setDips').value = SETTINGS.dipsDepth;
   document.getElementById('setStationWidth').value = SETTINGS.stationWidthCm ?? '';
   document.getElementById('setShoulderWidth').value = SETTINGS.shoulderWidthCm ?? '';
