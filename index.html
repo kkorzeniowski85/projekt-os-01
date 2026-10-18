@@ -247,6 +247,9 @@
     font-weight:700; font-size:0.95rem;
   }
   .rpe-chip.on{ background:var(--lichen-900); border-color:var(--lichen-500); color:var(--lichen-400); }
+  /* Pompa 0–10 i rodzaj sesji: więcej przycisków — zawijają się w dwa rzędy */
+  .pump-row{ flex-wrap:wrap; }
+  .pump-row .rpe-chip{ flex:1 0 14%; min-height:40px; font-size:0.85rem; padding:0 4px; }
   /* Zapis wspinania: osobne części lina / bouldering */
   .climb-part{ font-size:0.95rem; margin:18px 0 0; padding-top:14px; border-top:1px solid var(--stone-800); }
   /* Propozycje progresji */
@@ -381,6 +384,21 @@
     <div class="card" style="margin-top:14px;">
       <h2>Zapis sesji</h2>
       <div class="meta">Wypełnij to, co dziś robiłeś: linę, bouldering albo jedno i drugie.</div>
+      <div id="climbLinaBox" style="display:none;">
+        <h3 class="climb-part">Rodzaj sesji</h3>
+        <div class="rpe-row pump-row" id="climbKindRow" style="margin-top:8px;">
+          <button type="button" class="rpe-chip" data-k="wytrz" onclick="pickClimbKind(this)">wytrzymałość</button>
+          <button type="button" class="rpe-chip" data-k="boulder" onclick="pickClimbKind(this)">bouldering</button>
+          <button type="button" class="rpe-chip" data-k="lekka" onclick="pickClimbKind(this)">sesja lekka</button>
+          <button type="button" class="rpe-chip" data-k="prow" onclick="pickClimbKind(this)">prowadzenie</button>
+          <button type="button" class="rpe-chip" data-k="test" onclick="pickClimbKind(this)">testy</button>
+        </div>
+        <div class="meta" style="margin-top:6px;font-size:0.78rem;">Sesja lekka (pompa najwyżej 2–3/10) nie liczy się do limitu intensywnych dni dla palców — reszta tak. Od rodzaju sesji zależy przeliczenie reszty tygodnia.</div>
+        <label style="font-size:0.7rem;color:var(--chalk-500);display:block;margin:12px 0 6px;">Pompa pod koniec sesji (0 = żadna, 10 = przedramiona „zalane")</label>
+        <div class="rpe-row pump-row" id="climbPumpRow">
+          <button type="button" class="rpe-chip" data-v="0" onclick="pickClimbPump(this)">0</button><button type="button" class="rpe-chip" data-v="1" onclick="pickClimbPump(this)">1</button><button type="button" class="rpe-chip" data-v="2" onclick="pickClimbPump(this)">2</button><button type="button" class="rpe-chip" data-v="3" onclick="pickClimbPump(this)">3</button><button type="button" class="rpe-chip" data-v="4" onclick="pickClimbPump(this)">4</button><button type="button" class="rpe-chip" data-v="5" onclick="pickClimbPump(this)">5</button><button type="button" class="rpe-chip" data-v="6" onclick="pickClimbPump(this)">6</button><button type="button" class="rpe-chip" data-v="7" onclick="pickClimbPump(this)">7</button><button type="button" class="rpe-chip" data-v="8" onclick="pickClimbPump(this)">8</button><button type="button" class="rpe-chip" data-v="9" onclick="pickClimbPump(this)">9</button><button type="button" class="rpe-chip" data-v="10" onclick="pickClimbPump(this)">10</button>
+        </div>
+      </div>
       <h3 class="climb-part">🧗 Lina</h3>
       <div class="log-row">
         <div><label>Ile dróg</label><input type="number" id="climbRoutes" placeholder="np. 6"></div>
@@ -495,6 +513,32 @@
       <div class="meta" style="margin-top:8px;">Wersja obunóż obowiązuje, dopóki nie potwierdzisz, ile epizodów zapalenia Achillesa przeszedłeś (jeden czy więcej, jedna noga czy obie).</div>
     </div>
     <div class="card">
+      <h2 style="margin-bottom:10px;">Program treningowy</h2>
+      <div class="setting-row">
+        <label>Plan</label>
+        <select id="setProgram" onchange="saveProgram(this.value)">
+          <option value="fbw">Plan FBW (siła + wspinanie)</option>
+          <option value="lina">Plan na drogi z liną (wytrzymałość)</option>
+        </select>
+      </div>
+      <div id="linaSettings">
+        <div class="setting-row">
+          <label>Start planu na linę (tydzień 0 — testy)</label>
+          <input type="date" id="setLinaStart" onchange="saveLinaStart(this.value)" style="width:auto;">
+        </div>
+        <div class="setting-row">
+          <label>Bouldery zwykle w</label>
+          <select id="setLinaBoulder" onchange="saveLinaBoulder(this.value)">
+            <option value="mon">poniedziałek</option>
+            <option value="thu">czwartek</option>
+          </select>
+        </div>
+        <div class="meta" id="linaInfo"></div>
+        <div class="meta" style="margin-top:8px;">Tydzień: pon — bouldering (albo czw), wt — dom A, śr — ściana: wytrzymałość, czw — wolne, pt — chwytotablica 10/5 + core, sob — dom B, nd — wolne. Gdy dodasz, zmienisz albo usuniesz jednostkę, plan sam przelicza resztę tygodnia. Cykl 8 tygodni idzie naprzód po tygodniu z sesją na ścianie.</div>
+      </div>
+      <div class="meta" style="margin-top:8px;">Przełączenie niczego nie kasuje — historia, poziomy ćwiczeń i ustawienia zostają, a do drugiego planu możesz wrócić w każdej chwili.</div>
+    </div>
+    <div class="card" id="fbwCycleCard">
       <h2 style="margin-bottom:10px;">Makrocykl</h2>
       <div class="setting-row">
         <label>Start planu (poniedziałek)</label>
@@ -549,11 +593,12 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.24.0';
+const APP_VERSION = '1.25.0';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
    ========================================================================= */
+let STORE_VER = 0;   // rośnie przy każdym zapisie — unieważnia przeliczony plan tygodnia
 const store = {
   get(key, def){
     try{
@@ -562,6 +607,7 @@ const store = {
     }catch(e){ return def; }
   },
   set(key, val){
+    STORE_VER++;
     try{ localStorage.setItem('fbw:'+key, JSON.stringify(val)); }
     catch(e){ console.error('storage', e); }
   },
@@ -574,6 +620,7 @@ const store = {
     return out;
   },
   remove(key){
+    STORE_VER++;
     try{ localStorage.removeItem('fbw:'+key); }catch(e){}
   }
 };
@@ -2158,6 +2205,10 @@ function buildWeek(){
     ]
   };
 
+  // surowe definicje (przed poziomami i edycją ✎) — plan na linę składa z nich dni domowe
+  RAW_EX = {E3:EX_PISTOL, E6:EX_PIKE, E8:dipsExercise(), E9:EX_ABWHEEL, E12:EX_EXT, E14:EX_PAUSE_PULL,
+    E15:EX_BULGARIAN, E19:EX_LEGRAISE, E22:EX_BANDPULL, E30:EX_PUSHUP_PLUS};
+
   [DAY_MON, DAY_THU].forEach(day=>{
     day.blocks = day.blocks.map(block=>{
       if(block.kind === 'exercises') return {...block, items: block.items.map(prepEx)};
@@ -2177,6 +2228,7 @@ function buildWeek(){
   ];
 }
 let EXERCISE_CATALOG = [];
+let RAW_EX = {};
 let MODULES = {A:null, B:null, C:null};
 let GUM_PROGRAM = {A:null, B:null, C:null};   // osobny program: taśmy + masa ciała
 let GUM_EXERCISES = [];
@@ -2300,9 +2352,10 @@ function moduleDay(pos, slot, label){
 }
 /* Plan dnia wg pozycji w makrocyklu. */
 function scheduleFor(iso){
-  const pos = planPos(iso);
   const dow = new Date(iso+'T00:00:00').getDay();      // 0=Nd..6=Sob
   const label = {1:'Pon',2:'Wt',3:'Śr',4:'Czw',5:'Pt',6:'Sob',0:'Nd'}[dow];
+  if(linaOn()){ const ld = linaDayFor(iso); ld.label = label; return ld; }
+  const pos = planPos(iso);
   let day;
   if(pos.weekInCycle === 1){
     if(dow === 1)      day = {...WEEK.find(w=>w.key==='mon'), label};
@@ -2342,29 +2395,40 @@ function fingerLoadInfo(){
     const iso = k.replace('entries:','');
     const e = store.get(k, {});
     const info = {};
-    if(e.climb && e.climb.savedAt) info.climb = e.climb.savedAt;
+    // sesja lekka na ścianie (plan na linę, pompa ≤3/10) nie jest intensywną ekspozycją palców
+    const climbSlot = k => k === 'lekka' ? 'climbLow' : 'climb';
+    if(e.climb && e.climb.savedAt) info[climbSlot(e.climb.kind)] = e.climb.savedAt;
     if(e.exercises){
       for(const exId in e.exercises){
-        if(!exId.startsWith('hangboard')) continue;
-        const hb = e.exercises[exId];
-        const ts = hb && (hb.completedAt || hb.loggedAt);
+        const log = e.exercises[exId];
+        const ts = log && (log.completedAt || log.loggedAt);
         if(!ts) continue;
+        // części sesji na ścianie z timerem (plan na linę) liczą się jak wspinanie
+        if(log.climbKind){ const s = climbSlot(log.climbKind); if(!info[s] || ts > info[s]) info[s] = ts; continue; }
+        if(!exId.startsWith('hangboard')) continue;
         const slot = isHbIntensive(exId) ? 'hbHigh' : 'hbLow';
         if(!info[slot] || ts > info[slot]) info[slot] = ts;
       }
     }
-    if(info.climb || info.hbHigh || info.hbLow) byDate[iso] = info;
+    if(info.climb || info.climbLow || info.hbHigh || info.hbLow) byDate[iso] = info;
   }
   return byDate;
 }
 function dayIntensive(info){ return !!(info && (info.climb || info.hbHigh)); }
 
-function checkFingerLimits(forWhat, hbId){ // forWhat: 'hangboard' | 'climb'; hbId tylko dla tablicy
+function checkFingerLimits(forWhat, hbId, climbKind){ // forWhat: 'hangboard' | 'climb'; hbId tylko dla tablicy
   const loads = fingerLoadInfo();
   const today = todayISO();
   const out = { blocks:[], warns:[], infos:[] };
-  // Czy DZISIEJSZA sesja jest intensywna: wspinanie zawsze; tablica wg protokołu
-  const sessionIntensive = forWhat === 'climb' || isHbIntensive(hbId);
+  // Czy DZISIEJSZA sesja jest intensywna: wspinanie tak (poza sesją lekką planu na linę); tablica wg protokołu
+  const sessionIntensive = forWhat === 'climb' ? climbKind !== 'lekka' : isHbIntensive(hbId);
+  // Plan na linę: w dniu sesji lekkiej na ścianie i nazajutrz bez chwytotablicy
+  if(forWhat === 'hangboard' && linaOn()){
+    const yl = new Date(); yl.setDate(yl.getDate()-1);
+    const lightY = loads[isoOf(yl)] && loads[isoOf(yl)].climbLow, lightT = loads[today] && loads[today].climbLow;
+    if(lightY || lightT) out.warns.push({t:'Sesja lekka na ścianie ' + (lightT ? 'dziś' : 'wczoraj'),
+      b:'Plan na drogi z liną wyklucza chwytotablicę w dniu sesji lekkiej i nazajutrz — palce i przedramiona mają z niej wyjść wypoczęte. Jeśli możesz, przełóż tablicę.'});
+  }
 
   const y = new Date(); y.setDate(y.getDate()-1);
   const yIso = isoOf(y);
@@ -2376,7 +2440,9 @@ function checkFingerLimits(forWhat, hbId){ // forWhat: 'hangboard' | 'climb'; hb
   // fazie (~24–72 h) przejściowo ujemny, więc różnicujemy intensywność
   // zamiast układać dwa ciężkie dni z rzędu.
   if(!loads[today] && dayIntensive(yesterday)){
-    if(sessionIntensive){
+    if(!sessionIntensive && forWhat === 'climb'){
+      out.warns.push({t:'Dzień po intensywnej sesji — na ścianie tylko lekko', b:'Wczoraj palce miały intensywny dzień. Dzisiejsza sesja lekka jest w porządku pod warunkiem, że naprawdę jest lekka: pompa najwyżej 2–3/10, duże chwyty, bez prób na limicie i bez małych krawędzi. Jeśli czujesz wczorajszy dzień w palcach — zostań przy bardzo łatwych obwodach albo odpuść.'});
+    } else if(sessionIntensive){
       out.blocks.push({t:'Wczoraj intensywna praca palców', b:'Wczoraj było wspinanie albo intensywna tablica (Protokół B/C/własny). Dwie <b>intensywne</b> ekspozycje palców dzień po dniu są w tym planie zabronione — wczesny bilans kolagenu w ścięgnie jest po ciężkiej sesji przejściowo ujemny, mimo że siła mięśni wraca szybciej. Dziś najwyżej praca niskointensywna (Protokół A lub D) albo przerwa.'});
     } else {
       out.warns.push({t:'Dzień po intensywnej sesji — dziś tylko LEKKO', b:'Taki układ (dzień intensywny → dzień niskointensywny) jest dopuszczalny, ale warunki są twarde: chwyt otwarty lub half-crimp (zero zamkniętego crimpu), duża listwa, wyraźne odciążenie — ma być ŁATWO od pierwszego do ostatniego zwisu. Jeśli czujesz wczorajszą sesję w palcach, po prostu odpuść.'});
@@ -2577,7 +2643,8 @@ function engineTick(){
   const remainMs = engine.endAt - Date.now();
   if(remainMs <= 0){ engineAdvance(-remainMs); return; }
   const sec = Math.ceil(remainMs/1000);
-  if(sec <= 3 && sec !== engine.lastSignalSec){
+  const cur = engine.phases[engine.idx];
+  if(sec <= 3 && sec !== engine.lastSignalSec && !(cur && cur.quiet)){
     engine.lastSignalSec = sec;
     beep(420, 0.1); vibrate(15);
   }
@@ -2607,9 +2674,12 @@ function engineAdvance(overshootMs){
     }
     const durMs = (ph.seconds||1)*1000;
     if(carry < durMs){
-      if(ph.kind === 'rest' || ph.kind === 'seriesRest') beep(520, 0.2);
-      else beep(880, 0.15);
-      vibrate(45);
+      if(ph.quiet){ beep(ph.kind === 'rest' ? 440 : 660, 0.08); vibrate(15); }   // rytm oddechu — delikatnie
+      else {
+        if(ph.kind === 'rest' || ph.kind === 'seriesRest') beep(520, 0.2);
+        else beep(880, 0.15);
+        vibrate(45);
+      }
       if(engine.running){
         engine.endAt = Date.now() + (durMs - carry);
         renderTimerFace();
@@ -2690,7 +2760,7 @@ function renderTimerFace(){
   arc.setAttribute('stroke-dashoffset', String(628*(1-frac)));
   const color = (ph.kind==='rest'||ph.kind==='seriesRest'||ph.kind==='prep') ? 'var(--rope-500)' : 'var(--lichen-500)';
   arc.setAttribute('stroke', (sec<=3 && !ph.tap && engine.running) ? 'var(--alert-500)' : color);
-  btn.textContent = ph.tap ? 'Dalej (w górę!)' : engine.running ? 'Pauza' : (engine.pausedRemainMs!==null ? 'Wznów' : 'Start');
+  btn.textContent = ph.tap ? (ph.tapLabel || 'Dalej (w górę!)') : engine.running ? 'Pauza' : (engine.pausedRemainMs!==null ? 'Wznów' : 'Start');
 }
 
 /* =========================================================================
@@ -2725,6 +2795,11 @@ function rebuildRegistry(){
   GLOBAL_REGISTRY[GUM_WARMUP.id] = {type:'warmup', data:GUM_WARMUP};
   // Program gumowy — osobny trening, dostępny też pojedynczo w Timerach
   GUM_EXERCISES.forEach(ex=>{ GLOBAL_REGISTRY[ex.id] = {type:'exercise', data:ex}; });
+  // Plan na linę: ćwiczenia antagonistyczne i core (też do dokładania), mobilność, oddech, ściana
+  EXERCISE_CATALOG = EXERCISE_CATALOG.concat(linaExList());
+  [LINA_HIPS, LINA_ANKLE_HIPS, LINA_WALL_WARMUP, LINA_WALL_COOL].forEach(b=>{ GLOBAL_REGISTRY[b.id] = {type:'warmup', data:b}; });
+  [LINA_BREATH, linaCircuits(3), linaAutoSeries(1, 3, '5A', 'wzrok na stopniu, aż stopa go obciąży')]
+    .forEach(b=>{ GLOBAL_REGISTRY[b.id] = {type:'guided', data:b}; });
   // Katalog pojedynczych ćwiczeń — także te, których nie ma w planie tygodnia (np. ławka rzymska)
   EXERCISE_CATALOG.forEach(ex=>{ GLOBAL_REGISTRY[ex.id] = {type:'exercise', data:ex}; });
 }
@@ -2752,7 +2827,7 @@ function switchTab(tab){
 }
 function goToday(){ switchTab(state.returnTab === 'tools' ? 'tools' : 'today'); }
 
-function openClimb(){
+function openClimb(kind){
   engineStop();
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-climb').classList.add('active');
@@ -2764,15 +2839,37 @@ function openClimb(){
   boulderEffortPicked = c.boulderEffort || null;
   showBoulderEffort();
   document.getElementById('climbNote').value = c.note || '';
-  const res = checkFingerLimits('climb');
-  document.getElementById('climbLimitBanner').innerHTML = limitsBannerHTML(res);
+  // plan na linę: rodzaj sesji (domyślnie z planu dnia) i pompa 0–10
+  const lina = linaOn();
+  document.getElementById('climbLinaBox').style.display = lina ? '' : 'none';
+  climbKindPicked = lina ? (c.kind || (LINA_CLIMB_KINDS[kind] ? kind : null)) : (c.kind || null);
+  climbPumpPicked = c.pump != null ? c.pump : null;
+  showChips('climbKindRow', climbKindPicked);
+  showChips('climbPumpRow', climbPumpPicked);
+  showClimbLimits();
+}
+let climbKindPicked = null, climbPumpPicked = null;
+function showClimbLimits(){
+  document.getElementById('climbLimitBanner').innerHTML = limitsBannerHTML(checkFingerLimits('climb', null, climbKindPicked));
+}
+function pickClimbKind(btn){
+  const k = btn.dataset.k;
+  climbKindPicked = climbKindPicked === k ? null : k;
+  showChips('climbKindRow', climbKindPicked);
+  showClimbLimits();
+}
+function pickClimbPump(btn){
+  const v = Number(btn.dataset.v);
+  climbPumpPicked = climbPumpPicked === v ? null : v;
+  showChips('climbPumpRow', climbPumpPicked);
 }
 
 /* =========================================================================
    ZMIANA TYPU DNIA — gdy plan nie wchodzi w grę (np. odpoczynek zamiast
    treningu albo wspinanie w dzień wolny). Zapis per data, w entry.dayOverride.
    ========================================================================= */
-function dayFromKey(key, label){
+function dayFromKey(key, label, iso){
+  if(key && key.startsWith('L:')) return {...linaMakeDay(key.slice(2), iso || state.selectedDate), label};
   if(key === 'mon' || key === 'thu') return {...WEEK.find(w=>w.key===key), label};
   if(key === 'gumA' || key === 'gumB' || key === 'gumC'){
     return {...GUM_PROGRAM[key.slice(3)], label, gumProgram:true};
@@ -2795,7 +2892,7 @@ function resolveDay(iso){
     (ovr === 'climb' && planned.type === 'climb') ||
     ((ovr === 'rest' || ovr === 'skip') && planned.type === 'rest'));
   if(ovr && !sameAsPlan){
-    day = dayFromKey(ovr, planned.label);
+    day = dayFromKey(ovr, planned.label, iso);
     if(day.skipped) day.title = 'Nie zrobione: ' + planned.title;
     overridden = true;
   }
@@ -2803,7 +2900,7 @@ function resolveDay(iso){
   // druga jednostka tego samego dnia (np. wspinanie + blok siłowy)
   const extras = [];
   if(entry.dayExtra && day.type !== 'rest'){
-    const cand = dayFromKey(entry.dayExtra, planned.label);
+    const cand = dayFromKey(entry.dayExtra, planned.label, iso);
     if(cand.type !== 'rest' && cand.type !== day.type) extras.push(cand);
   }
   return {day, planned, overridden, extras, extraExercises: entry.extraExercises || []};
@@ -2842,7 +2939,7 @@ function setDayExtra(key){
    usuwanej jednostki kasujemy po potwierdzeniu, żeby nie zostały osierocone
    w dzienniku. „Przywróć jednostkę z planu" = setDayOverride('plan').
    ========================================================================= */
-function dayIcon(d){ return d.skipped ? '✕' : TYPE_META[d.type].icon; }
+function dayIcon(d){ return d.skipped ? '✕' : (d.icon || TYPE_META[d.type].icon); }
 
 /* Klucze zapisów jednostki: 'climb', 'w:<rozgrzewka>', 'x:<ćwiczenie/tablica/pomiar>'. */
 function unitRecordKeys(unit){
@@ -3019,8 +3116,8 @@ function comboWarningHTML(day, extra){
        ${hasDips ? '<br><br>Dodatkowo dipy: plan zabrania ich w dobie po mocnym wspinaniu — jeśli wspinasz się dziś mocno, dipy odpuść.' : ''}`);
   }
   let body = `Ten blok nie obciąża palców, więc <b>nie koliduje ze wspinaniem</b> — to bezpieczne połączenie.
-    Pilnuj tylko kolejności: zmęczone nogi pogarszają pracę stóp na ścianie, więc albo wspinaj się najpierw, albo rozdziel obie jednostki o kilka godzin.
-    Pamiętaj też o limicie <b>5 jednostek siłowych na 14 dni</b>.`;
+    Pilnuj tylko kolejności: zmęczone nogi pogarszają pracę stóp na ścianie, więc albo wspinaj się najpierw, albo rozdziel obie jednostki o kilka godzin.`
+    + (linaOn() ? '' : ` Pamiętaj też o limicie <b>5 jednostek siłowych na 14 dni</b>.`);
   if(hasDips) body += ` Dipy pomiń, jeśli wspinanie było mocne — plan zabrania ich w dobie po ciężkiej sesji.`;
   return bannerHTML('warn', '⚠️', 'Dwie jednostki tego samego dnia', body);
 }
@@ -3063,6 +3160,985 @@ function dayPickerHTML(planned, day, overridden, extras){
 }
 
 /* =========================================================================
+   PROGRAM „DROGI Z LINĄ" — plan z dokumentu „Plan treningowy: wytrzymałość
+   na drogach z liną" (14.10.2026), włączany w Ustawieniach zamiast planu FBW.
+   Tydzień powstaje z szablonu (środa = ściana, bouldery w poniedziałek albo
+   czwartek), a potem PRZELICZA SIĘ na podstawie tego, co naprawdę robisz:
+   dodatkowe wspinanie, zmieniony albo niezrobiony dzień przesuwają resztę
+   tygodnia tak, żeby zostały zasady palców (ok. 48 h między intensywnymi
+   dniami, maks. 3 intensywne na 7 dni, bez tablicy w dniu sesji lekkiej
+   i nazajutrz) i co najmniej jeden dzień całkiem wolny. Etap cyklu
+   8-tygodniowego idzie naprzód tylko po tygodniu z sesją na ścianie
+   (lina / obwody) — tydzień bez niej jest powtarzany.
+   ========================================================================= */
+function linaOn(){ return store.get('program', 'fbw') === 'lina'; }
+function addDaysISO(iso, n){ const d = new Date(iso+'T00:00:00'); d.setDate(d.getDate()+n); return isoOf(d); }
+function mondayOf(iso){
+  const d = new Date(iso+'T00:00:00');
+  d.setDate(d.getDate() + (d.getDay()===0 ? -6 : 1 - d.getDay()));
+  return isoOf(d);
+}
+function linaStartISO(){ return store.get('linaStart', null) || mondayOf(todayISO()); }
+function linaBoulderDay(mon){
+  return (store.get('linaWeekBoulder', {}))[mon] || store.get('linaBoulderDefault', 'mon');
+}
+const LINA_DOW_SHORT = ['Pon','Wt','Śr','Czw','Pt','Sob','Nd'];
+const LINA_DAY_ACC = ['poniedziałek','wtorek','środę','czwartek','piątek','sobotę','niedzielę'];
+const LINA_DAY_GEN = ['poniedziałku','wtorku','środy','czwartku','piątku','soboty','niedzieli'];
+const LINA_CLIMB_KINDS = {wytrz:'wytrzymałość', boulder:'bouldering', lekka:'sesja lekka', prow:'prowadzenie', test:'testy'};
+
+/* Pamięć podręczna obliczeń — ważna, dopóki nic nie zapisano i nie zmienił się dzień. */
+let LINA_MEMO = {key:'', weeks:{}, stages:{}};
+function linaMemo(){
+  const key = STORE_VER + '|' + todayISO();
+  if(LINA_MEMO.key !== key) LINA_MEMO = {key, weeks:{}, stages:{}};
+  return LINA_MEMO;
+}
+
+/* ---------- Etap cyklu ---------- */
+/* Czy w dniu zapisano sesję na ścianie inną niż sam bouldering. */
+function linaRopeLogged(e){
+  if(e.climb && e.climb.savedAt){
+    const k = e.climb.kind;
+    if(k ? k !== 'boulder' : Number(e.climb.routes) > 0) return true;
+  }
+  for(const id in (e.exercises || {})){
+    const log = e.exercises[id];
+    if(log && log.completedAt && log.climbKind && log.climbKind !== 'boulder') return true;
+  }
+  return false;
+}
+function linaWeekCounted(mon){
+  if((store.get('linaWeekDone', {}))[mon]) return true;
+  for(let i=0;i<7;i++) if(linaRopeLogged(loadEntry(addDaysISO(mon, i)))) return true;
+  return false;
+}
+function linaStageInfo(s){
+  if(s === 0) return {stage:0, cycle:0, wk:0, phase:'testy', tests:true, lighter:false, hbBreak:false,
+    label:'Tydzień 0 — testy startowe', short:'tydzień 0 (testy)'};
+  const cycle = Math.floor((s-1)/8) + 1, wk = ((s-1) % 8) + 1;
+  const phase = wk <= 3 ? 'baza' : wk === 4 ? 'lzejszy' : wk <= 7 ? 'ap' : 'testy8';
+  const name = {baza:'baza', lzejszy:'lżejszy tydzień', ap:'wytrzymałość tlenowa na trudniejszych drogach', testy8:'lżejszy tydzień + testy'}[phase];
+  return {stage:s, cycle, wk, phase, tests: wk === 8, lighter: wk === 4 || wk === 8,
+    hbBreak: cycle >= 2 && wk <= 2,
+    label:`Cykl ${cycle} · tydzień ${wk} z 8 — ${name}`, short:`cykl ${cycle}, tydz. ${wk}/8`};
+}
+function linaStage(mon){
+  const M = linaMemo();
+  if(M.stages[mon]) return M.stages[mon];
+  const start = linaStartISO();
+  let res;
+  if(mon < start) res = {before:true, stage:-1, wk:0, label:'Przed startem planu na linę', short:'przed startem'};
+  else {
+    const thisMon = mondayOf(todayISO());
+    let s = 0; const repeats = [];
+    for(let w = start; w < mon; w = addDaysISO(w, 7)){
+      if(w >= thisMon || linaWeekCounted(w)) s++;   // przyszłe tygodnie zakładamy jako zrobione
+      else repeats.push(w);
+    }
+    res = {...linaStageInfo(s), repeats};
+  }
+  M.stages[mon] = res;
+  return res;
+}
+
+/* ---------- Planowanie tygodnia ---------- */
+const LINA_TEMPLATES = {
+  mon: ['boulder','homeA','wall','restMob','hb','homeB','rest'],
+  thu: ['homeA','restMob','wallLight','boulder','homeB','hb','rest'],
+};
+/* Obciążenie palców: high = intensywny dzień (liczy się do 48 h i limitu 3/7),
+   lowClimb = lekka sesja na ścianie (bez tablicy tego dnia i nazajutrz), low = lekka tablica. */
+const LINA_EV = {wall:'high', tests:'high', lead:'high', boulder:'high', hb:'high', testD:'high',
+  wallLight:'lowClimb', boulderTech:'lowClimb', fbwHb:'low'};
+const LINA_PRIO = {wall:5, tests:5, lead:5, boulder:4, hb:3, testD:3, homeA:2, homeB:1};
+const LINA_UNIT_NAME = {wall:'Sesja główna na ścianie', tests:'Testy na ścianie', lead:'Dzień prowadzenia',
+  boulder:'Bouldering', hb:'Chwytotablica', testD:'Test palców D', homeA:'Dom A', homeB:'Dom B'};
+const LINA_SLOT_TITLE = {wall:'ściana — wytrzymałość', tests:'ściana — testy', lead:'prowadzenie z partnerem',
+  wallLight:'ściana — sesja lekka', boulder:'bouldering', boulderTech:'bouldering techniczny (lekko)',
+  homeA:'dom A', homeB:'dom B', homeBmob:'dom — tylko mobilność', hb:'chwytotablica + core', testD:'test palców + core',
+  hbBreak:'core + mobilność (przerwa od tablicy)', hbOff:'core + mobilność (bez tablicy)', restMob:'wolne (mobilność)',
+  rest:'wolne', restOvr:'pauza', skip:'nie zrobione', fbwStr:'trening z planu FBW', fbwHb:'trening FBW + tablica A'};
+const EV_RANK = {high:3, lowClimb:2, low:1};
+function evMax(a, b){ return (EV_RANK[a]||0) >= (EV_RANK[b]||0) ? (a || null) : b; }
+const isWallSlot = s => s === 'wall' || s === 'tests' || s === 'lead';
+const isHbSlot = s => s === 'hb' || s === 'testD';
+const isHomeSlot = s => s === 'homeA' || s === 'homeB';
+
+/* Twoja zmiana dnia (dayOverride / dayExtra) w języku planera. */
+function linaOvrSlot(key){
+  if(!key) return null;
+  if(key.startsWith('L:')) return key.slice(2);
+  if(key === 'climb') return 'wall';
+  if(key === 'thu') return 'fbwHb';
+  if(key === 'mon' || key.startsWith('gum')) return 'fbwStr';
+  if(key === 'rest') return 'restOvr';
+  if(key === 'skip') return 'skip';
+  return null;
+}
+/* Faktyczne obciążenie palców z zapisów dnia. */
+function linaActualEv(e){
+  let high = false, lowClimb = false, low = false;
+  if(e.climb && e.climb.savedAt){ if(e.climb.kind === 'lekka') lowClimb = true; else high = true; }
+  for(const id in (e.exercises || {})){
+    const log = e.exercises[id];
+    if(!log || !(log.completedAt || log.loggedAt)) continue;
+    if(log.climbKind){ if(log.climbKind === 'lekka') lowClimb = true; else high = true; }
+    else if(id.startsWith('hangboard')){ if(isHbIntensive(id)) high = true; else low = true; }
+  }
+  return high ? 'high' : lowClimb ? 'lowClimb' : low ? 'low' : null;
+}
+function linaHasRecords(e){
+  return !!(e.climb || (e.exercises && Object.keys(e.exercises).length) || (e.warmups && Object.keys(e.warmups).length));
+}
+
+function linaPlanWeek(mon){
+  const M = linaMemo();
+  if(M.weeks[mon]) return M.weeks[mon];
+  const today = todayISO();
+  const st = linaStage(mon);
+  const bd = linaBoulderDay(mon);
+  const days = LINA_TEMPLATES[bd].map((slot, i) => {
+    let s = slot;
+    if(!st.before){
+      if(s === 'wall' && (st.stage === 0 || st.tests)) s = 'tests';
+      else if(s === 'hb' && (st.stage === 0 || st.tests)) s = 'testD';
+      else if(s === 'hb' && st.hbBreak) s = 'hbBreak';
+    }
+    return {iso:addDaysISO(mon, i), idx:i, base:s, slot:s, final:s, extra:null, notes:[], reserved:false, done:false, ev:null};
+  });
+  const plan = {mon, st, bd, days};
+  M.weeks[mon] = plan;
+
+  // ogon poprzedniego tygodnia — do zasady 48 h i limitu 3/7
+  const tail = {};
+  let prevPlan = null;
+  for(let k = 1; k <= 6; k++){
+    const iso = addDaysISO(mon, -k), e = loadEntry(iso);
+    if(iso < today || linaHasRecords(e)) tail[k] = linaActualEv(e);
+    else {
+      if(!prevPlan) prevPlan = linaPlanWeek(addDaysISO(mon, -7));
+      tail[k] = prevPlan.days[7 - k].ev;
+    }
+  }
+  const evOf = j => {
+    if(j < 0) return tail[-j] || null;
+    if(j > 6) return LINA_EV[LINA_TEMPLATES[linaBoulderDay(addDaysISO(mon, 7))][j - 7]] || null;
+    const d = days[j];
+    return d.done ? d.ev : (LINA_EV[d.slot] || null);
+  };
+  const highCount = j => { let c = 0; for(let k = j-6; k < j; k++) if(evOf(k) === 'high') c++; return c; };
+  /* Dlaczego intensywnej jednostki nie da się dać w dniu j ('' = można). */
+  const blockReason = (j, unit) => {
+    const pv = evOf(j-1), nx = evOf(j+1);
+    if(pv === 'high') return 'dzień wcześniej była intensywna praca palców (potrzeba ok. 48 h przerwy)';
+    if(nx === 'high') return 'dzień później jest intensywna sesja (potrzeba ok. 48 h przerwy)';
+    if(highCount(j) >= 3) return 'w ostatnich 7 dniach były już 3 intensywne dni dla palców';
+    if(isHbSlot(unit) && pv === 'lowClimb') return 'w dzień po sesji lekkiej na ścianie tablica jest wykluczona';
+    return '';
+  };
+  const relocateHome = (unit, from) => {
+    for(let j = from + 1; j < 7; j++){
+      const d = days[j];
+      if(d.iso < today || d.reserved || d.slot !== 'restMob') continue;
+      d.slot = unit; d.reserved = true;
+      return j;
+    }
+    return -1;
+  };
+  /* Szuka późniejszego dnia dla intensywnej jednostki. originAs = czym jest dzień
+     źródłowy na czas szukania (pusty albo Twoja zmiana tego dnia). */
+  const relocateHigh = (unit, from, originAs) => {
+    const saved = days[from].slot;
+    days[from].slot = originAs || '_moved';
+    let found = -1;
+    for(let j = from + 1; j < 7 && found < 0; j++){
+      const d = days[j];
+      if(d.iso < today || d.reserved || d.slot === 'rest') continue;        // pełny dzień wolny zostaje
+      if(LINA_EV[d.slot] && !(LINA_PRIO[unit] > (LINA_PRIO[d.slot] || 0))) continue;
+      if(blockReason(j, unit)) continue;
+      found = j;
+    }
+    days[from].slot = saved;
+    if(found < 0) return null;
+    const displaced = days[found].slot;
+    days[found].slot = unit; days[found].reserved = true;
+    return {j:found, displaced};
+  };
+  const note = (i, t) => days[i].notes.push(t);
+  const placed = {};
+
+  for(let i = 0; i < 7; i++){
+    const d = days[i], e = loadEntry(d.iso);
+    let s = d.slot;
+    // 1) korekty automatyczne — plan dnia PRZED Twoją ewentualną zmianą
+    if(isHomeSlot(s) && placed[s]){ note(i, `${LINA_UNIT_NAME[s]} był już w tym tygodniu — dziś wolne.`); s = 'restMob'; }
+    if(isHbSlot(s) && placed.hb){ note(i, 'Chwytotablica była już w tym tygodniu — dziś tylko core i mobilność.'); s = 'hbOff'; }
+    if(LINA_EV[s] === 'high'){
+      const why = blockReason(i, s);
+      if(why){
+        if(isWallSlot(s)){ note(i, `Zamiast sesji głównej sesja lekka: ${why}.`); s = 'wallLight'; }
+        else if(d.reserved){ note(i, `${LINA_UNIT_NAME[s]} jednak odpada: ${why}.`); s = s === 'boulder' ? 'boulderTech' : 'hbOff'; }
+        else {
+          const r = d.iso >= today ? relocateHigh(s, i) : null;
+          if(r){
+            note(i, `${LINA_UNIT_NAME[s]} przeniesiony na ${LINA_DAY_ACC[r.j]}: ${why}.`);
+            note(r.j, `${LINA_UNIT_NAME[s]} przeniesiony tu z ${LINA_DAY_GEN[i]}.`);
+            if(isHbSlot(r.displaced)) note(r.j, 'Chwytotablica z tego dnia wypada w tym tygodniu.');
+            s = isHomeSlot(r.displaced) ? r.displaced : (isHbSlot(s) ? 'hbOff' : 'restMob');
+          } else if(s === 'boulder'){ note(i, `Bouldering tylko techniczny (lekko): ${why}, a w tym tygodniu nie ma innego bezpiecznego dnia.`); s = 'boulderTech'; }
+          else { note(i, `Chwytotablica w tym tygodniu odpada: ${why}, a nie ma innego bezpiecznego dnia.`); s = 'hbOff'; }
+        }
+      }
+    }
+    // dzień przed dodatkowym dniem na ścianie (Twoja zmiana na jutro) — w domu tylko mobilność
+    if(s === 'homeB' && i < 6){
+      const nx = linaOvrSlot(loadEntry(days[i+1].iso).dayOverride);
+      if(nx && (LINA_EV[nx] === 'high' || LINA_EV[nx] === 'lowClimb') && !isHbSlot(nx)){
+        note(i, 'Jutro dodatkowy dzień na ścianie — dziś w domu tylko mobilność i oddech.'); s = 'homeBmob';
+      }
+    }
+    d.slot = s;
+    // 2) Twoja zmiana tego dnia rozstrzyga; wypchnięta jednostka szuka nowego dnia
+    const ov = linaOvrSlot(e.dayOverride);
+    let fin = s;
+    if(ov && ov !== s){
+      fin = ov;
+      if(LINA_PRIO[s] && !(isHomeSlot(s) && (ov === s))){
+        if(LINA_EV[s] === 'high'){
+          const r = relocateHigh(s, i, ov);
+          if(r){
+            note(i, `${LINA_UNIT_NAME[s]} przeniesiony na ${LINA_DAY_ACC[r.j]} (Twoja zmiana tego dnia).`);
+            note(r.j, `${LINA_UNIT_NAME[s]} przeniesiony tu z ${LINA_DAY_GEN[i]}.`);
+            if(isHomeSlot(r.displaced) && relocateHome(r.displaced, i) < 0) note(r.j, `${LINA_UNIT_NAME[r.displaced]} z tego dnia wypada w tym tygodniu.`);
+            if(isHbSlot(r.displaced)) note(r.j, 'Chwytotablica z tego dnia wypada w tym tygodniu.');
+          } else note(i, `${LINA_UNIT_NAME[s]} w tym tygodniu przepada — nie ma bezpiecznego dnia na zamianę.`);
+        } else {
+          const j = relocateHome(s, i);
+          if(j >= 0){ note(i, `${LINA_UNIT_NAME[s]} przeniesiony na ${LINA_DAY_ACC[j]}.`); note(j, `${LINA_UNIT_NAME[s]} przeniesiony tu z ${LINA_DAY_GEN[i]}.`); }
+          else note(i, `${LINA_UNIT_NAME[s]} w tym tygodniu przepada — nie ma wolnego dnia.`);
+        }
+      }
+    }
+    d.final = fin;
+    d.extra = linaOvrSlot(e.dayExtra);
+    [fin, d.extra].forEach(x => { if(isHomeSlot(x)) placed[x] = true; if(isHbSlot(x)) placed.hb = true; });
+    d.ev = (d.iso < today || linaHasRecords(e)) ? linaActualEv(e)
+      : evMax(LINA_EV[fin] || null, LINA_EV[d.extra] || null);
+    d.done = true;
+  }
+  return plan;
+}
+
+/* ---------- Treść sesji ---------- */
+const LINA_AUTO_CHECK = [
+  'Wyciągnij kawałek taśmy i puść — powinna się sama zwinąć.',
+  'Karabinek w łączniku uprzęży, zamek zamknięty i zablokowany. Dotknij go i powiedz na głos „wpięty".',
+  'Nikt nie wspina się w Twojej linii ani ok. 6 m nad Tobą.',
+  'Nie wspinasz się w bok ani powyżej linii automatu. Przed zjazdem sprawdzasz, czy strefa pod Tobą jest wolna.',
+  'Przy zmęczeniu nie skracasz kontroli. Po odpięciu zostawiasz karabinek tak, jak każe ściana.',
+];
+const LINA_AUTO_CHECK_NOTE = 'Kontrola wpięcia przed każdym wejściem jest nienegocjowalna — brak wpięcia to ok. połowa incydentów na automatach zgłaszanych do brytyjskiego stowarzyszenia ścian wspinaczkowych (CWA). Kolejność według instrukcji automatu TRUBLUE i regulaminu ściany.';
+
+const LINA_WALL_WARMUP = {
+  id:'lw_warm', name:'Rozgrzewka na ścianie (12 min)', kind:'warmup',
+  intro:'Kolejność od lekkiej taśmy do jednego spokojnego wejścia na automacie. Zanim pierwszy raz się wepniesz — kontrola z listy przy serii na automacie.',
+  steps:[
+    {label:'Taśma — 3 min', seconds:180,
+     desc:'Rotacje zewnętrzne przy boku 1 × 12 na stronę (łokieć przyklejony do tułowia), rozciąganie taśmy przed klatką (pull-aparts) 1 × 15, krążenia nadgarstków.'},
+    {label:'Obwody: 2 × 3 min bardzo łatwo, 1 min przerwy', seconds:420,
+     desc:'Duże chwyty, zero pompy. Zadanie: ciche stopy albo zawieszenie dłoni ok. 2 cm nad chwytem na 2–3 s, zanim go złapiesz. Timer liczy całe 7 minut (3 + 1 + 3).'},
+    {label:'Automat: 1 spokojne wejście na najlżejszą 5A', reps:'1 wejście',
+     desc:'Kontrola wpięcia przed wejściem. Zjazd z opuszczonymi rękami — potrząsasz nimi w trakcie zjazdu.'},
+    {label:'Oddech: 1 min (4 s wdech, 6 s wydech)', seconds:60,
+     desc:'Wydech dłuższy niż wdech. To ustawia spokojny rytm na całą sesję.'},
+  ]
+};
+const LINA_WALL_COOL = {
+  id:'lw_cool', name:'Schłodzenie (5 min)', kind:'warmup',
+  intro:'Koniec sesji: przedramiona dostają sygnał „koniec pracy".',
+  steps:[
+    {label:'Bardzo łatwo na obwodach', seconds:180, desc:'Duże chwyty, wolny oddech, zero pompy.'},
+    {label:'Rozciąganie przedramion', seconds:120, desc:'Zginacze i prostowniki po 30 s na stronę, delikatnie, bez sprężynowania.'},
+  ]
+};
+
+function linaCircuits(n){
+  const drills = ['ciche stopy', 'wydech na każdy przechwyt', 'proste ramiona'];
+  const phases = [];
+  for(let i = 1; i <= n; i++){
+    phases.push({label:`Obwód ${i}/${n} — ${drills[i-1]}`, seconds:300, kind:'work'});
+    if(i < n) phases.push({label:'Przerwa — schodzisz, ręce luźno', seconds:180, kind:'rest'});
+  }
+  return {
+    id:'lw_obw', kind:'guided', climbKind:'wytrz', pumpLog:true,
+    name:`Część 1: obwody — ${n} × 5 min bez schodzenia`,
+    sub:`${n} × 5 min, przerwa 3 min · pompa najwyżej 3/10`,
+    intro:`Wspinanie ciągłe po dużych chwytach, ${n} serie po 5 minut bez schodzenia, 3 minuty przerwy. Trudność ustalasz doborem chwytów — <b>pompa najwyżej 3/10</b>. Każda seria ma jedno zadanie: seria 1 — ciche stopy, seria 2 — wydech na każdy przechwyt${n > 2 ? ', seria 3 — proste ramiona' : ''}.<br><br><b>Gdy obwody są tylko strome</b> (przewieszenie z małymi chwytami): zamiast tego zrób 1 serię 4–5 wejść na 5A na automacie — przerwa między wejściami to sam zjazd i rzut oka na zamek, pompa najwyżej 4/10.`,
+    phases,
+  };
+}
+function linaAutoPhases(n, rest, labels){
+  const p = [{label:'Kontrola wpięcia (lista powyżej)', tap:true, tapLabel:'Wpięty ✓', kind:'work'},
+             {label:'Wejdź ok. 1 m i usiądź w uprzęży', tap:true, tapLabel:'Automat trzyma ✓', kind:'work'}];
+  for(let i = 1; i <= n; i++){
+    p.push({label:(labels && labels[i-1]) || `Wejście ${i}/${n} — dotknij po wylądowaniu`, tap:true, tapLabel:'Wylądowałem ✓', kind:'work'});
+    if(i < n) p.push({label:'Rzut oka na zamek — i od razu dalej', seconds:15, kind:'rest'});
+  }
+  p.push({label:'Przerwa od lądowania', seconds:rest, kind:'seriesRest'});
+  return p;
+}
+function linaPumpOf(iso, id){
+  const log = (loadEntry(iso).exercises || {})[id];
+  return log && log.pump != null ? log.pump : null;
+}
+function linaAutoSeries(k, n, route, task){
+  return {
+    id:'lw_auto'+k, kind:'guided', climbKind:'wytrz', pumpLog:true,
+    name:`Część 2: automat — seria ${k} (${n} ${plural(n,'wejście','wejścia','wejść')})`,
+    sub:`${route.split(' (')[0]} · ${n} ${plural(n,'wejście','wejścia','wejść')} · przerwa 4 min od lądowania`,
+    intro:`<b>Droga:</b> ${route}.<br><b>Każde wejście:</b> 2 shake-outy (ok. 1/3 i 2/3 wysokości) i 2 symulowane wpinki — puszczasz chwyt na 2–3 s na wysokości pasa, na wydechu. Zjazd ok. 45 s z opuszczonymi rękami, potrząsasz nimi. Po wylądowaniu rzut oka na zamek karabinka (ok. 15 s) i od razu kolejne wejście.<br><b>Zadanie na całą serię:</b> ${task}.<br><br>Pompa pod koniec serii ok. 5–6/10. Odpadasz albo ruchy robią się nerwowe → łatwiejsza droga albo o jedno wejście mniej. Wejścia krótsze niż 1,5 min → dodaj 1 wejście albo wchodź wolniej z dodatkowym shake-outem.<br><br>Przed pierwszym wejściem serii: wejdź ok. 1 m i usiądź w uprzęży, czując, że automat trzyma — jeśli regulamin ściany na to pozwala.`,
+    checklist:LINA_AUTO_CHECK, checklistNote:LINA_AUTO_CHECK_NOTE,
+    phases:linaAutoPhases(n, 240),
+  };
+}
+function linaRoute2(iso){
+  const p1 = linaPumpOf(iso, 'lw_auto1');
+  if(p1 == null) return '5A+ lub 5B, jeśli po serii 1 pompa była najwyżej 4/10 — inaczej zostajesz na 5A (zapisz pompę po serii 1, a aplikacja podpowie)';
+  return p1 <= 4 ? `5A+ lub 5B (po serii 1 pompa ${p1}/10)` : `5A (po serii 1 pompa ${p1}/10 — zostajesz na 5A)`;
+}
+function linaApSeries(k, n){
+  return {
+    id:'lw_ap'+k, kind:'guided', climbKind:'wytrz', pumpLog:true,
+    name:`Automat — para ${k} z ${n} (5B+/6A → 5B)`,
+    sub:'2 wejścia · przerwa 4–5 min od lądowania · pompa 7–8/10',
+    intro:'<b>Wejście 1:</b> 5B+ lub 6A — najtrudniejsza droga, którą robisz bez odpadania. Zjazd z opuszczonymi rękami i rzut oka na zamek, razem ok. 1 min.<br><b>Wejście 2:</b> 5B. <b>Drop-set:</b> jeśli po wejściu 1 pompa jest 8/10 lub wyżej, wejście 2 robisz na 5A.<br><br>Pompa pod koniec pary 7–8/10, ale <b>bez odpadania w połowie drogi</b>. Oddech: mocny, krótki wydech tylko na najtrudniejszym ruchu, wpinka na wydechu, na odpoczynkach 3 wolne wydechy.',
+    checklist:LINA_AUTO_CHECK, checklistNote:LINA_AUTO_CHECK_NOTE,
+    phases:linaAutoPhases(2, 270, ['Wejście 1 — 5B+ lub 6A, dotknij po wylądowaniu', 'Wejście 2 — 5B (albo 5A przy pompie ≥8), dotknij po wylądowaniu']),
+  };
+}
+function linaWallBlocks(st, iso){
+  const wk = st.wk || 1;
+  if(st.phase === 'ap'){
+    const n = wk === 5 ? 3 : 4;
+    const warm = {...LINA_WALL_WARMUP, id:'lw_warm_ap', name:'Rozgrzewka na ścianie (12–15 min)',
+      steps:[...LINA_WALL_WARMUP.steps, {label:'Dodatkowe wejście na 5A+ lub 5B', reps:'1 wejście', desc:'Spokojnie — przejście do trudniejszych dróg.'}]};
+    const blocks = [warm];
+    for(let k = 1; k <= n; k++) blocks.push(linaApSeries(k, n));
+    blocks.push(LINA_WALL_COOL);
+    return blocks;
+  }
+  const circ = wk <= 2 ? 3 : 2;
+  const series = wk === 1 ? [3,3] : wk === 2 ? [4,3] : wk === 3 ? [4,4] : [3];   // tydz. 4: 1 seria × 3 na 5A
+  const blocks = [LINA_WALL_WARMUP, linaCircuits(circ)];
+  series.forEach((n, k) => {
+    const route = k === 0 ? (wk === 4 ? '5A (lżejszy tydzień)' : '5A') : linaRoute2(iso);
+    const task = k === 0 ? 'wzrok na stopniu, aż stopa go obciąży — dopiero potem patrzysz na chwyt'
+                         : '3 wolne wydechy na każdym shake-oucie i wpinka na wydechu';
+    blocks.push(linaAutoSeries(k + 1, n, route, task));
+  });
+  blocks.push(LINA_WALL_COOL);
+  return blocks;
+}
+function linaWallNote(st){
+  const wk = st.wk || 1;
+  const t = {
+    1:'Tydzień 1 (baza): obwody 3 × 5 min, potem 2 serie po 3 wejścia na automacie.',
+    2:'Tydzień 2 (baza): jak w tygodniu 1, ale seria 1 na automacie ma 4 wejścia.',
+    3:'Tydzień 3 (baza): 2 serie po 4 wejścia, obwody skrócone do 2 × 5 min.',
+    4:'Tydzień 4 (lżejszy): obwody 2 × 5 min i 1 seria × 3 wejścia na 5A. Jeśli masz partnera — zamiast tego dzień prowadzenia (zmień dzień w „Zmień lub dołóż"). Testy w tym tygodniu są opcjonalne: dokument wymienia je w tygodniach 0, 4 i 8, ale tabela tygodnia 4 ich nie wymaga.',
+    5:'Tydzień 5: wytrzymałość tlenowa na trudniejszych drogach — 3 pary wejść, pompa pod koniec pary 7–8/10.',
+    6:'Tydzień 6: 4 pary wejść, pompa 7–8/10, bez odpadania w połowie drogi.',
+    7:'Tydzień 7: 4 pary wejść — ostatni mocniejszy tydzień przed lżejszym tygodniem z testami.',
+  }[wk] || '';
+  return t + (wk >= 5 ? ' Na 6A na prowadzeniu przejdź, gdy 5C na automacie robisz płynnie i ze spokojnym oddechem.' : ' Pompa pod koniec serii na automacie ok. 5–6/10.');
+}
+
+function linaLightBlocks(){
+  const drills = ['zawieszenie dłoni nad chwytem', 'ciche stopy', 'wysoki stopień bez ciągnięcia rękami', 'wydech na każdy ruch'];
+  const phases = [{label:'Kontrola wpięcia (lista powyżej)', tap:true, tapLabel:'Wpięty ✓', kind:'work'}];
+  drills.forEach((dr, i) => {
+    phases.push({label:`Wejście ${i+1}/4 — ${dr}`, tap:true, tapLabel:'Wylądowałem ✓', kind:'work'});
+    if(i < 3) phases.push({label:'Przerwa 3 min (potem kontrola wpięcia)', seconds:180, kind:'rest'});
+  });
+  return [
+    {id:'lw_light_warm', name:'Rozgrzewka (12 min)', kind:'warmup',
+     intro:'<b>Sprawdzenie po rozgrzewce:</b> zostajesz na 15 min bardzo łatwych obwodów albo odpuszczasz, jeśli palce bolą przy ucisku lub chwytaniu, boli łokieć, przedramiona są sztywne albo 5A wydaje się ciężka (powyżej 5/10).',
+     steps:[
+       {label:'Mobilność bioder — 4 min', seconds:240, desc:'Pozycja 90/90 z przechodzeniem na drugą stronę i lekki przysiad kozacki.'},
+       {label:'Obwody: 2 × 3 min bardzo łatwo, 2 min przerwy', seconds:480, desc:'Duże chwyty, zero pompy.'},
+     ]},
+    {id:'lw_light', kind:'guided', climbKind:'lekka', pumpLog:true,
+     name:'Automat: 4 pojedyncze wejścia na najlżejszą 5A',
+     sub:'4 × ok. 3 min, przerwa 3 min · pompa najwyżej 2–3/10',
+     intro:'Technika i rozruszanie, <b>nie bodziec wytrzymałościowy</b>: pompa najwyżej 2–3/10, każde wejście osobno, z pełną przerwą. Najlepiej pion albo połóg z dużymi chwytami. Każde wejście wolno, ok. 3 min, z 2–3 shake-outami; zjazd z opuszczonymi rękami.<br><br>Zadania: wejście 1 — zawieszenie dłoni ok. 2 cm nad chwytem na 2–3 s; wejście 2 — ciche stopy; wejście 3 — wysoki stopień bez ciągnięcia rękami (rozluźnij dłonie, barki nad kolano, wstań z nogi); wejście 4 — wydech na każdy ruch.<br><br><b>Uczciwie:</b> sesje regeneracyjne robi się zwykle ok. 4 stopnie poniżej możliwości — przy minimum 5A na automacie tego nie spełnisz, więc nadrabiasz wolnym tempem, długimi przerwami i małą liczbą wejść.',
+     checklist:LINA_AUTO_CHECK, checklistNote:LINA_AUTO_CHECK_NOTE, phases},
+    {id:'lw_light_feet', name:'Obwody: praca stóp (5 min)', kind:'warmup',
+     intro:'Duże chwyty, uwaga wyłącznie na stopach.',
+     steps:[
+       {label:'3 × 10 ruchów stopami przy dwóch dużych chwytach', reps:'3 × 10', desc:'Trzymasz 2 duże chwyty i zmieniasz stopnie bez ruchu rąk.'},
+       {label:'Obrót na stopniu i drop knee — kilka prób', reps:'kilka prób', desc:'Obrót: na przodostopiu obracasz piętę tak, żeby biodro po stronie sięgającej ręki zbliżyło się do ściany. Drop knee: stopa zewnętrzną krawędzią buta, kolano do środka i w dół, przeciwna ręka sięga dalej.'},
+     ]},
+    {id:'lw_light_cool', name:'Schłodzenie (5 min)', kind:'warmup',
+     intro:'Po sesji masz się czuć tak samo albo lepiej niż przed nią. Jeśli gorzej — następnym razem skróć ją do 2–3 wejść.',
+     steps:[
+       {label:'Wolny oddech', seconds:120, desc:'4 s wdech, 6 s wydech.'},
+       {label:'Rozciąganie przedramion', seconds:120, desc:'Zginacze i prostowniki po 30 s na stronę.'},
+     ]},
+  ];
+}
+
+function linaBoulderBlocks(tech){
+  const warm = {id:'lb_warm', name:'Rozgrzewka bulderowa (15 min)', kind:'warmup',
+    intro:'Stopniowo od dużych chwytów do małych — palce mają być ciepłe, zanim dotkniesz czegokolwiek blisko limitu.',
+    steps:[
+      {label:'Taśma — 3 min', seconds:180, desc:'Rotacje zewnętrzne przy boku 1 × 12 na stronę, pull-aparts 1 × 15, krążenia nadgarstków.'},
+      {label:'8–10 łatwych bulderów, stopniowo trudniej', reps:'8–10', desc:'Zaczynasz od najłatwiejszych, kończysz ok. 2 stopnie poniżej swojego limitu. Małe chwyty dopiero pod koniec rozgrzewki.'},
+      {label:'Mobilność bioder — 2 min', seconds:120, desc:'90/90 i głęboki przysiad — biodra blisko ściany to mniej pracy rąk.'},
+    ]};
+  const feet = {id:'lb_tech', name:'Technika nóg (10 min)', kind:'warmup',
+    intro:'Na bulderach o umiarkowanej trudności — tu uczysz się ruchu, nie walczysz.',
+    steps:[
+      {label:'Heel hook i toe hook', reps:'kilka prób', desc:'Piętą ciągniesz, napinając tył uda; palcami buta zahaczasz pod chwyt, napinając przód podudzia i brzuch.'},
+      {label:'Drop knee', reps:'kilka prób', desc:'Stopa na stopniu zewnętrzną krawędzią buta, kolano obraca się do środka i w dół, przeciwna ręka sięga dalej.'},
+      {label:'Obrót na stopniu', reps:'kilka prób', desc:'Na przodostopiu obracasz piętę tak, żeby biodro po stronie sięgającej ręki zbliżyło się do ściany.'},
+      {label:'Stopy przy stałych rękach', reps:'10 zmian', desc:'Trzymasz 2 duże chwyty i robisz 10 zmian stopni bez ruchu rąk.'},
+    ]};
+  const cool = {...LINA_WALL_COOL, id:'lb_cool'};
+  if(tech){
+    return [warm, feet,
+      {id:'lb_easy', name:'Łatwa objętość (15 min)', kind:'warmup',
+       intro:'Dziś bez prób na limicie — ten dzień liczy się jako lekki dla palców tylko wtedy, gdy naprawdę jest lekki.',
+       steps:[{label:'Buldery co najmniej 3 stopnie poniżej limitu', seconds:900, desc:'Płynnie, z drillami nóg. Pompa najwyżej 3/10, zero walki na małych chwytach.'}]},
+      cool];
+  }
+  const phases = [];
+  for(let b = 1; b <= 5; b++) for(let a = 1; a <= 4; a++){
+    phases.push({label:`Bulder ${b} · próba ${a} — dotknij po zejściu`, tap:true, tapLabel:'Zszedłem ✓', kind:'work'});
+    if(!(b === 5 && a === 4)) phases.push({label:'Przerwa — pełne 3 min', seconds:180, kind:'rest'});
+  }
+  return [warm, feet,
+    {id:'lb_main', kind:'guided', climbKind:'boulder', pumpLog:false,
+     name:'Część główna: buldery blisko limitu (30–40 min)',
+     sub:'4–5 bulderów × 3–4 próby · pełne 3 min przerwy',
+     intro:'Siła i moc: 4–5 bulderów blisko Twojego limitu, na każdy 3–4 próby, między próbami <b>pełne 3 minuty</b> — siłę buduje się na świeżych przedramionach, nie na pompie. Kończysz wcześniej, gdy jakość ruchu wyraźnie spada albo dwie kolejne próby są gorsze od poprzednich. Timer prowadzi przerwy; przycisk „Pomiń" przechodzi do następnego bulderu.<br><br><b>Achilles:</b> schodzisz po chwytach; jeśli musisz zeskoczyć — tylko z niska, na obie stopy, na ugiętych kolanach. Nigdy zeskok z wysokości.<br><b>Palce:</b> na małych krawędziach unikaj pełnego zamkniętego crimpu — half-crimp albo chwyt otwarty.<br><br><i>To propozycja trenerska — dokument mówi tylko „siła i moc + technika nóg", bez szczegółów sesji.</i>',
+     phases},
+    cool];
+}
+
+const LINA_LEAD = {
+  id:'lw_lead', name:'Dzień prowadzenia (z partnerem)', kind:'warmup',
+  intro:'Najlepiej w tygodniu 4 i 8 cyklu — zastępuje wtedy sesję w środę. Jeśli wypada jako trzeci dzień na ścianie w tygodniu, dzień wcześniej w domu tylko mobilność (plan zrobi to sam, gdy wpiszesz ten dzień z wyprzedzeniem).',
+  steps:[
+    {label:'Rozgrzewka 12–15 min jak w sesji głównej', reps:'12–15 min', desc:'Taśma, obwody bardzo łatwo, jedno spokojne wejście.'},
+    {label:'Kontrola partnerska przed każdą drogą', reps:'każda droga', desc:'Węzeł, przyrząd, uprząż — sprawdzacie siebie nawzajem.'},
+    {label:'2–3 drogi 4c–5B na prowadzeniu', reps:'2–3 drogi', desc:'Przed wejściem zaplanuj wpinki i odpoczynki. Każda wpinka z wysokości klatki do pasa, na wydechu. Przerwa ok. 5 min — zwykle wypada sama, gdy wspina się partner.'},
+    {label:'Odpadanie stopniowane: 3–5 lotów', reps:'3–5 lotów', desc:'Najpierw z ekspresem na wysokości pasa, potem kolan, potem stóp. Tylko teren pionowy albo przewieszony bez półek, po wpięciu kilku pierwszych ekspresów, z doświadczonym asekurującym. Przez cały lot wydech. Kontakt ze ścianą przyjmujesz stopami na ugiętych kolanach, miękko — oszczędzasz Achillesa.'},
+    {label:'1–2 próby trudniejszej drogi', reps:'1–2', desc:'W tygodniu 4: 5B+ albo 5C. W tygodniu 8: 6A.'},
+    {label:'Partner zapisuje, gdzie milkniesz albo sztywniejesz', reps:'—', desc:'Przy których wpinkach zamilkłeś albo zesztywniałeś — to Twoja mapa stresu na prowadzeniu.'},
+    {label:'Schłodzenie', seconds:300, desc:'Bardzo łatwo, wolny oddech, rozciąganie przedramion.'},
+  ]
+};
+
+/* ---------- Testy postępów (tydzień 0, 4 opcjonalnie, 8) ---------- */
+const LINA_TESTS = {
+  A:{id:'lina_testA', climbKind:'test', name:'Test A: automat — ta sama droga 5B, start co 3:00',
+     how:'Ta sama droga 5B przy każdym teście, o podobnej porze dnia. Startujesz co 3 minuty: wejście, zjazd, a reszta czasu to odpoczynek — kolejny start dokładnie po 3:00 od poprzedniego (timer odlicza). Kończysz przy pierwszym odpadnięciu. Po 4. wejściu oceń pompę i wysiłek w skali 0–10.',
+     fields:[{k:'wejscia', l:'Liczba wejść do pierwszego odpadnięcia'}, {k:'pompa4', l:'Pompa po 4. wejściu (0–10)'}, {k:'wysilek4', l:'Wysiłek po 4. wejściu (0–10)'}],
+     change:'Realna zmiana: +1 wejście albo niższa pompa po 4. wejściu.',
+     phases:Array.from({length:15}, (_, i) => ({label:`Wejście ${i+1} — start co 3:00`, seconds:180, kind:'work'}))},
+  B:{id:'lina_testB', climbKind:'test', name:'Test B: obwody — ten sam obwód 5A–5B, maks. 20 min',
+     how:'Ten sam ciągły obwód 5A–5B przy każdym teście. Wspinasz się bez schodzenia aż do wymuszonego zejścia, najdłużej 20 minut. Licz pełne shake-outy (ręka opuszczona i potrząsana, 3 wolne wydechy).',
+     fields:[{k:'minuty', l:'Czas do wymuszonego zejścia (min)'}, {k:'shakeouty', l:'Liczba pełnych shake-outów'}],
+     change:'Realna zmiana: +2 minuty.',
+     phases:[{label:'Obwód ciągły — do wymuszonego zejścia', seconds:1200, kind:'work'}]},
+  C:{id:'lina_testC', climbKind:'test', name:'Test C: oddech — 1 wejście 5B z głośnym odliczaniem',
+     how:'Na jednej drodze 5B mówisz na głos numer każdego ruchu ręką i nagrywasz dźwięk (telefon w kieszeni albo wideo z dźwiękiem). Potem liczysz bezdechy dłuższe niż ok. 3 s — zwłaszcza przy wpinkach i na najtrudniejszych ruchach. Gdzie milkniesz albo głos się dusi, tam wstrzymujesz oddech.',
+     fields:[{k:'bezdechy', l:'Liczba bezdechów dłuższych niż 3 s'}],
+     change:'Realna zmiana: mniej bezdechów przy wpinkach.'},
+  D:{id:'hangboard_testD', name:'Test D: palce — listwa 20 mm, 7 s / 3 s do odmowy',
+     how:'Tylko w dniu bez innego obciążenia palców — zamiast zwisów. Po pełnej rozgrzewce palców. Listwa 20 mm, chwyt otwarty albo półzamknięty (nigdy pełny crimp), 7 s zwisu / 3 s przerwy, do odmowy: kończysz, gdy palce zaczynają się otwierać albo nie dotrzymujesz 7 s. Timer liczy powtórzenia — przerwij go przyciskiem „Pauza" w chwili odmowy.',
+     fields:[{k:'powt', l:'Liczba pełnych powtórzeń'}],
+     change:'Wynik służy do porównań w czasie (dokument nie podaje progu realnej zmiany).',
+     phases:Array.from({length:40}, (_, i) => [{label:`Zwis ${i+1}`, seconds:7, kind:'work'}, {label:'Luz', seconds:3, kind:'rest'}]).flat()},
+};
+function linaTestBlock(k){ return {...LINA_TESTS[k], kind:'linatest', testKey:k}; }
+function linaTestDayBlocks(){
+  return [LINA_WALL_WARMUP, linaTestBlock('C'), linaTestBlock('A'), linaTestBlock('B'), LINA_WALL_COOL];
+}
+
+/* ---------- Dom ---------- */
+const LINA_EX = {
+  L01:{id:'L01', name:'Taśma: rozciąganie przed klatką + rotacje zewnętrzne w odwiedzeniu', sets:2, repsRange:'15 + 12 na rękę', rest:60, tempo:null,
+    cue:'Pull-aparts 15 powtórzeń, potem rotacje zewnętrzne z ramieniem odwiedzonym do 90°, 12 na rękę, powrót ok. 3 s.',
+    tech:[
+      {t:'Rozciąganie taśmy przed klatką (pull-aparts)', h:'Ramiona proste przed sobą na wysokości barków, taśma w dłoniach. Rozciągasz ją do boków ściągnięciem łopatek, nie zginaniem łokci. Barki nisko, z dala od uszu.'},
+      {t:'Rotacje zewnętrzne w odwiedzeniu 90°', h:'Taśma zaczepiona przed Tobą. Ramię odwiedzone do 90° (łokieć na wysokości barku), łokieć zgięty 90°. Obracasz przedramię w górę, aż dłoń będzie nad łokciem; <b>powrót ok. 3 s</b>. Łokieć się nie przesuwa — ruch wychodzi z barku.'},
+      {t:'Po co', h:'Wspinanie ciągnie barki w jednym kierunku. Tylna część barku i rotatory zewnętrzne to przeciwwaga, która trzyma głowę kości ramiennej na miejscu przy ruchach nad głową.'},
+    ]},
+  L02:{id:'L02', name:'Pompki z wypchnięciem łopatek', sets:3, repsRange:'12 powt.', rest:75, tempo:null,
+    cue:'W górnej pozycji dodatkowo odpychasz podłogę i rozsuwasz łopatki.',
+    tech:[
+      {t:'Wykonanie', h:'<ol><li>Zwykła pompka, ciało w jednej linii, łokcie ok. 45° od tułowia.</li><li>Na górze, przy prostych łokciach, <b>dopychasz podłogę</b> jeszcze kawałek — plecy między łopatkami unoszą się, łopatki rozsuwają się na boki.</li><li>Dopiero potem kolejne powtórzenie.</li></ol>'},
+      {t:'Po co', h:'Mięsień zębaty przedni trzyma łopatkę przy żebrach. Wspinacze mają go zwykle słabego względem mięśni ciągnących — to jedna z najprostszych ochron barku.'},
+    ]},
+  L03:{id:'L03', name:'Face pulls + rotacje zewnętrzne przy boku', sets:2, repsRange:'15 + 12–15 na rękę', rest:60, tempo:null,
+    cue:'Face pulls 15 powtórzeń, potem rotacje zewnętrzne z łokciem przy tułowiu, 12–15 na rękę.',
+    tech:[
+      {t:'Face pulls na taśmie', h:'Taśma zaczepiona na wysokości twarzy. Ciągniesz ją do czoła, rozchylając dłonie na boki — łokcie wysoko, łopatki ściągnięte. Na końcu ruchu kciuki wskazują do tyłu.'},
+      {t:'Rotacje zewnętrzne przy boku', h:'Łokieć przyklejony do tułowia (możesz włożyć zwinięty ręcznik między łokieć a bok), zgięty 90°. Obracasz przedramię na zewnątrz przeciw taśmie, powoli w obie strony.'},
+    ]},
+  L04:{id:'L04', name:'Prostowniki nadgarstka — opuszczanie 3–4 s', sets:3, repsRange:'12–15 powt.', rest:60, tempo:null,
+    cue:'Przedramię na udzie, dłoń w dół, mały hantel. Opuszczanie przez 3–4 s.',
+    tech:[
+      {t:'Wykonanie', h:'Siedzisz, przedramię oparte na udzie, nadgarstek poza kolanem, dłoń zwrócona w dół, w dłoni mały hantel (albo butelka z wodą). Unosisz grzbiet dłoni (możesz pomóc drugą ręką), a potem <b>opuszczasz powoli przez 3–4 s</b>. Liczy się faza opuszczania.'},
+      {t:'Po co', h:'Prostowniki nadgarstka przyczepiają się do bocznego nadkłykcia — to profilaktyka „łokcia tenisisty", który u wspinaczy wynika z przewagi zginaczy.'},
+    ]},
+  L05:{id:'L05', name:'Dead bug', sets:3, repsRange:'8–10 na stronę', rest:60, tempo:null,
+    cue:'Lędźwie dociśnięte do podłogi. Opuszczasz przeciwną rękę i nogę na wydechu.',
+    tech:[
+      {t:'Wykonanie', h:'<ol><li>Leżysz na plecach, ręce wyprostowane nad barkami, biodra i kolana zgięte 90°.</li><li><b>Lędźwie dociśnięte do podłogi</b> przez cały czas.</li><li>Na wydechu opuszczasz przeciwną rękę i nogę nad podłogę, wracasz, zmiana stron.</li></ol>Jeśli lędźwie odrywają się od podłogi — skróć zakres.'},
+    ]},
+  L06:{id:'L06', name:'Plank boczny', sets:3, holdRange:[20,40], rest:45, tempo:null, holdBased:true,
+    cue:'Ciało w jednej linii od głowy do stóp, biodra wysoko. Czas na każdą stronę.',
+    tech:[
+      {t:'Wykonanie', h:'Podpór na przedramieniu, łokieć pod barkiem, stopy jedna na drugiej (łatwiej: kolana na podłodze). Biodra unosisz tak, żeby ciało tworzyło prostą linię — nie opadają i nie uciekają w tył. Czas z zakresu robisz <b>na każdą stronę</b>.'},
+    ]},
+};
+function linaEx(id){ return prepEx(LINA_EX[id]); }
+function linaExList(){ return Object.keys(LINA_EX).map(linaEx); }
+/* Ćwiczenie z planu FBW w liczbach planu na linę: wariant z drabinki (Twój poziom) →
+   serie z planu na linę (zakres powtórzeń tylko na wariancie z planu) → Twoje edycje ✎. */
+function lx(id, patch){
+  if(!RAW_EX[id]) return null;
+  const lv = applyLevel(RAW_EX[id]);
+  const p = {...patch};
+  if(lv.levelIdx != null && lv.levelIdx !== lv.levelDef){ delete p.repsRange; delete p.holdRange; }
+  return applyExerciseOverride({...lv, ...p});
+}
+
+const LINA_HIPS = {
+  id:'lina_hips', name:'Biodra: 90/90, przysiad kozacki, gołąb', kind:'warmup',
+  intro:'5–6 minut. Otwarte biodra pozwalają trzymać ciało blisko ściany — mniej pracy dla rąk.',
+  steps:[
+    {label:'90/90 — 2 × 10 przejść', reps:'2 × 10', desc:'Siad z obiema nogami zgiętymi pod kątem 90° (jedna przed Tobą, druga z boku); przechodzisz kolanami na drugą stronę, najlepiej bez pomocy rąk.'},
+    {label:'Przysiad kozacki — 2 × 8 na stronę', reps:'2 × 8', desc:'Szeroki rozkrok, schodzisz nisko na jedną nogę, druga prosta (palce w górę). Pięta nogi zgiętej zostaje na podłodze — jak przy pistolu.'},
+    {label:'Frog stretch albo gołąb — 30–60 s', seconds:120, desc:'Frog: klęk podparty, kolana szeroko, biodra cofasz w tył. Gołąb: jedna noga zgięta z przodu, druga wyprostowana w tył, biodra równo. Spokojny oddech, bez sprężynowania.'},
+  ]
+};
+const LINA_ANKLE_HIPS = {
+  ...LINA_HIPS, id:'lina_hips_b', name:'Kostki i biodra (kolano do ściany, 90/90, kozacki)',
+  steps:[
+    {label:'Kolano do ściany — 10 na stronę', reps:'10 na stronę', desc:'Stopa przed ścianą, pięta na podłodze, kolano dotyka ściany; odsuń stopę tak daleko, żeby było to na granicy. Mobilność stawu skokowego — dla stóp na wysokich stopniach i dla Achillesa.'},
+    ...LINA_HIPS.steps,
+  ]
+};
+const LINA_BREATH = {
+  id:'lina_breath', kind:'guided', pumpLog:false,
+  name:'Oddech: 5 min (4 s wdech, 6 s wydech)', sub:'30 spokojnych oddechów z timerem',
+  intro:'Wolny oddech przeponą: wdech nosem 4 s, wydech 6 s. Timer prowadzi rytm — krótki sygnał przy każdej zmianie. Przed trudną drogą wystarczy 1–2 minuty; wariant zamienny: 4 s wdech, 4 s pauza, 4 s wydech, 4 s pauza.',
+  phases:Array.from({length:30}, (_, i) => [{label:`Wdech · ${i+1}/30`, seconds:4, kind:'work', quiet:true}, {label:'Wydech', seconds:6, kind:'rest', quiet:true}]).flat(),
+};
+
+function linaCoreBlock(){
+  return {id:'block_core', name:'Core', kind:'exercises',
+    items:[linaEx('L05'), linaEx('L06'), lx('E19', {sets:3, repsRange:'6–10 powt.'})].filter(Boolean)};
+}
+function linaHomeA(){
+  return [GUM_WARMUP,
+    {id:'block_main', name:'Przysiad jednonóż, antagoniści, core', kind:'exercises', items:[
+      lx('E3', {sets:3}), lx('E6', {sets:3}), linaEx('L02'), linaEx('L01'),
+      lx('E9', {sets:3, repsRange:'8 powt.'}), lx('E12', {sets:2, repsRange:'20 powt.'}),
+    ].filter(Boolean)},
+    LINA_HIPS, LINA_BREATH];
+}
+/* Mocne wspinanie dzień wcześniej (zapis albo plan) — wtedy bez dipów. */
+function linaClimbedHard(iso){
+  const e = loadEntry(iso);
+  if(e.climb && e.climb.savedAt) return e.climb.kind !== 'lekka';
+  for(const id in (e.exercises || {})){ const l = e.exercises[id]; if(l && l.completedAt && l.climbKind && l.climbKind !== 'lekka') return true; }
+  if(iso < todayISO()) return false;
+  const d = linaPlanWeek(mondayOf(iso)).days.find(x => x.iso === iso);
+  return !!(d && ['wall','tests','lead','boulder'].includes(d.final));
+}
+function linaHomeB(iso){
+  const noDips = linaClimbedHard(addDaysISO(iso, -1));
+  const items = [lx('E15', {sets:3, repsRange:'5 powt. na nogę'})];
+  if(!noDips) items.push(lx('E8', {sets:3}));
+  items.push(lx('E14', {sets:3}), linaEx('L03'), linaEx('L04'), prepEx({...calfExercise(), sets:3}));
+  return {noDips, blocks:[GUM_WARMUP,
+    {id:'block_main', name:'Noga, pchanie, podciąganie, łokcie, stopy', kind:'exercises', items:items.filter(Boolean)},
+    LINA_ANKLE_HIPS, LINA_BREATH]};
+}
+
+/* ---------- Chwytotablica: zwisy przerywane 10/5 ---------- */
+HANGBOARD_PROTOCOLS.IH = {
+  id:'hangboard_IH', key:'IH', kind:'hangboard',
+  name:'Zwisy przerywane 10/5 (plan na linę)',
+  series:3, reps:4, hang:10, hangRest:5, seriesRest:60,
+  qualNote:'Ostatnie powtórzenie ostatniej serii trudne, ale czyste technicznie.',
+  cue:'10 s zwisu / 5 s przerwy, 4–5 powtórzeń w serii, 1 min między seriami. Ostatnie powtórzenie ostatniej serii trudne, ale czyste technicznie.',
+  warn:'Ekspozycja INTENSYWNA — jedyna sesja palców w domu w tym planie, liczy się do limitu 3 intensywnych dni na 7. Nie w dniu sesji lekkiej na ścianie ani nazajutrz.',
+  tech:[
+    {t:'Ustawienie', h:'Listwa 20 mm, chwyt otwarty albo półzamknięty (half-crimp) — <b>bez pełnego crimpa</b>. Łopatki aktywne (ściągnięte w dół), łokcie lekko ugięte. Za ciężko → odciąż się stopami na krześle.'},
+    {t:'Oddech', h:'Spokojny wydech w zwisie, wdech w przerwie — bez wstrzymywania oddechu.'},
+    {t:'Progresja w planie', h:'Najpierw serie, potem powtórzenia, na końcu obciążenie. Aplikacja prowadzi to tydzień po tygodniu: tydz. 1 — 3 × 4, tydz. 2 — 4 × 4, tydz. 3 — 5 × 4, tydz. 4 (lżejszy) — 3 × 4, tydz. 5 — 4 × 5, tydz. 6–7 — 5 × 5; w tygodniach 0 i 8 zamiast zwisów jest test palców. Obciążenie (mniejsze odciążenie stopami) ruszasz dopiero, gdy 5 × 5 wychodzi czysto. Jeśli zmienisz liczby przez „✎", Twoje ustawienie obowiązuje we wszystkich tygodniach.'},
+    {t:'Dlaczego 10/5, a nie 7/3', h:'Nie ma badań porównujących oba rytmy wprost — to kwestia wyboru. Plan zostaje przy 10/5 (zwisy przerywane z badania López-Rivery i González-Badillo, 2019).'},
+    {t:'Po 8 tygodniach', h:'Po 8 tygodniach zwisów 2–3 tygodnie przerwy od chwytotablicy — aplikacja sama zamienia wtedy ten dzień na core i mobilność.'},
+    ...HANGBOARD_SAFETY,
+  ]
+};
+function linaIH(st){
+  const tab = {1:[3,4], 2:[4,4], 3:[5,4], 4:[3,4], 5:[4,5], 6:[5,5], 7:[5,5]};
+  const [series, reps] = tab[st.wk] || [3,4];
+  const p = applyHangboardOverride({...HANGBOARD_PROTOCOLS.IH, series, reps});
+  return {...p, name:`Chwytotablica: zwisy przerywane 10/5 — ${p.series} × ${p.reps}`};
+}
+
+/* ---------- Dzień planu ---------- */
+function linaMakeDay(slot, iso, st){
+  st = st || linaStage(mondayOf(iso));
+  const base = {key:'L:'+slot, lina:true, linaSlot:slot};
+  const C = (title, icon, kind, blocks, note) => ({...base, type:'climb', icon, title, climbKind:kind, blocks, note});
+  const S = (title, icon, blocks, note) => ({...base, type:'strength', icon, title, blocks, note});
+  const R = (title, opt, note) => ({...base, type:'rest', icon:'😴', title, optBlocks:opt || [], note});
+  switch(slot){
+    case 'wall': return C(st.phase === 'ap' ? 'Ściana: wytrzymałość — trudniejsze drogi w parach' : 'Ściana: wytrzymałość (sesja główna)', '🧗', 'wytrz', linaWallBlocks(st, iso), linaWallNote(st));
+    case 'tests': return C('Ściana: testy postępów', '📋', 'test', linaTestDayBlocks(),
+      'Testy robisz zawsze na tych samych drogach i o podobnej porze — tylko wtedy wyniki da się porównać. Kolejność w aplikacji: najpierw oddech (jedno wejście), potem automat, na końcu obwód. Jeśli obwód po teście A to za dużo, zrób go innego dnia w tym tygodniu — ważne, żeby za każdym razem tak samo.'
+      + (st.wk === 8 ? ' W tym tygodniu, jeśli masz partnera, zamiast testów możesz zrobić dzień prowadzenia z próbą 6A.' : ''));
+    case 'lead': return C('Ściana: dzień prowadzenia', '🤝', 'prow', [LINA_LEAD], 'Stres prowadzenia oswaja się głównie prowadząc — przy jednym dniu na 4–6 tygodni ta część będzie się poprawiać wolniej niż wytrzymałość.');
+    case 'wallLight': return C('Ściana: sesja lekka (technika)', '🌿', 'lekka', linaLightBlocks(),
+      'Sesja lekka nie liczy się do limitu intensywnych dni, ale <b>tego dnia i następnego nie ma chwytotablicy</b> — plan tego pilnuje.');
+    case 'boulder': return C('Ściana: bouldering', '🪨', 'boulder', linaBoulderBlocks(false), 'Siła i moc + technika nóg.');
+    case 'boulderTech': return C('Ściana: bouldering techniczny (lekko)', '🪨', 'lekka', linaBoulderBlocks(true),
+      'Dziś tylko technika i łatwa objętość — intensywne buldery nie mieszczą się w zasadach palców w tym tygodniu.');
+    case 'homeA': return S('Dom A: antagoniści, przysiad jednonóż, core', '🏠', linaHomeA(),
+      'Ok. 40 min. Bez palców. Pistol prowadzisz na swoim poziomie (Achilles: pięta cały czas na podłożu).');
+    case 'homeB': {
+      const hb = linaHomeB(iso);
+      return S('Dom B: noga, pchanie, łokcie, stopy', '🏠', hb.blocks,
+        'Ok. 40 min. Bez obciążania palców poza podciąganiem na drążku (utrzymanie, nie priorytet).'
+        + (hb.noDips ? ' <b>Dipy dziś wypadają</b> — dzień wcześniej było mocne wspinanie (zasada: nie w dobie po mocnym wspinaniu).' : ''));
+    }
+    case 'homeBmob': return S('Dom B — tylko mobilność i oddech', '🧘', [LINA_ANKLE_HIPS, LINA_BREATH],
+      'Jutro dodatkowy dzień na ścianie, więc dziś zgodnie z planem tylko mobilność i oddech.');
+    case 'hb': return S('Dom: chwytotablica 10/5 + core', '✋', [FINGER_WARMUP, linaIH(st), linaCoreBlock(), COOLDOWN],
+      'Jedyna sesja palców w domu. Rozgrzewka palców w całości — dokument podaje 5 min, ale w tej aplikacji obowiązuje pełna (12–15 min), bez skracania.');
+    case 'testD': return S('Dom: test palców D + core', '✋', [FINGER_WARMUP, linaTestBlock('D'), linaCoreBlock(), COOLDOWN],
+      'Test zamiast zwisów — tylko w dniu bez innego obciążenia palców.');
+    case 'hbBreak': return S('Dom: core + mobilność (przerwa od tablicy)', '🧘', [linaCoreBlock(), LINA_HIPS, LINA_BREATH],
+      'Po 8 tygodniach zwisów 2–3 tygodnie przerwy od chwytotablicy — wraca w 3. tygodniu cyklu.');
+    case 'hbOff': return S('Dom: core + mobilność (bez tablicy w tym tygodniu)', '🧘', [linaCoreBlock(), LINA_HIPS, LINA_BREATH],
+      'Tablica w tym tygodniu odpada — palce dostały swoje na ścianie. Szczegóły w banerze „Plan przeliczony".');
+    case 'restMob': return R('Wolne — ewentualnie 15 min mobilności', [LINA_HIPS]);
+    default: return R('Wolne', [], iso && new Date(iso+'T00:00:00').getDay() === 0
+      ? 'Co 2–3 tygodnie możesz tu zrobić trzeci dzień na ścianie: sesję lekką albo prowadzenie z partnerem. Wybierz to z wyprzedzeniem w „Zmień lub dołóż" — wtedy sobota sama ograniczy się do mobilności i oddechu.' : '');
+  }
+}
+function linaDayFor(iso){
+  const plan = linaPlanWeek(mondayOf(iso));
+  const d = plan.days.find(x => x.iso === iso);
+  const day = linaMakeDay(d.slot, iso, plan.st);
+  day.linaNotes = d.notes;
+  day.linaAuto = d.slot !== d.base;
+  day.linaBase = d.base;
+  if(d.slot === 'wallLight' && d.base === 'wallLight')
+    day.note = 'W tym tygodniu bouldery są w czwartek, więc środa jest sesją lekką — dwa intensywne dni pod rząd łamią zasadę ok. 48 h. Główny bodziec wytrzymałościowy w tym tygodniu odpada; jako wyjątek — w porządku, ale jeśli zdarza się często, wróć do bulderów w poniedziałek. ' + day.note;
+  return day;
+}
+
+/* ---------- Ekran Dziś: banery planu ---------- */
+function linaWeekInfo(st, plan){
+  const wk = st.wk;
+  let t = st.stage === 0
+    ? 'Tydzień startowy: w środę na ścianie testy (oddech, automat, obwód), w piątek zamiast zwisów test palców. Wyniki są punktem odniesienia dla testów w tygodniach 4 i 8.'
+    : ({baza:'Baza: ciągłe wspinanie na obwodach i interwały na automacie, pompa pod koniec serii ok. 5–6/10.',
+        lzejszy:'Lżejszy tydzień: mniej wejść, pompa niżej. Jeśli masz partnera — dzień prowadzenia zamiast środy.',
+        ap:'Trudniejsze drogi w parach: pompa pod koniec pary 7–8/10, bez odpadania w połowie drogi; drop-set na 5A, gdy pompa ≥8/10.',
+        testy8:'Lżejszy tydzień z testami na tych samych drogach co w tygodniu 0. Potem nowy cykl.'}[st.phase] || '');
+  if(st.hbBreak) t += ' <b>Przerwa od chwytotablicy</b> (2 tygodnie po 8 tygodniach zwisów).';
+  if(st.cycle >= 3) t += '<br><br>Po 2–3 cyklach, gdy 6A jest stabilne, dokument proponuje 4–6 tygodni bloku na wytrzymałość siłową (np. 4×4) przed wyjazdem w skały — to osobny blok, aplikacja go nie prowadzi.';
+  t += '<br><br><b>Ten tydzień:</b><br>' + plan.days.map(d => `• ${LINA_DOW_SHORT[d.idx]} — ${LINA_SLOT_TITLE[d.final] || d.final}${d.extra ? ' + ' + (LINA_SLOT_TITLE[d.extra] || d.extra) : ''}`).join('<br>');
+  t += '<br><br>Etap cyklu przesuwa się po tygodniu z zapisaną sesją na ścianie (lina albo obwody) — bez niej tydzień się powtarza, zamiast „zaliczać" niezrobiony bodziec.';
+  return t;
+}
+function linaTodayHTML(iso){
+  const mon = mondayOf(iso), plan = linaPlanWeek(mon), st = plan.st;
+  if(st.before) return bannerHTML('info', '🧗', 'Plan na linę startuje ' + fmtDayLong(linaStartISO()),
+    'Do tego dnia nic nie jest zaplanowane. Datę startu zmienisz w Ustawieniach → Program treningowy.');
+  let html = bannerHTML('info', '🗓️', 'Plan na linę · ' + st.label, linaWeekInfo(st, plan));
+  const thisMon = mondayOf(todayISO()), prevMon = addDaysISO(thisMon, -7);
+  if(mon === thisMon && (st.repeats || []).indexOf(prevMon) !== -1){
+    html += bannerHTML('warn', '🔁', 'Etap powtórzony — w zeszłym tygodniu brak sesji na ścianie',
+      `Etap cyklu idzie naprzód tylko po tygodniu z sesją na linie albo obwodach (sam bouldering jej nie zastępuje). W zeszłym tygodniu takiej sesji nie ma w zapisach, więc ten tydzień powtarza poprzedni etap — progresja ma sens tylko po zrobionym bodźcu.<br><br>Jeśli sesja była, tylko jej nie zapisałeś:
+       <button class="btn btn-ghost" style="margin-top:10px;" onclick="linaMarkWeekDone('${prevMon}')">✓ Zalicz zeszły tydzień</button>`);
+  }
+  const d = plan.days.find(x => x.iso === iso);
+  const all = plan.days.filter(x => x.notes.length);
+  if(all.length){
+    const body = (d && d.notes.length ? '<b>Ten dzień:</b><br>' + d.notes.map(n => '• ' + n).join('<br>') + '<br><br>' : '')
+      + '<b>Zmiany w tym tygodniu:</b><br>' + all.map(x => `• ${LINA_DOW_SHORT[x.idx]}: ${x.notes.join(' ')}`).join('<br>')
+      + '<br><br>Plan przelicza się sam, gdy dodasz, zmienisz albo usuniesz jednostkę. Stałe zasady: ok. 48 h między intensywnymi dniami dla palców, maks. 3 intensywne na 7 dni, bez tablicy w dniu sesji lekkiej i nazajutrz, co najmniej jeden dzień całkiem wolny.';
+    html += bannerHTML('warn', '🔄', d && d.notes.length ? 'Plan tego dnia przeliczony automatycznie' : `Plan tygodnia przeliczony (zmiany: ${all.length})`, body, !!(d && d.notes.length));
+  }
+  if(iso >= thisMon){
+    const bd = plan.bd;
+    html += `<div class="card" style="padding:12px 14px;">
+      <div class="meta" style="margin-bottom:8px;">Bouldery w tym tygodniu:</div>
+      <div class="btn-row">
+        <button class="btn ${bd === 'mon' ? 'btn-primary' : 'btn-ghost'}" onclick="linaSetWeekBoulder('${mon}','mon')">Poniedziałek</button>
+        <button class="btn ${bd === 'thu' ? 'btn-primary' : 'btn-ghost'}" onclick="linaSetWeekBoulder('${mon}','thu')">Czwartek</button>
+      </div>
+      ${bd === 'thu' ? '<div class="meta" style="margin-top:8px;">Czwartek po środzie na ścianie łamie zasadę 48 h, więc środa staje się sesją lekką, a tablica idzie na sobotę.</div>' : ''}
+    </div>`;
+  }
+  return html;
+}
+function linaSetWeekBoulder(mon, v){
+  const per = store.get('linaWeekBoulder', {});
+  per[mon] = v;
+  store.set('linaWeekBoulder', per);
+  vibrate(25);
+  renderAll();
+}
+function linaMarkWeekDone(mon){
+  const m = store.get('linaWeekDone', {});
+  m[mon] = true;
+  store.set('linaWeekDone', m);
+  vibrate(25);
+  renderAll();
+}
+
+/* Ściąga na dni na ścianie: drille, oddech, prowadzenie, sygnały ostrzegawcze. */
+function linaRefHTML(){
+  const det = (t, h) => `<details class="tech"><summary>${t}</summary><div class="inner">${h}</div></details>`;
+  return `<div class="tech-head">Ściąga — plan na drogi z liną</div>`
+    + det('Drille na pracę nóg (wybierz jedno zadanie na serię)', `<ol>
+        <li><b>Ciche stopy</b> — stawiasz stopę bez dźwięku: najpierw celujesz czubkiem buta, ciężar przenosisz, gdy stopa leży. Stuknęło — cofnij i powtórz.</li>
+        <li><b>Stopy bez poprawiania</b> — stopy raz postawionej nie poprawiasz ani nie przesuwasz aż do następnego ruchu nogą.</li>
+        <li><b>Wzrok na stopniu</b> — patrzysz na stopień, aż stopa go obciąży, dopiero potem na chwyt.</li>
+        <li><b>Zawieszenie dłoni nad chwytem</b> — zatrzymujesz dłoń ok. 2 cm nad chwytem na 2–3 s. Jeśli w tej pauzie odpychasz się od ściany albo druga ręka mocno pracuje, ciężar nie jest nad stopą.</li>
+        <li><b>Obrót na stopniu</b> — na przodostopiu obracasz piętę tak, żeby biodro po stronie sięgającej ręki zbliżyło się do ściany.</li>
+        <li><b>Wysoki stopień bez ciągnięcia rękami</b> — stopa wysoko, dłonie rozluźnione do minimum, barki nad kolano, wstajesz z nogi.</li>
+        <li><b>Drop knee</b> — stopa zewnętrzną krawędzią buta, kolano obraca się do środka i w dół, przeciwna ręka sięga dalej.</li>
+        <li><b>Skręt bioder</b> — na przewieszeniu ten sam ruch raz frontalnie, raz bokiem z biodrem przy ścianie. Porównaj wysiłek rąk.</li>
+        <li><b>Ograniczenie rąk</b> — duże chwyty i drobne stopnie albo wspinanie otwartą dłonią.</li>
+        <li><b>Heel i toe hook</b> (na bulderach o umiarkowanej trudności) — piętą ciągniesz, napinając tył uda; palcami buta zahaczasz pod chwyt, napinając przód podudzia i brzuch.</li>
+        <li><b>Płyty i połogi</b> — 1–2 drogi na sesję: tułów wyprostowany, ciężar nad stopami, pięty nisko.</li>
+        <li><b>Stopy przy stałych rękach</b> — trzymasz 2 duże chwyty i robisz 10 zmian stopni bez ruchu rąk.</li>
+        <li><b>Proste ramiona</b> — cała seria z możliwie prostymi ramionami, pracę wykonują nogi i biodra.</li>
+      </ol>To praktyka trenerska — nie ma badań porównujących skuteczność poszczególnych drilli.`)
+    + det('Oddech: jak sprawdzić bezdech i jak go oduczyć', `Bezdech we wspinaniu występuje i podnosi ciśnienie (to pokazały badania), ale nie ma badań, że pogarsza utlenowanie przedramion — traktuj go raczej jako znak napięcia i stresu, które realnie przyspieszają pompę.<br><br>
+        <b>Jak sprawdzić:</b> głośne odliczanie ruchów na drodze 5B (gdzie milkniesz, tam wstrzymujesz oddech); nagranie dźwięku z telefonu w kieszeni — liczysz bezdechy dłuższe niż ok. 3 s; partner na prowadzeniu zapisuje, przy których wpinkach zamilkłeś.<br><br>
+        <b>Drille:</b><ol>
+        <li>Wydech na ruch — na łatwym terenie przy każdym przechwycie, tak żebyś sam go słyszał.</li>
+        <li>3 wydechy na shake-oucie — ręka opuszczona wzdłuż ciała i potrząsana, 3 wolne wydechy dłuższe niż wdech (opuszczona ręka ma poparcie w badaniach, wydechy to praktyka).</li>
+        <li>Wpinka na wydechu — ustawiasz stopy, wybierasz chwyt, wydychasz przez całą wpinkę.</li>
+        <li>Mocny wydech tylko na najtrudniejszym ruchu, potem od razu spokojny oddech.</li>
+        <li>Oddech przed drogą: 1–2 min (4 s wdech, 6 s wydech) albo 4-4-4-4.</li>
+        <li>Odpadanie z wydechem (wg Ilgnera): zawis na wędce → krótkie odpadnięcia na wędce → krótkie loty na prowadzeniu w terenie pionowym lub przewieszonym bez półek (ten etap tylko z partnerem). Przez cały lot długi, słyszalny wydech.</li></ol>
+        <b>Kiedy do lekarza:</b> świsty, kaszel albo ucisk w klatce ok. 5–10 min po wysiłku (skurcz oskrzeli wysiłkowy) albo świst przy wdechu w szczycie wysiłku (wysiłkowa obturacja krtani).`)
+    + det('Prowadzenie: wpinanie i oswajanie odpadania', `<ul>
+        <li>Wpinasz, gdy ekspres jest między klatką a pasem, z dobrej pozycji stóp, na wydechu.</li>
+        <li>Lina biegnie przed nogą — nigdy za łydką ani kolanem.</li>
+        <li><b>Bez back-clipu:</b> lina od asekurującego biegnie wzdłuż ściany, wchodzi do karabinka od strony ściany i wychodzi na zewnątrz, w Twoją stronę.</li>
+        <li><b>Bez z-clipu:</b> linę do wpinki bierzesz tuż przy węźle, nie spod poprzedniego ekspresu.</li>
+        <li>Odpadanie ćwiczysz stopniowo, z doświadczonym asekurującym.</li></ul>
+        <b>Między dniami z partnerem:</b> każde wejście na automacie traktuj jak prowadzenie — przed startem wskaż sobie miejsca wpinek i odpoczynków, symulowane wpinki rób na wydechu. Puszczaj się na automacie z różnych miejsc drogi, także z trudnego ruchu (zgodnie z regulaminem ściany). Jeśli ściana pozwala — 2–3 min wpinania „na sucho" do nisko wiszącego ekspresu, obiema rękami i przy obu ustawieniach zamka.`)
+    + det('Sygnały ostrzegawcze', `<ul>
+        <li><span class="warn"><b>Ból u podstawy palca przy chwytaniu lub ucisku, trzask w palcu</b></span> — przerwij i skonsultuj się z fizjoterapeutą lub lekarzem.</li>
+        <li>Poranna sztywność palców utrzymująca się kilka dni, ból łokcia (przyśrodkowy albo boczny nadkłykieć), ból barku nad głową — zmniejsz obciążenie.</li>
+        <li>Spadek wyników, gorszy sen, brak motywacji dłużej niż tydzień — zrób lżejszy tydzień.</li>
+        <li>Ból, który utrzymuje się do następnego dnia albo narasta z tygodnia na tydzień — zmniejsz obciążenie.</li></ul>`)
+    + det('Czego w tym planie nie robimy', `<ul>
+        <li>Piramidy 6a–6b+ i „4×4" na 5c/6a — powyżej obecnego limitu na linie.</li>
+        <li>Frenchies — siła ciągu nie jest ograniczeniem, a mogą drażnić łokcie.</li>
+        <li>Testu z wykałaczką w ustach — ryzyko zadławienia przy odpadnięciu.</li>
+        <li>Zamiany zwisów 10/5 na 7/3 — brak bezpośredniego porównania, zostajemy przy 10/5.</li>
+        <li>Basenu i biegania „na pompę" — brak dowodów przeniesienia efektu (dla zdrowia mogą być, nie kosztem wspinania).</li>
+        <li>Treningu mięśni wdechowych — brak badań u wspinaczy, niski priorytet.</li></ul>`);
+}
+function linaClimbDayHTML(dayObj, entry){
+  let html = limitsBannerHTML(checkFingerLimits('climb', null, dayObj.climbKind));
+  if(dayObj.note) html += `<div class="notes-box" style="margin-top:0;">${dayObj.note}</div>`;
+  html += `<div class="notes-box"><b>Achilles:</b> z bulderów schodzisz po chwytach — <span class="warn">nigdy zeskok z wysokości</span>. Zjazd na automacie kończysz miękko, na ugiętych kolanach.</div>`;
+  html += blocksListHTML(dayObj.blocks, entry);
+  html += `<div style="margin-top:14px;"><button class="btn btn-primary" onclick="openClimb('${dayObj.climbKind}')">Zapis sesji: liczby, pompa, rodzaj</button></div>`;
+  if(entry.climb) html += `<div class="meta" style="margin-top:10px;text-align:center;">✓ Sesja zapisana: ${climbSummaryTxt(entry.climb)}</div>`;
+  html += linaRefHTML();
+  return html;
+}
+
+/* Zmień lub dołóż — wersja dla planu na linę. */
+function linaPickerHTML(planned, day, overridden, extras){
+  const opt = (fn, key, icon, label) =>
+    `<button class="btn btn-secondary" style="margin-bottom:8px;text-align:left;" onclick="${fn}('${key}')">${icon} ${label}</button>`;
+  let addSection;
+  if(day.type === 'rest'){
+    addSection = `<div class="meta" style="margin-top:14px;">W dzień wolny nie ma jednostki, do której dałoby się dołożyć drugą — wybierz powyżej, co robisz zamiast odpoczynku.</div>`;
+  } else if(extras.length){
+    addSection = `<div class="meta" style="margin:16px 0 8px;"><b>Druga jednostka:</b> ${extras[0].title}</div>
+      <button class="btn btn-ghost" onclick="setDayExtra('none')">✕ Usuń drugą jednostkę</button>`;
+  } else {
+    const adds = day.type === 'climb'
+      ? opt('setDayExtra','L:homeA','🏠','Dołóż: Dom A (bez palców)') + opt('setDayExtra','L:homeB','🏠','Dołóż: Dom B')
+      : opt('setDayExtra','L:wallLight','🌿','Dołóż: ściana — sesja lekka') + opt('setDayExtra','L:boulder','🪨','Dołóż: bouldering') + opt('setDayExtra','L:wall','🧗','Dołóż: ściana — wytrzymałość');
+    addSection = `<div class="meta" style="margin:16px 0 8px;">Albo <b>dwie rzeczy jednego dnia</b> — dołóż drugą jednostkę:</div>${adds}`;
+  }
+  return `<details class="tech" style="margin-top:12px;">
+    <summary>Zmień lub dołóż jednostkę do tego dnia</summary>
+    <div class="inner">
+      <div class="meta" style="margin-bottom:12px;">Według planu ten dzień to <b>${planned.title}</b>. Wybierz, co robisz <b>zamiast</b> tego — <b>plan sam przeliczy resztę tygodnia</b>: przesunie albo odpuści tablicę, zamieni sesję główną na lekką, przeniesie dom na wolny dzień — tak, żeby zostały zasady palców.</div>
+      ${opt('setDayOverride','L:wall','🧗','Ściana: wytrzymałość (sesja główna)')}
+      ${opt('setDayOverride','L:boulder','🪨','Ściana: bouldering')}
+      ${opt('setDayOverride','L:wallLight','🌿','Ściana: sesja lekka (technika)')}
+      ${opt('setDayOverride','L:lead','🤝','Dzień prowadzenia (z partnerem)')}
+      ${opt('setDayOverride','L:tests','📋','Ściana: testy postępów')}
+      ${opt('setDayOverride','L:homeA','🏠','Dom A: antagoniści, przysiad jednonóż, core')}
+      ${opt('setDayOverride','L:homeB','🏠','Dom B: noga, pchanie, łokcie, stopy')}
+      ${opt('setDayOverride','L:hb','✋','Dom: chwytotablica 10/5 + core')}
+      ${opt('setDayOverride','rest','😴','Odpoczynek (pauza)')}
+      <div class="meta" style="margin:16px 0 8px;"><b>Program gumowy</b> — na wyjazd albo dzień bez sprzętu:</div>
+      ${opt('setDayOverride','gumA','🎒','Gumy A — Push + core')}
+      ${opt('setDayOverride','gumB','🎒','Gumy B — Nogi + core')}
+      ${opt('setDayOverride','gumC','🎒','Gumy C — Pull + kondycja')}
+      ${(overridden || extras.length) ? `<button class="btn btn-primary" style="margin-top:4px;" onclick="setDayOverride('plan')">✓ Wróć do planu (${planned.title})</button>` : ''}
+      ${addSection}
+    </div>
+  </details>`;
+}
+
+/* ---------- Bloki sesji z timerem (ściana, oddech) i testy ---------- */
+let pumpPicked = null;
+function pumpChipsHTML(rowId, fn){
+  let h = `<div class="rpe-row pump-row" id="${rowId}">`;
+  for(let v = 0; v <= 10; v++) h += `<button type="button" class="rpe-chip" data-v="${v}" onclick="${fn}(this)">${v}</button>`;
+  return h + '</div>';
+}
+function showChips(rowId, val){
+  document.querySelectorAll('#'+rowId+' .rpe-chip').forEach(b => b.classList.toggle('on', (b.dataset.k || Number(b.dataset.v)) === val));
+}
+function pickPump(btn){
+  const v = Number(btn.dataset.v);
+  pumpPicked = pumpPicked === v ? null : v;
+  showChips('pumpRow', pumpPicked);
+}
+function renderGuidedBody(data){
+  const log = (loadEntry(state.selectedDate).exercises || {})[data.id];
+  pumpPicked = log && log.pump != null ? log.pump : null;
+  let html = '';
+  if(data.intro) html += `<div class="notes-box" style="margin-top:0;">${data.intro}</div>`;
+  if(data.checklist) html += `<details class="tech" open><summary>Bezpieczeństwo na automacie — przed każdym wejściem</summary><div class="inner"><ol>${data.checklist.map(x => '<li>'+x+'</li>').join('')}</ol>${data.checklistNote ? '<div class="meta" style="margin-top:8px;">'+data.checklistNote+'</div>' : ''}</div></details>`;
+  if(data.phases && data.phases.length){
+    html += `<div class="card">` + timerRingHTML() + `</div>`;
+    if(data.phases.some(p => p.tap)) html += `<div class="meta" style="margin:-4px 0 10px;">Przy wejściach timer czeka na Ciebie — dotknij przycisku po wylądowaniu, dopiero wtedy liczy kontrolę zamka i przerwę.</div>`;
+  }
+  if(data.pumpLog){
+    html += `<div style="margin-top:12px;"><label style="font-size:0.7rem;color:var(--chalk-500);display:block;margin-bottom:6px;">Pompa pod koniec (0 = żadna, 10 = przedramiona „zalane")</label>${pumpChipsHTML('pumpRow','pickPump')}</div>`;
+  }
+  html += `<div class="log-row"><div><label>Notatka (droga, zadanie, odczucia)</label><input type="text" id="guidedNote" value="${esc((log && log.note) || '')}" placeholder="opcjonalnie"></div></div>`;
+  html += `<button class="btn btn-primary" style="margin-top:12px;" onclick="saveGuided('${data.id}')">${log ? 'Zapisz zmiany' : 'Zapisz jako zrobione'}</button>`;
+  if(log && log.completedAt) html += `<div class="meta" style="margin-top:8px;text-align:center;">✓ Zapisane${log.pump != null ? ' · pompa ' + log.pump + '/10' : ''}</div>`;
+  if(data.tech) html += techBlock(data, false);
+  setTimeout(() => {
+    if(data.phases && data.phases.length) engineLoad(data.phases, {noPrep: !!data.phases[0].tap});
+    showChips('pumpRow', pumpPicked);
+  }, 0);
+  return html;
+}
+function saveGuided(id){
+  const found = lookupExercise(id);
+  const data = found ? found.data : {id};
+  const entry = loadEntry(state.selectedDate);
+  const ex = entry.exercises || {};
+  const prev = ex[id] || {};
+  const noteEl = document.getElementById('guidedNote');
+  ex[id] = {...prev, kind:'guided', name:data.name,
+    completedAt: prev.completedAt || new Date().toISOString(),
+    pump: data.pumpLog && pumpPicked != null ? pumpPicked : undefined,
+    note: noteEl ? noteEl.value : '',
+    climbKind: data.climbKind || undefined};
+  mergeEntry(state.selectedDate, {exercises: ex});
+  vibrate(30);
+  goToday();
+}
+function linaTestSummary(data, v){
+  return data.fields.filter(f => v[f.k] != null).map(f => f.l.split(' (')[0].toLowerCase() + ': ' + v[f.k]).join(' · ');
+}
+function renderLinaTestBody(data){
+  const entries = allEntries();
+  const hist = Object.keys(entries).sort()
+    .filter(iso => iso !== state.selectedDate && entries[iso].exercises && entries[iso].exercises[data.id] && entries[iso].exercises[data.id].values)
+    .map(iso => ({iso, v: entries[iso].exercises[data.id].values}));
+  const cur = ((loadEntry(state.selectedDate).exercises || {})[data.id]) || {};
+  const cv = cur.values || {};
+  let html = `<div class="notes-box" style="margin-top:0;">${data.how}<br><br><b>${data.change}</b></div>`;
+  if(data.climbKind) html += `<details class="tech"><summary>Bezpieczeństwo na automacie — przed każdym wejściem</summary><div class="inner"><ol>${LINA_AUTO_CHECK.map(x => '<li>'+x+'</li>').join('')}</ol></div></details>`;
+  if(data.phases) html += `<div class="card">` + timerRingHTML() + `</div>`;
+  data.fields.forEach(f => {
+    html += `<div class="log-row"><div><label>${f.l}</label><input type="number" inputmode="decimal" id="lt_${f.k}" value="${cv[f.k] != null ? cv[f.k] : ''}"></div></div>`;
+  });
+  html += `<button class="btn btn-primary" style="margin-top:12px;" onclick="saveLinaTest('${data.id}')">Zapisz wynik testu</button>`;
+  if(hist.length){
+    html += `<div class="tech-head">Poprzednie wyniki</div>`;
+    hist.slice(-4).forEach(h => { html += `<div class="exercise-row" style="cursor:default;"><div class="left"><div class="exname">${fmtDayLong(h.iso)}</div><div class="exsub">${esc(linaTestSummary(data, h.v))}</div></div></div>`; });
+  } else {
+    html += `<div class="meta" style="margin-top:12px;">To pierwszy zapis tego testu — kolejne pokażą się tu do porównania.</div>`;
+  }
+  if(data.phases) setTimeout(() => engineLoad(data.phases, {}), 0);
+  return html;
+}
+function saveLinaTest(id){
+  const found = lookupExercise(id);
+  if(!found) return;
+  const data = found.data;
+  const values = {};
+  data.fields.forEach(f => {
+    const el = document.getElementById('lt_'+f.k);
+    const raw = el ? String(el.value).replace(',', '.').trim() : '';
+    if(raw !== '' && !isNaN(Number(raw))) values[f.k] = Number(raw);
+  });
+  const entry = loadEntry(state.selectedDate);
+  const ex = entry.exercises || {};
+  ex[id] = {...(ex[id] || {}), kind:'linatest', name:data.name, completedAt: new Date().toISOString(), values,
+    climbKind: data.climbKind || undefined};
+  mergeEntry(state.selectedDate, {exercises: ex});
+  vibrate(30);
+  goToday();
+}
+
+/* ---------- Ustawienia ---------- */
+function saveProgram(v){
+  store.set('program', v === 'lina' ? 'lina' : 'fbw');
+  if(v === 'lina' && !store.get('linaStart', null)){
+    // pon–śr: tydzień 0 (testy) jeszcze w tym tygodniu; czw–nd: od najbliższego poniedziałku
+    const dow = new Date(todayISO()+'T00:00:00').getDay();
+    const mon = mondayOf(todayISO());
+    store.set('linaStart', (dow >= 1 && dow <= 3) ? mon : addDaysISO(mon, 7));
+  }
+  vibrate(25);
+  loadSettingsForm();
+}
+function saveLinaStart(val){
+  if(!val) return;
+  store.set('linaStart', mondayOf(val));
+  vibrate(20);
+  loadSettingsForm();
+}
+function saveLinaBoulder(v){
+  store.set('linaBoulderDefault', v === 'thu' ? 'thu' : 'mon');
+  vibrate(20);
+  loadSettingsForm();
+}
+function linaSettingsInfo(){
+  if(!linaOn()) return '';
+  const st = linaStage(mondayOf(todayISO()));
+  return st.before ? 'Plan wystartuje ' + fmtDayLong(linaStartISO()) + '.'
+    : 'Dziś: ' + st.label + '.' + ((st.repeats || []).length ? ` Powtórzone tygodnie (bez sesji na ścianie): ${st.repeats.length}.` : '');
+}
+
+/* =========================================================================
    RENDER: PASEK TYGODNIA + DZIEŃ
    ========================================================================= */
 function renderWeekStrip(){
@@ -3077,7 +4153,8 @@ function renderWeekStrip(){
     const iso = isoOf(d);
     const resolved = resolveDay(iso);
     const icons = [dayIcon(resolved.day), ...resolved.extras.map(dayIcon)];
-    const modified = resolved.overridden || resolved.extras.length > 0 || resolved.extraExercises.length > 0;
+    const modified = resolved.overridden || resolved.extras.length > 0 || resolved.extraExercises.length > 0
+      || !!(resolved.planned.lina && resolved.planned.linaAuto);
     const chip = document.createElement('div');
     chip.className = 'day-chip' + (modified?' ovr':'') + (iso===todayISO()?' today':'') + (iso===state.selectedDate?' selected':'');
     chip.innerHTML = `<div class="dlabel">${resolved.day.label}</div><div class="dtype icon${icons.length>1?' combo':''}">${icons.join('')}</div>`;
@@ -3091,6 +4168,7 @@ function renderWeekStrip(){
 function dayComponentHTML(dayObj, entry){
   let html = '';
   if(dayObj.type==='climb'){
+    if(dayObj.lina) return linaClimbDayHTML(dayObj, entry);
     const res = checkFingerLimits('climb');
     html += limitsBannerHTML(res);
     html += `<div class="notes-box"><b>Plan na sesję:</b> długie łatwe wspinanie ciągiem (20–30 min), powtarzane przewiązki, trening odpoczywania na drodze. <span class="warn">Z bulderów schodź po chwytach — nigdy nie zeskakuj.</span></div>`;
@@ -3106,11 +4184,36 @@ function dayComponentHTML(dayObj, entry){
   if(dayObj.skipped) return '';   // opis i „Przywróć" są w banerze nad listą
   if(dayObj.type==='rest'){
     html += `<div class="notes-box">Dziś nic nie trenujesz — regeneracja jest częścią planu, nie przerwą w nim. Jeśli chcesz, możesz dołożyć lekką mobilność albo wyciszenie.</div>`;
+    if(dayObj.lina && dayObj.note) html += `<div class="notes-box">${dayObj.note}</div>`;
+    if(dayObj.lina && dayObj.optBlocks && dayObj.optBlocks.length) html += blocksListHTML(dayObj.optBlocks, entry, 'Opcjonalnie: ');
     return html;
   }
-  dayObj.blocks.forEach((block, bi)=>{
-    html += `<div class="block-title"><div class="idx">${bi+1}</div><h3>${block.name}</h3></div>`;
-    if(block.kind==='warmup'){
+  if(dayObj.lina){
+    if(dayObj.note) html += `<div class="notes-box" style="margin-top:0;">${dayObj.note}</div>`;
+    html += blocksListHTML(dayObj.blocks, entry);
+    html += `<div class="meta" style="margin-top:14px;">Jeśli zabraknie czasu: najpierw odpuszczasz prostowniki palców, potem skracasz mobilność — nigdy pracy łopatek i rotatorów (to ochrona barków przy wspinaniu).</div>`;
+    return html;
+  }
+  html += blocksListHTML(dayObj.blocks, entry);
+  html += `<div class="meta" style="margin-top:14px;">Kolejność na liście jest celowa: rozgrzewki → palce (na świeżo) → reszta. Jeśli zabraknie czasu, jako pierwsze odpuszczasz pompki archer, potem ab wheel — nigdy chwytotablicy, podciągania, dipów ani pracy łopatek.</div>`;
+  return html;
+}
+
+/* Lista bloków jednostki (rozgrzewki, tablica, ćwiczenia, sesje z timerem, testy) —
+   rejestruje pozycje w state.registry, żeby dało się je otworzyć z listy. */
+function blocksListHTML(blocks, entry, prefix){
+  let html = '';
+  blocks.forEach((block, bi)=>{
+    html += `<div class="block-title"><div class="idx">${bi+1}</div><h3>${prefix || ''}${block.name}</h3></div>`;
+    if(block.kind==='guided'){
+      state.registry[block.id] = {type:'guided', data:block};
+      const log = entry.exercises && entry.exercises[block.id];
+      html += rowHTML(block.id, block.name, (block.sub || '') + (log && log.pump != null ? ` · pompa ${log.pump}/10` : ''), !!(log && log.completedAt));
+    } else if(block.kind==='linatest'){
+      state.registry[block.id] = {type:'linatest', data:block};
+      const log = entry.exercises && entry.exercises[block.id];
+      html += rowHTML(block.id, block.name, log && log.values ? esc(linaTestSummary(block, log.values)) || 'zapisany' : 'po teście wpisz wynik', !!(log && log.completedAt));
+    } else if(block.kind==='warmup'){
       state.registry[block.id] = {type:'warmup', data:block};
       const isDone = !!(entry.warmups && entry.warmups[block.id]);
       html += rowHTML(block.id, block.name, kroki(block.steps.length), isDone);
@@ -3135,7 +4238,6 @@ function dayComponentHTML(dayObj, entry){
       });
     }
   });
-  html += `<div class="meta" style="margin-top:14px;">Kolejność na liście jest celowa: rozgrzewki → palce (na świeżo) → reszta. Jeśli zabraknie czasu, jako pierwsze odpuszczasz pompki archer, potem ab wheel — nigdy chwytotablicy, podciągania, dipów ani pracy łopatek.</div>`;
   return html;
 }
 
@@ -3175,6 +4277,7 @@ function renderToday(){
     ${canDelete ? deleteUnitButtonsHTML(trainingUnits) : ''}
   </div>`;
 
+  if(planned.lina) html += linaTodayHTML(iso);
   const pos = planned.pos;
   if(pos && pos.deload && !overridden){
     html += bannerHTML('warn', '🪫', 'Tydzień odciążeniowy (deload)',
@@ -3192,6 +4295,9 @@ function renderToday(){
     html += bannerHTML('info', '✕', 'Jednostka usunięta — nie zrobiona',
       `Według planu w tym dniu był trening „${planned.title}". Usunąłeś go jako niezrobiony — tak jest oznaczony w dzienniku i w analizie dla Claude.
        <button class="btn btn-ghost" style="margin-top:10px;" onclick="setDayOverride('plan')">↩ Przywróć jednostkę z planu</button>`, true);
+  } else if(overridden && planned.lina){
+    html += bannerHTML('warn', '📅', 'Twoja zmiana dnia',
+      `Według planu ten dzień to „${planned.title}", a Ty wybrałeś „${day.title}". Reszta tygodnia jest już przeliczona pod tę zmianę — zobacz pasek tygodnia i baner „Plan przeliczony".`);
   } else if(overridden){
     const tail = day.type === 'rest'
       ? 'Pauza zamiast treningu jest zawsze w porządku — regeneracja też buduje formę.'
@@ -3200,7 +4306,7 @@ function renderToday(){
       `Według planu ten dzień to „${planned.title}", a Ty wybrałeś „${day.title}". ${tail}`);
   }
   extras.forEach(x=>{ html += comboWarningHTML(day, x); });
-  html += dayPickerHTML(planned, day, overridden, extras);
+  html += planned.lina ? linaPickerHTML(planned, day, overridden, extras) : dayPickerHTML(planned, day, overridden, extras);
 
 
   const units = [day, ...extras];
@@ -3224,7 +4330,9 @@ function renderToday(){
   html += extraExercisesHTML(units, entry);
 
   cont.innerHTML = html;
-  const hdr = pos
+  const hdr = planned.lina
+    ? 'Plan na linę · ' + linaStage(mondayOf(iso)).short
+    : pos
     ? `Cykl ${pos.cycleIndex+1} · Tydz. ${pos.weekInCycle}${pos.deload?' (deload)':''} · ${pos.planWeek}. tydzień planu`
     : '';
   document.getElementById('headerSub').textContent = hdr + ' · ' + allTitles.join(' + ');
@@ -3280,11 +4388,15 @@ function openExerciseData(found){
   document.getElementById('exBreadcrumb').textContent =
     found.type==='hangboard' ? 'CHWYTOTABLICA' :
     found.type==='warmup' ? 'ROZGRZEWKA' :
-    found.type==='measure' ? 'POMIAR' : 'ĆWICZENIE';
+    found.type==='measure' ? 'POMIAR' :
+    found.type==='guided' ? (found.data.climbKind ? 'ŚCIANA' : 'TIMER') :
+    found.type==='linatest' ? 'TEST POSTĘPÓW' : 'ĆWICZENIE';
   document.getElementById('exTitle').textContent = found.data.name;
 
   const body = document.getElementById('exerciseBody');
-  if(found.type==='warmup') body.innerHTML = renderWarmupBody(found.data);
+  if(found.type==='guided') body.innerHTML = renderGuidedBody(found.data);
+  else if(found.type==='linatest') body.innerHTML = renderLinaTestBody(found.data);
+  else if(found.type==='warmup') body.innerHTML = renderWarmupBody(found.data);
   else if(found.type==='hangboard') body.innerHTML = renderHangboardBody(found.data);
   else if(found.type==='measure') body.innerHTML = renderMeasureBody(found.data);
   else body.innerHTML = renderExerciseBody(found.data);
@@ -3747,8 +4859,10 @@ function showBoulderEffort(){
 function climbSummaryTxt(c){
   const r = Number(c.routes) || 0, b = Number(c.boulders) || 0;
   const parts = [];
+  if(c.kind && LINA_CLIMB_KINDS[c.kind]) parts.push(LINA_CLIMB_KINDS[c.kind]);
   if(r) parts.push(`lina: ${r} ${plural(r,'droga','drogi','dróg')}`);
   if(b || c.boulderEffort) parts.push(`bouldering: ${b} ${plural(b,'bulder','buldery','bulderów')}` + (c.boulderEffort ? ` (${BOULDER_EFFORT[c.boulderEffort]})` : ''));
+  if(c.pump != null) parts.push(`pompa ${c.pump}/10`);
   return parts.length ? parts.join(' · ') : 'bez liczb';
 }
 function saveClimb(){
@@ -3757,6 +4871,8 @@ function saveClimb(){
     boulders: document.getElementById('climbBoulders').value,
     feel: document.getElementById('climbFeel').value || undefined,   // brak wyboru = brak oceny
     boulderEffort: boulderEffortPicked || undefined,                  // 1 lekko · 2 średnio · 3 ciężko
+    kind: climbKindPicked || undefined,                              // plan na linę: rodzaj sesji
+    pump: climbPumpPicked != null ? climbPumpPicked : undefined,      // plan na linę: pompa 0–10
     note: document.getElementById('climbNote').value,
     savedAt: new Date().toISOString(),
   };
@@ -3788,6 +4904,7 @@ function protoSummary(p){
     : `${p.series} ${plural(p.series,'zwis','zwisy','zwisów')} po ${p.hang} s · przerwa ${fmtTime(p.seriesRest)}`;
 }
 function exSummary(ex){
+  if(ex.kind === 'guided') return ex.sub || '';
   if(ex.steps) return kroki(ex.steps.length);
   return (ex.holdBased
     ? `${serie(ex.sets)} × utrzymanie ${holdTxt(ex)}`
@@ -3895,7 +5012,7 @@ function renderTools(){
 
   /* ---------- 2. Chwytotablica ---------- */
   html += `<div class="block-title"><div class="idx">1</div><h3>Chwytotablica</h3></div>`;
-  ['A','B','C','CP','D'].forEach(k=>{
+  ['A','B','C','CP','D','IH'].forEach(k=>{
     const p = getProtocol(k);
     html += launchRow('proto:'+k, p.name, protoSummary(p), `openProtocol('${k}')`);
   });
@@ -3935,12 +5052,19 @@ function renderTools(){
   </div></details>`;
 
   /* ---------- 3. Pozostałe ćwiczenia ---------- */
-  const warmups = [], exercises = [];
+  const warmups = [], exercises = [], guided = [];
   for(const id in GLOBAL_REGISTRY){
     const r = GLOBAL_REGISTRY[id];
     if(r.type === 'warmup') warmups.push(r);
     else if(r.type === 'exercise') exercises.push(r);
+    else if(r.type === 'guided') guided.push(r);
   }
+
+  html += `<div class="block-title"><div class="idx">✦</div><h3>Ściana i oddech</h3></div>`;
+  html += `<div class="meta" style="margin-bottom:10px;">Timery z planu na drogi z liną — obwody, seria na automacie (czeka, aż dotkniesz po wylądowaniu) i oddech 4/6.</div>`;
+  guided.forEach(r=>{
+    html += launchRow('ex:'+r.data.id, r.data.name, exSummary(r.data), `openFromTools('${r.data.id}')`);
+  });
 
   html += `<div class="block-title"><div class="idx">2</div><h3>Pojedyncze ćwiczenia</h3></div>`;
   html += `<div class="meta" style="margin-bottom:10px;">Każde z opisem techniki, timerem tempa i odliczaniem przerw — możesz odpalić o dowolnej porze.</div>`;
@@ -3976,7 +5100,8 @@ function renderHistory(){
       const c = entry.climb, r = Number(c.routes) || 0, b = Number(c.boulders) || 0;
       if(r) tags.push(`<span class="pill">🧗 ${r} ${plural(r,'droga','drogi','dróg')}</span>`);
       if(b || c.boulderEffort) tags.push(`<span class="pill">🪨 ${b} buld.${c.boulderEffort ? ' · '+BOULDER_EFFORT[c.boulderEffort] : ''}</span>`);
-      if(!r && !b && !c.boulderEffort) tags.push('<span class="pill">🧗 wspinanie</span>');
+      if(!r && !b && !c.boulderEffort) tags.push(`<span class="pill">🧗 ${LINA_CLIMB_KINDS[c.kind] || 'wspinanie'}</span>`);
+      if(c.pump != null) tags.push(`<span class="pill">pompa ${c.pump}/10</span>`);
     }
     if(entry.exercises){
       const n = Object.keys(entry.exercises).length;
@@ -4022,6 +5147,11 @@ function aiSetTxt(s){
   return t;
 }
 function aiExerciseLine(id, log){
+  if(log.kind === 'guided') return '• '+(log.name || id)+(log.pump != null ? ': pompa '+log.pump+'/10' : ': zrobione')+(aiTxt(log.note) ? ' — „'+aiTxt(log.note)+'"' : '');
+  if(log.kind === 'linatest' && log.values){
+    const t = Object.values(LINA_TESTS).find(x => x.id === id);
+    return '• '+(log.name || id)+': '+(t ? linaTestSummary(t, log.values) : JSON.stringify(log.values));
+  }
   if(id.startsWith('hangboard')) return aiHangboardLine(id, log);
   const found = GLOBAL_REGISTRY[id];
   const ex = found ? found.data : null;
@@ -4050,7 +5180,7 @@ function aiHistory(days, today){
     const iso = aiShift(today, -i);
     const r = resolveDay(iso);
     const units = [r.day, ...r.extras];
-    const before = planPos(iso).beforeStart;
+    const before = linaOn() ? !!linaStage(mondayOf(iso)).before : planPos(iso).beforeStart;
     const planned = !before && units.some(u => u.type !== 'rest');
     const skipped = !before && !!r.day.skipped;
     const entry = loadEntry(iso);
@@ -4063,14 +5193,17 @@ function aiHistory(days, today){
         +(c.boulderEffort ? ', zmęczenie po sesji: '+c.boulderEffort+'/3 ('+BOULDER_EFFORT[c.boulderEffort]+')' : '')
         +(!rt && feel ? ', '+feel : ''));
       if(!rt && !bl && !c.boulderEffort) items.push('• Wspinanie (bez liczb)'+(feel ? ': '+feel : ''));
+      if(c.kind || c.pump != null) items.push('• Rodzaj sesji: '+(LINA_CLIMB_KINDS[c.kind] || 'nie podano')+(c.pump != null ? ', pompa na koniec '+c.pump+'/10' : ''));
       if(aiTxt(c.note)) items.push('• Notatka ze wspinania: „'+aiTxt(c.note)+'"');
       sum.climb++;
     }
-    let strength = false;
+    let strength = false, wallParts = false;
     for(const id of Object.keys(entry.exercises || {})){
       const log = entry.exercises[id];
       if(!log) continue;
       if(id.startsWith('hangboard')) sum.hb++;
+      else if(log.climbKind) wallParts = true;                     // część sesji na ścianie z timerem
+      else if(log.kind === 'guided'){ /* oddech z timerem — nie liczymy jako trening siłowy */ }
       else {
         strength = true;
         if(Array.isArray(log.sets) && log.sets.length && !('planned' in log)) sum.old = true;
@@ -4078,6 +5211,7 @@ function aiHistory(days, today){
       items.push(aiExerciseLine(id, log));
     }
     if(strength) sum.strength++;
+    if(wallParts && !entry.climb) sum.climb++;
     if(!items.length && !planned && !skipped) continue;
     const label = before ? 'przed startem planu'
       : skipped ? r.planned.title
@@ -4123,6 +5257,7 @@ function aiUpcoming(today){
     units.forEach(u => (u.blocks || []).forEach(b => {
       if(b.kind === 'hangboard') parts.push(aiHbName(b.name)+' ('+b.series+' '+plural(b.series,'seria','serie','serii')+' × '+b.reps+' zwisów, '+b.hang+' s / '+b.hangRest+' s)');
       else if(b.kind === 'exercises') b.items.forEach(ex => parts.push(ex.name+' '+ex.sets+' × '+(ex.holdBased ? holdTxt(ex) : ex.repsRange)));
+      else if(b.kind === 'guided' || b.kind === 'linatest') parts.push(b.name);
     }));
     out.push('• '+aiDay(iso)+' — '+units.map(u => u.title).join(' + ')+(r.overridden ? ' (zmienione przeze mnie)' : '')+(parts.length ? ': '+parts.join('; ') : ''));
   }
@@ -4147,8 +5282,15 @@ function claudeSummary(days, today){
   const L = [];
   L.push('Poniżej dane z mojej aplikacji treningowej (Trener FBW '+APP_VERSION+'): wspinaczka, trening siłowy z masą ciała i chwytotablica. Prośba jest na końcu.');
   L.push('', '=== POZYCJA W PLANIE ===');
-  L.push('Dziś ('+aiDay(today)+'): cykl '+(p.cycleIndex+1)+', tydzień '+p.weekInCycle+' z 2 ('+p.planWeek+'. tydzień planu)'+(p.deload ? ' — tydzień odciążeniowy (deload)' : '')+'.');
-  L.push('Układ planu: makrocykl 14 dni. Tydzień 1: pon — blok nóg + core; wt i sob — wspinanie (lina i/lub bouldering); czw — moduł siłowy + chwytotablica; pozostałe dni wolne. Tydzień 2: pon, śr, pt — moduły siłowe (kolejka A→B→C) + chwytotablica, bez wspinania. Co trzeci cykl tydzień 2 to deload: połowa serii, bez chwytotablicy.');
+  const lina = linaOn();
+  if(lina){
+    const ls = linaStage(mondayOf(today));
+    L.push('Program: plan na drogi z liną (wytrzymałość tlenowa przedramion i ekonomia ruchu). Dziś ('+aiDay(today)+'): '+ls.label+(ls.repeats && ls.repeats.length ? '; tygodnie powtórzone z braku sesji na ścianie: '+ls.repeats.length : '')+'.');
+    L.push('Układ tygodnia: pon — bouldering (albo czw), wt — dom A (antagoniści, przysiad jednonóż, core, mobilność, oddech), śr — ściana: wytrzymałość (obwody + interwały na automacie), czw — wolne, pt — chwytotablica 10/5 + core, sob — dom B (noga, dipy, podciąganie, łokcie, stopy), nd — wolne. Cykl 8 tygodni: tydz. 1–3 baza, 4 lżejszy, 5–7 trudniejsze drogi w parach (pompa 7–8/10), 8 lżejszy + testy (A automat, B obwód, C oddech, D palce). Aplikacja sama przelicza tydzień po dodatkowym, zmienionym albo niezrobionym dniu.');
+  } else {
+    L.push('Dziś ('+aiDay(today)+'): cykl '+(p.cycleIndex+1)+', tydzień '+p.weekInCycle+' z 2 ('+p.planWeek+'. tydzień planu)'+(p.deload ? ' — tydzień odciążeniowy (deload)' : '')+'.');
+    L.push('Układ planu: makrocykl 14 dni. Tydzień 1: pon — blok nóg + core; wt i sob — wspinanie (lina i/lub bouldering); czw — moduł siłowy + chwytotablica; pozostałe dni wolne. Tydzień 2: pon, śr, pt — moduły siłowe (kolejka A→B→C) + chwytotablica, bez wspinania. Co trzeci cykl tydzień 2 to deload: połowa serii, bez chwytotablicy.');
+  }
   L.push('', '=== POZIOMY ĆWICZEŃ (warianty dostępne w aplikacji) ===', ...aiLevels());
   L.push('', '=== MOJE TRENINGI: ostatnie '+days+' dni ('+aiDate(aiShift(today, -(days - 1)))+'–'+aiDate(today)+') ===');
   L.push('Liczby przy seriach to powtórzenia albo sekundy (ćwiczenia na utrzymanie). RPE: 10 = nic więcej bym nie zrobił, 8 = zostały 2 powtórzenia zapasu; brak RPE = nie oceniałem.');
@@ -4161,11 +5303,13 @@ function claudeSummary(days, today){
   L.push(...(props.length ? props : ['• brak']));
   L.push('', '=== PLAN NA NAJBLIŻSZE 7 DNI ===', ...aiUpcoming(today));
   L.push('', '=== ZASADY BEZPIECZEŃSTWA (nienaruszalne) ===');
-  L.push('• Palce: maks. 3 intensywne ekspozycje na 7 dni (wspinanie + chwytotablica B, C, C+ lub własna). Dwie intensywne dzień po dniu są zabronione; dzień po intensywnej najwyżej lekka tablica (protokół A lub D). Co najmniej 48 h między wspinaniem a intensywną tablicą. Tablica tylko na początku jednostki, na świeżych palcach.');
+  if(lina) L.push('• Palce (plan na linę): maks. 3 intensywne dni na 7 (bouldering, sesja na ścianie, testy, prowadzenie, chwytotablica 10/5); sesja lekka na ścianie (pompa ≤2–3/10) się nie liczy, ale w jej dniu i nazajutrz bez tablicy. Ok. 48 h między intensywnymi dniami. Co najmniej jeden dzień w tygodniu całkiem wolny. Po 8 tygodniach zwisów 2 tygodnie przerwy od tablicy.');
+  else L.push('• Palce: maks. 3 intensywne ekspozycje na 7 dni (wspinanie + chwytotablica B, C, C+ lub własna). Dwie intensywne dzień po dniu są zabronione; dzień po intensywnej najwyżej lekka tablica (protokół A lub D). Co najmniej 48 h między wspinaniem a intensywną tablicą. Tablica tylko na początku jednostki, na świeżych palcach.');
+  if(lina) L.push('• Automat: kontrola wpięcia przed każdym wejściem jest nienaruszalna.');
   L.push('• Intensywne ekspozycje palców w ostatnich 7 dniach: '+aiFingerWeek(today)+'.');
   L.push('• Achilles (przebyte zapalenie ścięgna): z bulderów schodzę po chwytach, bez zeskoków; żadnych ćwiczeń z wyskokami; pistol squat bez przechodzenia wyżej; wspięcia na palce: '+(SETTINGS.achillesTrack === 'fast' ? 'jednonóż' : 'obunóż (ostrożnie)')+'.');
   L.push('• Dipy: '+(SETTINGS.dipsDepth === '90' ? 'do kąta prostego' : 'stop na 100–110°')+'; nie w dobie po mocnym wspinaniu.');
-  L.push('• Maks. 5 jednostek siłowych na 14 dni.');
+  if(!lina) L.push('• Maks. 5 jednostek siłowych na 14 dni.');
   L.push('', '=== PROŚBA ===');
   L.push('Jesteś doświadczonym trenerem wspinaczki i treningu siłowego. Na podstawie tych danych:');
   L.push('1. Oceń krótko ostatnie tygodnie: co idzie do przodu, co stoi w miejscu, co wygląda na za ciężkie albo za lekkie.');
@@ -4261,6 +5405,13 @@ function loadSettingsForm(){
   document.getElementById('overridesInfo').textContent = n
     ? `Masz zmienione liczby w ${n} ${plural(n,'pozycji','pozycjach','pozycjach')}.`
     : 'Wszystko jeszcze na wartościach z planu.';
+  const lina = linaOn();
+  document.getElementById('setProgram').value = lina ? 'lina' : 'fbw';
+  document.getElementById('linaSettings').style.display = lina ? '' : 'none';
+  document.getElementById('fbwCycleCard').style.display = lina ? 'none' : '';
+  document.getElementById('setLinaStart').value = linaStartISO();
+  document.getElementById('setLinaBoulder').value = store.get('linaBoulderDefault', 'mon');
+  document.getElementById('linaInfo').textContent = linaSettingsInfo();
   document.getElementById('setCycleStart').value = getCycleStart();
   const p = planPos(todayISO());
   document.getElementById('cycleInfo').textContent =
