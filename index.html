@@ -205,6 +205,7 @@
   #timerFull .timer-wrap .btn{ min-height:68px; font-size:1.2rem; }
   #timerFull .fs-open{ display:none; }
   #timerFull .fs-next{ text-align:center; color:var(--chalk-500); font-size:0.95rem; min-height:1.4em; margin-top:14px; }
+  #timerFull .fs-vol{ margin-top:12px; padding:0 4px; }
   body.fs-lock{ overflow:hidden; }
 
   .notes-box{
@@ -288,6 +289,25 @@
   .slider-row{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
   .slider-row .val{ font-size:1.4rem; font-weight:800; color:var(--rope-400); }
   input[type=range]{ width:100%; accent-color:var(--lichen-500); height:28px; }
+  /* Zapis bez timera */
+  .ql-item{ background:var(--stone-900); border:1px solid var(--stone-800); border-radius:12px; padding:10px 12px; margin-bottom:8px; }
+  .ql-row{ display:flex; align-items:flex-start; gap:12px; cursor:pointer; }
+  .ql-row input[type=checkbox]{ width:22px; height:22px; flex:0 0 auto; margin-top:2px; accent-color:var(--lichen-500); }
+  .ql-name{ font-weight:600; color:var(--chalk-100); font-size:0.92rem; line-height:1.35; }
+  .ql-sub{ display:block; font-weight:400; color:var(--chalk-500); font-size:0.78rem; margin-top:2px; }
+  .ql-reps, .ql-sel{ margin-top:8px; }
+  /* Głośność: cienki suwak */
+  .vol-row{ display:flex; align-items:center; gap:10px; }
+  .vol-ic{ font-size:0.95rem; opacity:0.8; }
+  .vol-val{ font-size:0.78rem; color:var(--chalk-500); min-width:64px; text-align:right; }
+  input[type=range].vol-slider{
+    -webkit-appearance:none; appearance:none; flex:1; min-width:0; height:22px; margin:0;
+    background:transparent; cursor:pointer;
+  }
+  .vol-slider::-webkit-slider-runnable-track{ height:3px; border-radius:2px; background:var(--stone-700); }
+  .vol-slider::-moz-range-track{ height:3px; border-radius:2px; background:var(--stone-700); }
+  .vol-slider::-webkit-slider-thumb{ -webkit-appearance:none; width:16px; height:16px; margin-top:-6.5px; border-radius:50%; background:var(--lichen-400); border:none; }
+  .vol-slider::-moz-range-thumb{ width:16px; height:16px; border-radius:50%; background:var(--lichen-400); border:none; }
   input[type=number], input[type=text], select{
     background:var(--stone-900); border:1px solid var(--stone-700); border-radius:10px;
     color:var(--chalk-100); padding:10px 12px; font-size:0.92rem; width:100%;
@@ -396,6 +416,14 @@
   </section>
 
   <!-- ===================== EKRAN: WSPINANIE ===================== -->
+  <section class="screen" id="screen-quick">
+    <div class="back-row">
+      <button class="back-btn" onclick="goToday()">←</button>
+      <h2 style="font-size:1.05rem;">Zapis bez timera</h2>
+    </div>
+    <div id="quickBody"></div>
+  </section>
+
   <section class="screen" id="screen-climb">
     <div class="back-row">
       <button class="back-btn" onclick="goToday()">←</button>
@@ -540,6 +568,14 @@
       <div class="meta" style="margin-top:8px;">Wersja obunóż obowiązuje, dopóki nie potwierdzisz, ile epizodów zapalenia Achillesa przeszedłeś (jeden czy więcej, jedna noga czy obie).</div>
     </div>
     <div class="card">
+      <h2 style="margin-bottom:10px;">Dźwięki timera</h2>
+      <div id="setVolumeBox"></div>
+      <div class="btn-row" style="margin-top:10px;">
+        <button class="btn btn-ghost" onclick="ensureAudio(); beep(880, 0.15); setTimeout(()=>beep(520, 0.2), 260);">🔊 Sprawdź dźwięk</button>
+      </div>
+      <div class="meta" style="margin-top:8px;">Głośność sygnałów timera (start fazy, przerwa, odliczanie 3-2-1, koniec). Wibracje działają niezależnie od suwaka — także przy wyciszeniu. Ten sam suwak jest na dole timera na pełnym ekranie. Na telefonie dźwięk zależy też od głośności multimediów w systemie.</div>
+    </div>
+    <div class="card">
       <h2 style="margin-bottom:10px;">Program treningowy</h2>
       <div class="setting-row">
         <label>Plan</label>
@@ -619,6 +655,7 @@
   </div>
   <div class="fs-body" id="fsBody"></div>
   <div class="fs-next" id="fsNext"></div>
+  <div class="fs-vol" id="fsVol"></div>
 </div>
 
 <nav class="bottomnav">
@@ -630,7 +667,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.25.1';
+const APP_VERSION = '1.26.0';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -2563,13 +2600,38 @@ function ensureAudio(){
     if(audioCtx.state === 'suspended') audioCtx.resume();
   }catch(e){}
 }
+/* Głośność sygnałów 0–100 %. Krzywa kwadratowa (ucho słyszy głośność logarytmicznie):
+   60 % = dotychczasowa głośność, 100 % ≈ 2,7 raza głośniej, 0 = cisza (zostają wibracje). */
+const VOLUME_DEFAULT = 60;
+function getVolume(){
+  const v = Number(store.get('volume', VOLUME_DEFAULT));
+  return isNaN(v) ? VOLUME_DEFAULT : Math.min(100, Math.max(0, v));
+}
+function volumeGain(){ const v = getVolume() / 100; return 0.6 * v * v; }
+function volumeLabel(){ const v = getVolume(); return v === 0 ? 'wyciszone' : v + '%'; }
+function setVolume(v, test){
+  store.set('volume', Math.min(100, Math.max(0, Math.round(Number(v) || 0))));
+  document.querySelectorAll('.vol-slider').forEach(s => { s.value = String(getVolume()); });
+  document.querySelectorAll('.vol-val').forEach(s => { s.textContent = volumeLabel(); });
+  if(test){ ensureAudio(); beep(880, 0.15); }
+}
+function volumeRowHTML(){
+  return `<div class="vol-row">
+    <span class="vol-ic" aria-hidden="true">🔈</span>
+    <input type="range" class="vol-slider" min="0" max="100" step="5" value="${getVolume()}" aria-label="Głośność sygnałów"
+      oninput="setVolume(this.value)" onchange="setVolume(this.value, true)">
+    <span class="vol-val">${volumeLabel()}</span>
+  </div>`;
+}
 function beep(freq=880, dur=0.12){
   try{
     if(!audioCtx) return;
+    const gain = volumeGain();
+    if(gain < 0.002) return;                 // wyciszone
     const o = audioCtx.createOscillator();
     const g = audioCtx.createGain();
     o.frequency.value = freq; o.type = 'sine';
-    g.gain.setValueAtTime(0.22, audioCtx.currentTime);
+    g.gain.setValueAtTime(gain, audioCtx.currentTime);
     g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+dur);
     o.connect(g); g.connect(audioCtx.destination);
     o.start(); o.stop(audioCtx.currentTime+dur);
@@ -2796,6 +2858,7 @@ function openTimerFull(){
   document.getElementById('fsBody').appendChild(wrap);
   const t = document.getElementById('exTitle');
   document.getElementById('fsTitle').textContent = t ? t.textContent : '';
+  document.getElementById('fsVol').innerHTML = volumeRowHTML();
   box.hidden = false;
   document.body.classList.add('fs-lock');
   renderTimerFace();
@@ -3069,6 +3132,135 @@ function deleteUnit(which){
   saveEntry(iso, entry);
   vibrate(25);
   renderAll();
+}
+
+/* =========================================================================
+   ZAPIS BEZ TIMERA — cały dzień po fakcie, jednym ekranem (np. po ścianie,
+   gdzie telefon zostaje w plecaku). Odhaczasz, co zrobiłeś; liczby są
+   opcjonalne. Zapis bez powtórzeń nie wpływa na propozycje zmiany poziomu.
+   ========================================================================= */
+/* Znacznik czasu zapisu: dziś = teraz, dzień miniony = jego wieczór (ważne dla zasady 48 h). */
+function recordTs(iso){
+  return iso === todayISO() ? new Date().toISOString() : new Date(iso+'T18:00:00').toISOString();
+}
+function quickLogButtonHTML(){
+  return `<button class="btn btn-secondary" style="width:auto;margin:12px 8px 0 0;padding:9px 14px;font-weight:700;font-size:0.85rem;" onclick="openQuickLog()">✍️ Zapisz bez timera</button>`;
+}
+let QL_ITEMS = [];
+function qlPumpSelect(id, val){
+  let o = `<option value="">pompa —</option>`;
+  for(let v = 0; v <= 10; v++) o += `<option value="${v}"${val === v ? ' selected' : ''}>pompa ${v}/10</option>`;
+  return `<select id="${id}" class="ql-sel">${o}</select>`;
+}
+function openQuickLog(){
+  engineStop();
+  const iso = state.selectedDate;
+  const {day, extras} = resolveDay(iso);
+  const units = [day, ...extras].filter(u => u.type !== 'rest' && !u.skipped);
+  const entry = loadEntry(iso);
+  const ex = entry.exercises || {}, wu = entry.warmups || {};
+  QL_ITEMS = [];
+  const seen = new Set();
+  let html = `<div class="notes-box" style="margin-top:0;">Zapis treningu z dnia <b>${fmtDayLong(iso)}</b> bez uruchamiania timerów. Odhacz, co zrobiłeś — domyślnie wszystko „jak w planie". Liczby są opcjonalne: jeśli wpiszesz powtórzenia, trafią do dziennika i do analizy; bez nich zapis tylko oznacza pozycję jako zrobioną (i nie wpływa na propozycje zmiany poziomu).</div>`;
+  const climbUnit = units.find(u => u.type === 'climb');
+  if(climbUnit){
+    const c = entry.climb || {};
+    const lina = !!climbUnit.lina;
+    const kind = c.kind || climbUnit.climbKind || '';
+    html += `<div class="block-title"><div class="idx">🧗</div><h3>Sesja na ścianie</h3></div>
+      <div class="ql-item"><label class="ql-row"><input type="checkbox" id="ql_climb" checked><span class="ql-name">Byłem na ścianie<span class="ql-sub">${entry.climb ? '✓ już zapisane — możesz poprawić liczby' : 'rodzaj sesji decyduje o przeliczeniu reszty tygodnia'}</span></span></label></div>
+      ${lina ? `<div class="log-row"><div><label>Rodzaj sesji</label><select id="ql_kind">
+        ${Object.keys(LINA_CLIMB_KINDS).map(k => `<option value="${k}"${k === kind ? ' selected' : ''}>${LINA_CLIMB_KINDS[k]}</option>`).join('')}
+      </select></div><div><label>Pompa na koniec</label>${qlPumpSelect('ql_pump', c.pump != null ? c.pump : null)}</div></div>` : ''}
+      <div class="log-row">
+        <div><label>Ile dróg</label><input type="number" id="ql_routes" value="${esc(c.routes || '')}" placeholder="np. 6"></div>
+        <div><label>Ile bulderów</label><input type="number" id="ql_boulders" value="${esc(c.boulders || '')}" placeholder="np. 9"></div>
+      </div>
+      <div class="log-row"><div><label>Notatka</label><input type="text" id="ql_note" value="${esc(c.note || '')}" placeholder="opcjonalnie"></div></div>`;
+  }
+  units.forEach(u => {
+    const blocks = (u.blocks || []);
+    if(!blocks.length) return;
+    html += `<div class="block-title"><div class="idx">${dayIcon(u)}</div><h3>${u.title}</h3></div>`;
+    blocks.forEach(b => {
+      const list = b.kind === 'exercises' ? b.items.map(it => ({kind:'exercise', id:it.id, name:it.name, data:it})) : [{kind:b.kind, id:b.id, name:b.name, data:b}];
+      list.forEach(it => {
+        if(seen.has(it.id)) return;
+        seen.add(it.id);
+        const log = it.kind === 'warmup' ? wu[it.id] : ex[it.id];
+        const done = it.kind === 'exercise' ? !!(log && log.sets && log.sets.length >= it.data.sets)
+          : !!(log && (log.completedAt || it.kind === 'measure'));
+        QL_ITEMS.push({...it, done});
+        let extra = '', sub = '';
+        if(it.kind === 'exercise'){
+          sub = it.data.holdBased ? `${serie(it.data.sets)} × ${holdTxt(it.data)}` : `${serie(it.data.sets)} × ${esc(it.data.repsRange)}`;
+          if(!done) extra = `<input type="text" inputmode="numeric" id="ql_reps_${it.id}" class="ql-reps" placeholder="${it.data.holdBased ? 'sekundy w seriach' : 'powtórzenia w seriach'}, np. ${it.data.holdBased ? '8 8 7' : '5 5 4'} (opcjonalnie)">`;
+        } else if(it.kind === 'guided'){
+          sub = it.data.sub || '';
+          if(it.data.pumpLog && !done) extra = qlPumpSelect('ql_pump_'+it.id, null);
+        } else if(it.kind === 'hangboard'){
+          sub = `${serie(it.data.series)} po ${it.data.reps} (${it.data.hang} s / ${it.data.hangRest} s)`;
+        } else if(it.kind === 'linatest'){
+          sub = 'wynik testu wpiszesz po otwarciu testu na liście dnia';
+        } else if(it.kind === 'warmup'){
+          sub = kroki(it.data.steps.length);
+        }
+        html += `<div class="ql-item">
+          <label class="ql-row"><input type="checkbox" id="ql_${it.id}" ${done ? 'checked disabled' : 'checked'}>
+            <span class="ql-name">${it.name}<span class="ql-sub">${done ? '✓ już zapisane' : sub}</span></span></label>
+          ${extra}
+        </div>`;
+      });
+    });
+  });
+  html += `<button class="btn btn-primary" style="margin-top:16px;" onclick="saveQuickLog()">Zapisz trening</button>
+    <div class="meta" style="margin-top:8px;">Pozycje już zapisane wcześniej zostają bez zmian. Plan tygodnia przeliczy się po zapisie.</div>`;
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-quick').classList.add('active');
+  document.getElementById('quickBody').innerHTML = html;
+  window.scrollTo && window.scrollTo(0, 0);
+}
+function saveQuickLog(){
+  const iso = state.selectedDate;
+  const entry = loadEntry(iso);
+  const ex = {...(entry.exercises || {})}, wu = {...(entry.warmups || {})};
+  const ts = recordTs(iso);
+  const val = id => { const el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; };
+  const checked = id => { const el = document.getElementById(id); return !!(el && el.checked); };
+  const patch = {};
+  if(document.getElementById('ql_climb') && checked('ql_climb')){
+    const c = entry.climb || {};
+    const pump = val('ql_pump');
+    patch.climb = {...c, routes: val('ql_routes'), boulders: val('ql_boulders'), note: val('ql_note'),
+      kind: val('ql_kind') || c.kind || undefined,
+      pump: pump !== '' ? Number(pump) : c.pump,
+      savedAt: c.savedAt || ts, quick: true};
+  }
+  QL_ITEMS.forEach(it => {
+    if(it.done || !checked('ql_'+it.id)) return;
+    if(it.kind === 'warmup') wu[it.id] = {completedAt: ts, quick: true};
+    else if(it.kind === 'exercise'){
+      const nums = val('ql_reps_'+it.id).split(/[\s,;]+/).filter(Boolean);
+      const prior = (ex[it.id] && ex[it.id].sets) || [];
+      const sets = [...prior];
+      const n = Math.max(it.data.sets, nums.length);
+      for(let i = prior.length; i < n; i++) sets.push({set: i+1, reps: nums[i] != null ? nums[i] : '', at: ts});
+      ex[it.id] = {sets, updatedAt: ts, quick: true, ...(nums.length ? progressMeta(it.data) : {})};
+    } else if(it.kind === 'guided'){
+      const p = val('ql_pump_'+it.id);
+      ex[it.id] = {...(ex[it.id] || {}), kind:'guided', name: it.name, completedAt: ts, quick: true,
+        pump: p !== '' ? Number(p) : undefined, climbKind: it.data.climbKind || undefined};
+    } else if(it.kind === 'linatest'){
+      ex[it.id] = {...(ex[it.id] || {}), kind:'linatest', name: it.name, completedAt: ts, quick: true, climbKind: it.data.climbKind || undefined};
+    } else {
+      ex[it.id] = {...(ex[it.id] || {}), completedAt: ts, quick: true};
+    }
+  });
+  if(Object.keys(ex).length) patch.exercises = ex;
+  if(Object.keys(wu).length) patch.warmups = wu;
+  mergeEntry(iso, patch);
+  vibrate(30);
+  goToday();
 }
 
 /* =========================================================================
@@ -4357,7 +4549,7 @@ function renderToday(){
     <span class="badge ${meta.badge}">${meta.label}</span>${extras.map(x=>` <span class="badge ${TYPE_META[x.type].badge}">${TYPE_META[x.type].label}</span>`).join('')}
     <h2 style="margin-top:8px;">${allTitles.join(' + ')}</h2>
     <div class="meta" style="text-transform:capitalize;">${niceDate}</div>
-    ${canDelete ? deleteUnitButtonsHTML(trainingUnits) : ''}
+    ${canDelete ? quickLogButtonHTML() + deleteUnitButtonsHTML(trainingUnits) : ''}
   </div>`;
 
   if(planned.lina) html += linaTodayHTML(iso);
@@ -4957,7 +5149,7 @@ function saveClimb(){
     kind: climbKindPicked || undefined,                              // plan na linę: rodzaj sesji
     pump: climbPumpPicked != null ? climbPumpPicked : undefined,      // plan na linę: pompa 0–10
     note: document.getElementById('climbNote').value,
-    savedAt: new Date().toISOString(),
+    savedAt: recordTs(state.selectedDate),     // dzień miniony = jego wieczór, nie „teraz" (zasada 48 h)
   };
   mergeEntry(state.selectedDate, {climb:data});
   vibrate(30);
@@ -5488,6 +5680,7 @@ function loadSettingsForm(){
   document.getElementById('overridesInfo').textContent = n
     ? `Masz zmienione liczby w ${n} ${plural(n,'pozycji','pozycjach','pozycjach')}.`
     : 'Wszystko jeszcze na wartościach z planu.';
+  document.getElementById('setVolumeBox').innerHTML = volumeRowHTML();
   const lina = linaOn();
   document.getElementById('setProgram').value = lina ? 'lina' : 'fbw';
   document.getElementById('linaSettings').style.display = lina ? '' : 'none';
