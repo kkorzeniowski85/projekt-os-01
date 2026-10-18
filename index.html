@@ -180,6 +180,33 @@
   .timer-center .time{ font-size:3rem; font-weight:800; letter-spacing:-0.02em; }
   .timer-center .rep{ font-size:0.85rem; color:var(--lichen-400); margin-top:4px; font-weight:600; }
 
+  /* Timer na pełnym ekranie: po starcie tarcza z przyciskami przenosi się do
+     nakładki na całe okno — bez przewijania, duże cele do dotknięcia. */
+  #timerFull{
+    position:fixed; inset:0; z-index:300; background:var(--stone-950);
+    display:flex; flex-direction:column;
+    padding:calc(8px + env(safe-area-inset-top)) 18px calc(18px + env(safe-area-inset-bottom));
+    overscroll-behavior:contain; touch-action:none;
+  }
+  #timerFull[hidden]{ display:none; }
+  #timerFull .fs-top{ display:flex; align-items:center; gap:10px; min-height:52px; }
+  #timerFull .fs-title{ flex:1; min-width:0; font-weight:700; font-size:1rem; color:var(--chalk-100); line-height:1.3; }
+  #timerFull .fs-close{
+    flex:0 0 auto; width:48px; height:48px; border-radius:12px; cursor:pointer;
+    background:var(--stone-900); border:1px solid var(--stone-700); color:var(--chalk-300); font-size:1.2rem;
+  }
+  #timerFull .fs-body{ flex:1; min-height:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  #timerFull .timer-wrap{ width:100%; padding:0; }
+  #timerFull .timer-ring-holder{ width:min(86vw, 54vh); height:min(86vw, 54vh); margin:0 0 18px; }
+  #timerFull .timer-center .time{ font-size:clamp(3.2rem, 16vw, 5.4rem); }
+  #timerFull .timer-center .phase{ font-size:clamp(0.85rem, 3.8vw, 1.15rem); color:var(--chalk-300); padding:0 12%; }
+  #timerFull .timer-center .rep{ font-size:1rem; }
+  #timerFull .timer-wrap .btn-row{ max-width:none !important; width:100%; }
+  #timerFull .timer-wrap .btn{ min-height:68px; font-size:1.2rem; }
+  #timerFull .fs-open{ display:none; }
+  #timerFull .fs-next{ text-align:center; color:var(--chalk-500); font-size:0.95rem; min-height:1.4em; margin-top:14px; }
+  body.fs-lock{ overflow:hidden; }
+
   .notes-box{
     background:var(--stone-900); border:1px solid var(--stone-800); border-radius:var(--radius);
     padding:14px; font-size:0.88rem; line-height:1.55; color:var(--chalk-300); margin-top:16px;
@@ -584,6 +611,16 @@
 
 </main>
 
+<!-- Timer na pełnym ekranie — tarcza trafia tu po naciśnięciu Start -->
+<div id="timerFull" hidden>
+  <div class="fs-top">
+    <div class="fs-title" id="fsTitle"></div>
+    <button class="fs-close" onclick="closeTimerFull()" title="Zamknij pełny ekran — timer liczy dalej" aria-label="Zamknij pełny ekran">✕</button>
+  </div>
+  <div class="fs-body" id="fsBody"></div>
+  <div class="fs-next" id="fsNext"></div>
+</div>
+
 <nav class="bottomnav">
   <button class="active" data-tab="today" onclick="switchTab('today')"><span class="ic">🏠</span>Dziś</button>
   <button data-tab="tools" onclick="switchTab('tools')"><span class="ic">⏱️</span>Timery</button>
@@ -593,7 +630,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.25.0';
+const APP_VERSION = '1.25.1';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -2593,6 +2630,7 @@ function engineLoad(phases, opts){
 }
 
 function engineStop(){
+  closeTimerFull();
   clearTimeout(engine.timer);
   engine.phases = []; engine.idx = 0; engine.running = false;
   engine.endAt = 0; engine.pausedRemainMs = null;
@@ -2614,6 +2652,7 @@ function engineToggle(){
   const ph = engine.phases[engine.idx];
   if(!ph) return;
   if(ph.tap){
+    openTimerFull();
     // po fazie "X" kolejna faza rusza od razu — bez dodatkowego "Wznów"
     engine.running = true;
     engine.pausedRemainMs = null;
@@ -2627,6 +2666,7 @@ function engineToggle(){
     clearTimeout(engine.timer);
     releaseWakeLock();
   } else {
+    openTimerFull();
     const remain = engine.pausedRemainMs !== null ? engine.pausedRemainMs : (ph.seconds||1)*1000;
     engine.endAt = Date.now() + remain;
     engine.pausedRemainMs = null;
@@ -2707,6 +2747,10 @@ function engineFinish(){
   if(timeEl) timeEl.textContent = '00:00';
   const btn = document.getElementById('timerStartBtn');
   if(btn) btn.textContent = 'Start';
+  const fsN = document.getElementById('fsNext');
+  if(fsN) fsN.textContent = 'Koniec — wracam do zapisu';
+  // pełny ekran znika po chwili (chyba że od razu ruszyła kolejna sekwencja, np. przerwa)
+  setTimeout(()=>{ if(!engine.running) closeTimerFull(); }, 1200);
   if(cb) cb();
 }
 
@@ -2733,8 +2777,41 @@ function timerRingHTML(){
     <div class="btn-row" style="width:100%;max-width:280px;">
       <button class="btn btn-primary" id="timerStartBtn" onclick="engineToggle()">Start</button>
       <button class="btn btn-ghost" onclick="skipPhase()">Pomiń</button>
+      <button class="btn btn-ghost fs-open" style="flex:0 0 auto;width:auto;padding:0 14px;" onclick="openTimerFull()" title="Timer na pełnym ekranie">⛶</button>
     </div>
   </div>`;
+}
+
+/* Pełny ekran timera. Tarcza jest PRZENOSZONA do nakładki (te same id, więc silnik
+   rysuje ją bez zmian), a w jej miejscu zostaje znacznik, do którego wraca po zamknięciu. */
+let fsHome = null;
+function timerFullOpen(){ const b = document.getElementById('timerFull'); return !!(b && b.hidden === false); }
+function openTimerFull(){
+  const box = document.getElementById('timerFull');
+  const btn = document.getElementById('timerStartBtn');
+  const wrap = btn && btn.closest ? btn.closest('.timer-wrap') : null;
+  if(!box || !wrap || box.hidden !== true) return;
+  fsHome = document.createComment('miejsce tarczy timera');
+  wrap.parentNode.insertBefore(fsHome, wrap);
+  document.getElementById('fsBody').appendChild(wrap);
+  const t = document.getElementById('exTitle');
+  document.getElementById('fsTitle').textContent = t ? t.textContent : '';
+  box.hidden = false;
+  document.body.classList.add('fs-lock');
+  renderTimerFace();
+}
+function closeTimerFull(){
+  const box = document.getElementById('timerFull');
+  if(!box || box.hidden !== false) return;
+  const wrap = document.querySelector('#fsBody .timer-wrap');
+  if(wrap){
+    if(fsHome && fsHome.isConnected) fsHome.parentNode.insertBefore(wrap, fsHome);
+    else wrap.remove();          // ekran pod spodem już się przerysował — stara tarcza niepotrzebna
+  }
+  if(fsHome && fsHome.parentNode) fsHome.parentNode.removeChild(fsHome);
+  fsHome = null;
+  box.hidden = true;
+  document.body.classList.remove('fs-lock');
 }
 
 function renderTimerFace(){
@@ -2761,6 +2838,12 @@ function renderTimerFace(){
   const color = (ph.kind==='rest'||ph.kind==='seriesRest'||ph.kind==='prep') ? 'var(--rope-500)' : 'var(--lichen-500)';
   arc.setAttribute('stroke', (sec<=3 && !ph.tap && engine.running) ? 'var(--alert-500)' : color);
   btn.textContent = ph.tap ? (ph.tapLabel || 'Dalej (w górę!)') : engine.running ? 'Pauza' : (engine.pausedRemainMs!==null ? 'Wznów' : 'Start');
+  if(timerFullOpen()){
+    const nx = engine.phases[engine.idx + 1] || (engine.loop ? engine.phases[engine.loopFrom] : null);
+    document.getElementById('fsNext').textContent = nx
+      ? 'Dalej: ' + nx.label + (nx.seconds && !nx.tap ? ' · ' + fmtTime(nx.seconds) : '')
+      : 'Ostatnia faza';
+  }
 }
 
 /* =========================================================================
