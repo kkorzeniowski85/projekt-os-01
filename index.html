@@ -289,6 +289,22 @@
   .slider-row{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
   .slider-row .val{ font-size:1.4rem; font-weight:800; color:var(--rope-400); }
   input[type=range]{ width:100%; accent-color:var(--lichen-500); height:28px; }
+  /* Trudności dróg / bulderów */
+  .grade-row{ display:flex; gap:6px; overflow-x:auto; padding:6px 0 6px; -webkit-overflow-scrolling:touch; scrollbar-width:thin; }
+  .grade-chip{ flex:0 0 auto; min-width:46px; height:40px; padding:0 8px; border-radius:10px; cursor:pointer;
+    background:var(--stone-900); border:1px solid var(--stone-700); color:var(--chalk-100); font-weight:700; font-size:0.85rem; }
+  .grade-chip:active{ background:var(--lichen-900); border-color:var(--lichen-500); }
+  .grade-done{ display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
+  .grade-pill{ border-radius:999px; padding:5px 10px; cursor:pointer; font-size:0.78rem; font-weight:700;
+    background:var(--lichen-900); border:1px solid var(--lichen-500); color:var(--lichen-400); }
+  /* Licznik dróg / bulderów */
+  .cc-card{ padding:12px 14px; }
+  .cc-row{ display:flex; align-items:center; gap:12px; padding:4px 0; }
+  .cc-lbl{ flex:1; font-weight:600; color:var(--chalk-100); }
+  .cc-val{ min-width:36px; text-align:center; font-size:1.4rem; font-weight:800; color:var(--chalk-100); }
+  .cc-btn{ width:52px; height:44px; border-radius:12px; cursor:pointer; font-size:1.4rem; font-weight:700;
+    background:var(--stone-900); border:1px solid var(--stone-700); color:var(--chalk-300); }
+  .cc-plus{ background:var(--lichen-900); border-color:var(--lichen-500); color:var(--lichen-400); }
   /* Zapis bez timera */
   .ql-item{ background:var(--stone-900); border:1px solid var(--stone-800); border-radius:12px; padding:10px 12px; margin-bottom:8px; }
   .ql-row{ display:flex; align-items:flex-start; gap:12px; cursor:pointer; }
@@ -431,10 +447,7 @@
     </div>
     <div id="climbLimitBanner"></div>
     <div class="notes-box" style="margin-top:0;">
-      <b>Najważniejsza zasada dnia:</b> z bulderów schodź po chwytach, <span class="warn">nigdy nie zeskakuj na materac</span>. Zeskok to największe pojedyncze ryzyko dla Twojego ścięgna Achillesa — większe niż wszystkie ćwiczenia razem wzięte.
-    </div>
-    <div class="notes-box">
-      <b>Na co wykorzystać sesję (wg planu):</b> zamiast maksymalnej liczby trudnych dróg — długie, łatwe wspinanie ciągiem przez 20–30 minut (tzw. ARC: cały czas na ścianie, na tyle łatwo, żeby przedramiona nie puchły), powtarzanie tej samej drogi kilka razy z rzędu oraz świadome ćwiczenie odpoczywania na drodze (strzepywanie rąk na dobrych chwytach).
+      <b>Achilles:</b> z bulderów schodź po chwytach, <span class="warn">nie zeskakuj na materac</span> — zeskok to dla ścięgna największe ryzyko na ścianie.
     </div>
     <div class="card" style="margin-top:14px;">
       <h2>Zapis sesji</h2>
@@ -458,6 +471,7 @@
       <div class="log-row">
         <div><label>Ile dróg</label><input type="number" id="climbRoutes" placeholder="np. 6"></div>
       </div>
+      <div id="climbGradeRoutes"></div>
       <div style="margin-top:12px;">
         <label style="font-size:0.7rem;color:var(--chalk-500);display:block;margin-bottom:4px;">Jak wypadła wytrzymałość (czy przedramiona „puchły" szybciej/wolniej niż zwykle)</label>
         <select id="climbFeel">
@@ -471,6 +485,7 @@
       <div class="log-row">
         <div><label>Ile bulderów</label><input type="number" id="climbBoulders" placeholder="np. 9"></div>
       </div>
+      <div id="climbGradeBoulders"></div>
       <div style="margin-top:12px;">
         <label style="font-size:0.7rem;color:var(--chalk-500);display:block;margin-bottom:6px;">Jak ciężka była sesja — jak bardzo jesteś zmęczony?</label>
         <div class="rpe-row" id="boulderEffortRow">
@@ -501,7 +516,7 @@
   <section class="screen" id="screen-history">
     <h2 style="margin-bottom:14px;">Dziennik</h2>
     <div class="card">
-      <h2 style="margin-bottom:6px;">🤖 Analiza z Claude</h2>
+      <h2 style="margin-bottom:6px;">Analiza z Claude</h2>
       <div class="meta" style="margin-bottom:12px;">Aplikacja zbiera Twoje ostatnie treningi, plan na najbliższe dni i zasady bezpieczeństwa, a na końcu dopisuje gotową prośbę. Kopiujesz to, wklejasz w aplikacji Claude i wysyłasz. Nic nie wysyła się samo.</div>
       <div class="setting-row">
         <label for="aiDays">Okres</label>
@@ -576,6 +591,26 @@
       <div class="meta" style="margin-top:8px;">Głośność sygnałów timera (start fazy, przerwa, odliczanie 3-2-1, koniec). Wibracje działają niezależnie od suwaka — także przy wyciszeniu. Ten sam suwak jest na dole timera na pełnym ekranie. Na telefonie dźwięk zależy też od głośności multimediów w systemie.</div>
     </div>
     <div class="card">
+      <h2 style="margin-bottom:10px;">Skale trudności</h2>
+      <div class="setting-row">
+        <label>Drogi</label>
+        <select id="setScaleRoutes" onchange="saveGradeScale('routes', this.value)">
+          <option value="fr">francuska (5A, 6B+…)</option>
+          <option value="uiaa">UIAA (V+, VI-…)</option>
+          <option value="kurtyka">polska — Kurtyki (VI.1, VI.2…)</option>
+          <option value="yds">amerykańska YDS (5.10a…)</option>
+        </select>
+      </div>
+      <div class="setting-row">
+        <label>Buldery</label>
+        <select id="setScaleBoulders" onchange="saveGradeScale('boulders', this.value)">
+          <option value="font">Fontainebleau (5+, 6A…)</option>
+          <option value="v">V-scale (V0, V3…)</option>
+        </select>
+      </div>
+      <div class="meta" style="margin-top:8px;">Z tej skali wybierasz trudność przy zapisie dróg i bulderów. Zmiana skali nie przelicza starych wpisów — każdy zapis pamięta skalę, w której powstał.</div>
+    </div>
+    <div class="card">
       <h2 style="margin-bottom:10px;">Program treningowy</h2>
       <div class="setting-row">
         <label>Plan</label>
@@ -637,7 +672,7 @@
     </div>
     <div class="card">
       <h2 style="margin-bottom:10px;">Aktualizacja aplikacji</h2>
-      <div class="meta" style="margin-bottom:10px;">Aplikacja aktualizuje się sama, gdy otwierasz ją z internetem — ale nowa wersja potrafi „doskoczyć" dopiero przy kolejnym uruchomieniu. Tym przyciskiem sprawdzisz od ręki, czy na serwerze jest coś nowszego; jeśli jest, aplikacja pobierze nową wersję i da przycisk do natychmiastowego przeładowania. Twoje dane (historia, ustawienia, poziomy) zostają nietknięte — aktualizacja wymienia tylko samą aplikację. Wymaga internetu.</div>
+      <div class="meta" style="margin-bottom:10px;">Aplikacja aktualizuje się sama, gdy otwierasz ją z internetem — ale nowa wersja bywa widoczna dopiero przy kolejnym uruchomieniu. Tym przyciskiem sprawdzisz od ręki, czy na serwerze jest coś nowszego; jeśli jest, aplikacja pobierze nową wersję i da przycisk do natychmiastowego przeładowania. Twoje dane (historia, ustawienia, poziomy) zostają nietknięte — aktualizacja wymienia tylko samą aplikację. Wymaga internetu.</div>
       <button class="btn btn-primary" id="updCheckBtn" onclick="checkForUpdate()">Sprawdź, czy jest nowa wersja</button>
       <div class="meta" id="updStatus" style="margin-top:10px;"></div>
       <button class="btn btn-secondary" id="updReloadBtn" style="display:none;margin-top:8px;" onclick="location.reload()">Uruchom ponownie z nową wersją</button>
@@ -667,7 +702,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.26.1';
+const APP_VERSION = '1.27.0';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -787,7 +822,7 @@ function numOr(elId, fallback){
    ========================================================================= */
 const GENERAL_WARMUP = {
   id:'warmup_general', name:'Rozgrzewka ogólna', kind:'warmup',
-  intro:'10 minut przed każdym treningiem. Kolejność kroków jest celowa — od podniesienia tętna do aktywacji mięśni, które za chwilę będą pracować.',
+  intro:'10 minut przed każdym treningiem, w podanej kolejności — od podniesienia tętna do aktywacji mięśni, które za chwilę będą pracować.',
   steps:[
     {label:'Podniesienie tętna — 5 min', seconds:300,
      desc:'Rower, wioślarz albo szybki marsz. Bez skakanki — jest usunięta z planu ze względu na Achillesa. Koniec, gdy oddech wyraźnie przyspieszony, ale da się mówić pełnymi zdaniami; lekki pot na czole to właściwy moment.'},
@@ -824,16 +859,16 @@ const GUM_WARMUP = {
     {label:'Aktywacja pośladków i core', reps:'2 × 12',
      desc:'Odwodzenie na taśmie w bok (taśma nad kolanami), mostek biodrowy obunóż z sekundą pauzy, dead bug 8 naprzemiennych powtórzeń z lędźwiami dociśniętymi do podłogi.'},
     {label:'Aktywacja docelowego wzorca', reps:'1 × 5',
-     desc:'Pięć powtórzeń pierwszego ćwiczenia sesji w łatwiejszym wariancie, z maksymalną intencją przyspieszenia. To „budzi" układ nerwowy — a on jest w tym programie głównym motorem siły.'},
+     desc:'Pięć powtórzeń pierwszego ćwiczenia sesji w łatwiejszym wariancie, wykonanych dynamicznie.'},
   ]
 };
 
 const COOLDOWN = {
   id:'cooldown', name:'Wyciszenie (rozciąganie)', kind:'warmup',
-  intro:'3–5 minut na koniec treningu lub wspinania. Rozciąganie pasywne: wchodzisz w pozycję do uczucia ciągnięcia (nie bólu), spokojny oddech, bez sprężynowania. To moment, w którym układ nerwowy dostaje sygnał „koniec pracy".',
+  intro:'3–5 minut na koniec treningu lub wspinania. Rozciąganie pasywne: wchodzisz w pozycję do uczucia ciągnięcia (nie bólu), spokojny oddech, bez sprężynowania.',
   steps:[
     {label:'Zginacze przedramion', seconds:60,
-     desc:'Ramię wyprostowane przed sobą, dłoń palcami w dół, drugą ręką delikatnie dociągasz palce do siebie. 30 s na stronę. Po wspinaniu i tablicy — najważniejszy punkt tej listy.'},
+     desc:'Ramię wyprostowane przed sobą, dłoń palcami w dół, drugą ręką delikatnie dociągasz palce do siebie. 30 s na stronę.'},
     {label:'Prostowniki przedramion', seconds:60,
      desc:'Jak wyżej, ale dłoń palcami w dół i grzbietem do góry — dociągasz grzbiet dłoni do siebie. 30 s na stronę.'},
     {label:'Klatka piersiowa przy framudze', seconds:60,
@@ -847,14 +882,14 @@ const COOLDOWN = {
 
 const FINGER_WARMUP = {
   id:'warmup_fingers', name:'Rozgrzewka palców', kind:'warmup',
-  intro:'12–15 minut, zawsze w całości — tej rozgrzewki nie wolno skracać. Wykonujesz ją po rozgrzewce ogólnej, bezpośrednio przed chwytotablicą.',
+  intro:'12–15 minut, w całości. Wykonujesz ją po rozgrzewce ogólnej, bezpośrednio przed chwytotablicą.',
   steps:[
     {label:'Podniesienie tętna — 5 min', seconds:300,
      desc:'Jak w rozgrzewce ogólnej. Jeśli robisz obie rozgrzewki pod rząd, tego kroku nie powtarzasz drugi raz.'},
     {label:'Mobilizacja barków i nadgarstków — 3 min', seconds:180,
      desc:'Pełne, powolne zakresy ruchu, bez oporu: krążenia ramion, krążenia nadgarstków, zginanie i prostowanie.'},
     {label:'Zwisy na dużej listwie — 3 × 10 s', seconds:120,
-     desc:'Największa listwa lub szczebel drabinki, chwyt otwarty, stopa mocno odciąża — ma być zupełnie lekko, zero wysiłku. To dopiero budzenie palców.'},
+     desc:'Największa listwa lub szczebel drabinki, chwyt otwarty, stopa mocno odciąża — ma być zupełnie lekko, zero wysiłku.'},
     {label:'Zwisy progresywne 50% → 70% → 85% — 3 × 7 s', seconds:240,
      desc:'Trzy zwisy po 7 s, każdy nieco cięższy. Procent regulujesz odciążeniem stopy, nie zmianą chwytu: 50% = wyraźnie odciążony, 85% = prawie pełny ciężar ciała. Nigdy 100% w rozgrzewce.'},
   ]
@@ -869,7 +904,7 @@ function calfExercise(){
     tech:[
       {t:'Wykonanie', h:'<ol><li>Stań przodostopiem na płaskim podłożu — pięta <b>nie schodzi</b> poniżej poziomu palców (bez deficytu w tej fazie).</li><li><b>3 sekundy w górę</b> — powolne, kontrolowane wspięcie na pełną wysokość.</li><li><b>1 sekunda pauzy</b> w górze.</li><li><b>3 sekundy w dół</b> do pozycji neutralnej stopy, nie niżej.</li><li>Bez odbicia i bez pauzy na dole — kolejne powtórzenie startuje płynnie.</li></ol>'},
       {t:'Dlaczego tak wolno', h:'Powolna praca pod dużym napięciem (protokół Heavy Slow Resistance — badania Alfredsona i Kongsgaarda nad tendinopatią Achillesa) przebudowuje i wzmacnia ścięgno skuteczniej niż odpoczynek. U Ciebie, przy bezobjawowym ścięgnie po przebytych zapaleniach, działa profilaktycznie: buduje tolerancję na obciążenie, zanim wróci wspinanie z pełną intensywnością.'},
-      {t:'Najczęstsze błędy', h:'<ul><li>Skracanie fazy schodzenia w dół — „opadanie" zamiast opuszczania. To niszczy cały sens protokołu; faza w dół jest najważniejsza.</li><li>Schodzenie piętą poniżej poziomu palców, „bo tak naturalniej" — obniżenie (deficyt) wejdzie dopiero od 5. tygodnia, stopniowo.</li></ul>'},
+      {t:'Najczęstsze błędy', h:'<ul><li>Skracanie fazy schodzenia w dół — „opadanie" zamiast opuszczania. Faza w dół to główna część bodźca — pełne 3 s.</li><li>Schodzenie piętą poniżej poziomu palców, „bo tak naturalniej" — obniżenie (deficyt) wejdzie dopiero od 5. tygodnia, stopniowo.</li></ul>'},
     ]
   };
   if(SETTINGS.achillesTrack === 'fast'){
@@ -897,8 +932,8 @@ function dipsExercise(){
     tech:[
       {t:'Jak głęboko i dlaczego', h:'W tym tygodniu '+depthTxt+'. Powód: zejście poniżej przenosi obciążenie na przednią torebkę stawu ramiennego i przyczep mięśnia piersiowego. Twój przód barku i tak ciężko pracuje przy wspinaniu — sumowanie tych obciążeń to najczęstszy mechanizm bólu przedniego barku u wspinaczy, którzy dołożyli dipy.'+widthTxt},
       {t:'Wykonanie', h:'<ol><li>Wejdź do podporu: łokcie wyprostowane, <b>barki aktywnie wciśnięte w dół</b> — daleko od uszu.</li><li>Tułów lekko pochylony w przód, łokcie blisko ciała, nie na boki.</li><li>Schodź <b>2–3 sekundy</b> — zero swobodnego opadania.</li><li>Zatrzymaj się na ustalonym kącie i wyjdź w górę, bez „wyrzucania" barków do góry na końcu.</li></ol>'},
-      {t:'Najczęstsze błędy', h:'<ul><li><b>Bark „wjeżdża" do ucha w dolnej pozycji</b> — utrata wciśnięcia łopatek w dół. To najważniejszy błąd na tym ćwiczeniu; jeśli nie utrzymujesz barków nisko przez cały zakres, skróć zakres.</li><li>Kołysanie nogami dla rozpędu.</li><li>Schodzenie „na odczucie" zamiast do ustalonego kąta — zmęczenie zawsze pogłębia zejście, kontroluj kąt świadomie.</li></ul>'},
-      {t:'Przed pierwszą sesją', h:'Obciąż stację i sprawdź, czy nie przesuwa się na szczeblach drabinki. Poluzowanie mocowania w dolnej pozycji to uraz barku, nie potknięcie.'},
+      {t:'Najczęstsze błędy', h:'<ul><li><b>Bark „wjeżdża" do ucha w dolnej pozycji</b> — utrata wciśnięcia łopatek w dół. Jeśli nie utrzymujesz barków nisko przez cały zakres, skróć zakres.</li><li>Kołysanie nogami dla rozpędu.</li><li>Schodzenie „na odczucie" zamiast do ustalonego kąta — zmęczenie zawsze pogłębia zejście, kontroluj kąt świadomie.</li></ul>'},
+      {t:'Przed pierwszą sesją', h:'Obciąż stację i sprawdź, czy nie przesuwa się na szczeblach drabinki. Jeśli mocowanie puści w dolnej pozycji, grozi to urazem barku.'},
     ]
   };
 }
@@ -907,15 +942,15 @@ function dipsExercise(){
    Wspólne zasady bezpieczeństwa dopisywane są do każdego wariantu. */
 const HANGBOARD_SAFETY = [
   {t:'Zasady wspólne dla każdego protokołu', h:'<ul><li><span class="warn"><b>Nigdy full crimp</b></span> (pełny zamknięty chwyt z kciukiem dociskającym palce) — bez wyjątków, niezależnie od protokołu. Z modelowania biomechanicznego wynika, że zamknięty crimp obciąża bloczek A2 wielokrotnie (rzędu 36×) mocniej niż chwyt otwarty — wybór chwytu to największy pojedynczy czynnik ryzyka, na który masz wpływ.</li><li>Żadnych chwytów na jeden ani dwa palce, żadnego campusowania (puszczania i łapania w locie).</li><li>Wejście i zejście z tablicy <b>zawsze przez stopień lub szczebel</b> — nigdy zeskok, zwłaszcza na końcu ostatniej serii.</li><li>Tablica tylko <b>na początku treningu</b>, po pełnej rozgrzewce palców — nigdy na zmęczonych palcach po innych ćwiczeniach.</li><li>Rano sztywne lub bolące palce = dziś bez tablicy. Reszta treningu zostaje.</li></ul>'},
-  {t:'Ile razy w tygodniu — księgowość obciążeń palców', h:'Liczy się <b>każda intensywna ekspozycja palców</b>, a wspinanie jest z nich największą: sesja na ścianie = jedna ekspozycja, dokładnie tak samo jak Protokół B czy C. Zasady planu:<ul><li>Maksymalnie <b>3 intensywne ekspozycje na 7 dni</b> (wspinanie + Protokół B/C/tablica własna łącznie).</li><li><b>Nigdy dwie intensywne dzień po dniu.</b> Dzień po intensywnej sesji dozwolona jest wyłącznie praca niskointensywna (Protokół A lub D) albo przerwa.</li><li>Między wspinaniem a intensywną tablicą minimum <b>48 godzin</b>. Lekka tablica dzień po wspinaniu jest w porządku.</li></ul><b>Dlaczego tak:</b> po ciężkiej sesji siła mięśni zginaczy wraca w około dobę, ale bilans kolagenu w ścięgnie jest we wczesnej fazie (pierwsze 24–36 h) przejściowo ujemny i przewaga syntezy przychodzi dopiero później — dlatego różnicujemy intensywność sąsiednich dni zamiast układać dwa ciężkie dni z rzędu. Aplikacja pilnuje tych reguł automatycznie.'},
-  {t:'Progi: kiedy utrzymać plan, kiedy cofnąć, kiedy STOP', h:'<ul><li><b>Utrzymaj plan</b>, jeśli: brak porannej sztywności palców trwającej ponad 30 minut, brak bólu punktowego u podstawy palca lub przy paliczku środkowym (bloczki A2/A4), siła chwytu stabilna.</li><li><b>Cofnij się o etap</b> (mniej serii, większe odciążenie, tylko lekkie protokoły), jeśli: pojawia się poranna sztywność, siła chwytu spada, poczucie „gotowości" poniżej 100% utrzymuje się ponad 48 h.</li><li><span class="warn"><b>STOP i konsultacja</b></span>, jeśli: ból punktowy nad bloczkiem, obrzęk stawu środkowego palca (PIP), jakikolwiek trzask/„pop", ból przy zgięciu palca z oporem.</li></ul>Prosty autotest raz w tygodniu: powtarzalny maksymalny zwis na świeżych palcach, zawsze w tych samych warunkach. Spadek wyniku o więcej niż ~10% to sygnał przeciążenia, zanim cokolwiek zaboli.'},
+  {t:'Ile razy w tygodniu — limity dla palców', h:'Liczy się <b>każdy intensywny dzień dla palców</b> — sesja na ścianie tak samo jak Protokół B czy C. Zasady planu:<ul><li>Maksymalnie <b>3 intensywne dni na 7</b> (wspinanie + Protokół B/C/tablica własna łącznie).</li><li><b>Nigdy dwie intensywne dzień po dniu.</b> Dzień po intensywnej sesji dozwolona jest wyłącznie praca niskointensywna (Protokół A lub D) albo przerwa.</li><li>Między wspinaniem a intensywną tablicą minimum <b>48 godzin</b>. Lekka tablica dzień po wspinaniu jest w porządku.</li></ul><b>Dlaczego tak:</b> po ciężkiej sesji siła mięśni zginaczy wraca w około dobę, ale bilans kolagenu w ścięgnie jest we wczesnej fazie (pierwsze 24–36 h) przejściowo ujemny i przewaga syntezy przychodzi dopiero później — dlatego różnicujemy intensywność sąsiednich dni zamiast układać dwa ciężkie dni z rzędu.'},
+  {t:'Progi: kiedy utrzymać plan, kiedy cofnąć, kiedy przerwać', h:'<ul><li><b>Utrzymaj plan</b>, jeśli: brak porannej sztywności palców trwającej ponad 30 minut, brak bólu punktowego u podstawy palca lub przy paliczku środkowym (bloczki A2/A4), siła chwytu stabilna.</li><li><b>Cofnij się o etap</b> (mniej serii, większe odciążenie, tylko lekkie protokoły), jeśli: pojawia się poranna sztywność, siła chwytu spada, poczucie „gotowości" poniżej 100% utrzymuje się ponad 48 h.</li><li><span class="warn"><b>Przerwij i skonsultuj</b></span>, jeśli: ból punktowy nad bloczkiem, obrzęk stawu środkowego palca (PIP), jakikolwiek trzask/„pop", ból przy zgięciu palca z oporem.</li></ul>Prosty autotest raz w tygodniu: powtarzalny maksymalny zwis na świeżych palcach, zawsze w tych samych warunkach. Spadek wyniku o więcej niż ~10% to sygnał przeciążenia, zanim cokolwiek zaboli.'},
   {t:'Skąd te zasady i jak mocny to dowód', h:'Reguły częstotliwości pochodzą z Twojej analizy dowodów (sierpień 2026). Uczciwie: <b>nie istnieje badanie z randomizacją testujące tablicę w dni następujące po sobie</b> — cała baza badań to 2–3 sesje tygodniowo z dniami przerwy, a schemat „dzień intensywny + dzień lekki" to ekstrapolacja z kinetyki regeneracji tkanek i danych obserwacyjnych (m.in. retrospektywna analiza lekkich częstych zwisów), nie protokół z badań. Dlatego reguły są konserwatywne, a Twój profil (powrót po ~10 latach przerwy — nerwowo-mięśniowa adaptacja niemal na pewno wyprzedza adaptację tkanki łącznej) uzasadnia dodatkową ostrożność. Opcjonalny dodatek: 15 g żelatyny z witaminą C ~1 h przed sesją podnosi marker syntezy kolagenu, ale <b>nie ma dowodu, że zmniejsza liczbę urazów</b> — tani zakład o niskim ryzyku, decyzja Twoja.'},
 ];
 
 /* Wspólna sekcja modułu „Wytrzymałość siłowa" (Protokoły A + B) —
    przebudowa i nazwa na prośbę użytkownika (09.2026). */
 const WS_MODUL = [
-  {t:'Moduł „Wytrzymałość siłowa" — jak A i B grają razem', h:'Wytrzymałość siłowa palców to dwie różne adaptacje i dlatego moduł ma dwie części:<ul><li><b>Protokół A (baza, niskointensywny)</b> — buduje kapilary i zaplecze tlenowe, czyli <b>zdolność do wypłukiwania metabolitów</b> między chwytami. Robisz go częściej, zawsze lekko.</li><li><b>Protokół B (repeatery 7/3, intensywny)</b> — uczy mięsień <b>pracować w zakwaszeniu</b>: buforowanie i tolerancja „palenia". Robisz go rzadko (to intensywna ekspozycja z limitu 3/tydzień) i tylko na bazie zbudowanej przez A.</li></ul>Uwaga o „kwasie mlekowym": to, co pali w przedramionach, to nie sam mleczan, lecz narastające jony wodorowe i fosforany przy pracy bez dopływu krwi — mleczan jest w dużej mierze paliwem, które sprawniejsza sieć naczyń i mitochondria potrafią z powrotem zużyć. Efekt praktyczny obu części jest jednak dokładnie ten, o który chodzi: <b>później „zalewasz się" i szybciej odpuszcza</b>.<br><br>Trzeci, cichy składnik wytrzymałości to <b>siła maksymalna (Protokół C)</b>: im mocniejsze palce, tym mniejszy procent maksimum kosztuje ten sam chwyt — dłużej pozostajesz poniżej progu, przy którym mięsień zaciska sobie dopływ krwi. Dlatego nawet trenując wytrzymałość, nie porzuca się siły całkiem.<br><br><b>Rytm tygodnia w praktyce:</b> A możesz robić 2–3× w tygodniu (także dzień po wspinaniu), B najwyżej 1× — osobno od wspinania o co najmniej 48 h. Uzupełnieniem, nie zamiennikiem, jest łatwe wspinanie ciągiem z dni wspinaczkowych planu.'},
+  {t:'Moduł „Wytrzymałość siłowa" — jak łączyć A i B', h:'Wytrzymałość siłowa palców to dwie różne adaptacje i dlatego moduł ma dwie części:<ul><li><b>Protokół A (baza, niskointensywny)</b> — buduje kapilary i zaplecze tlenowe, czyli <b>zdolność do wypłukiwania metabolitów</b> między chwytami. Robisz go częściej, zawsze lekko.</li><li><b>Protokół B (repeatery 7/3, intensywny)</b> — uczy mięsień <b>pracować w zakwaszeniu</b>: buforowanie i tolerancja „palenia". Robisz go rzadko (liczy się do limitu 3 intensywnych dni na tydzień) i tylko na bazie zbudowanej przez A.</li></ul>Uwaga o „kwasie mlekowym": to, co pali w przedramionach, to nie sam mleczan, lecz narastające jony wodorowe i fosforany przy pracy bez dopływu krwi — mleczan jest w dużej mierze paliwem, które sprawniejsza sieć naczyń i mitochondria potrafią z powrotem zużyć. W praktyce: <b>później „zalewasz się" i szybciej odpuszcza</b>.<br><br>Trzeci składnik wytrzymałości to <b>siła maksymalna (Protokół C)</b>: im mocniejsze palce, tym mniejszy procent maksimum kosztuje ten sam chwyt — dłużej pozostajesz poniżej progu, przy którym mięsień zaciska sobie dopływ krwi. Dlatego nawet trenując wytrzymałość, nie porzuca się siły całkiem.<br><br><b>Rytm tygodnia w praktyce:</b> A możesz robić 2–3× w tygodniu (także dzień po wspinaniu), B najwyżej 1× — osobno od wspinania o co najmniej 48 h. Uzupełnieniem, nie zamiennikiem, jest łatwe wspinanie ciągiem z dni wspinaczkowych planu.'},
 ];
 
 const HANGBOARD_PROTOCOLS = {
@@ -923,14 +958,14 @@ const HANGBOARD_PROTOCOLS = {
     id:'hangboard', key:'A', kind:'hangboard',
     name:'Protokół A — wytrzymałość siłowa: baza (kapilaryzacja)',
     series:3, reps:8, hang:10, hangRest:5, seriesRest:240,
-    qualNote:'Trening z założenia LEKKI — budujesz sieć naczyń i wytrzymałość, nie siłę.',
-    cue:'8 × (10 s zwisu / 5 s luzu) = 1 seria. Trening z założenia LEKKI — budujesz sieć naczyń i wytrzymałość, nie siłę.',
-    warn:'Protokół NISKOINTENSYWNY (jeśli jest dobrze skalibrowany): nie zużywa limitu 3 intensywnych ekspozycji na tydzień i może wchodzić dzień po wspinaniu. Jeśli „pompa" w przedramionach utrzymuje się do następnego dnia — intensywność była za wysoka; mocniej odciąż stopą, nie skracaj serii.',
+    qualNote:'Trening z założenia lekki — budujesz sieć naczyń i wytrzymałość, nie siłę.',
+    cue:'8 × (10 s zwisu / 5 s luzu) = 1 seria. Trening z założenia lekki — budujesz sieć naczyń i wytrzymałość, nie siłę.',
+    warn:'Protokół niskointensywny (jeśli jest dobrze skalibrowany): nie wlicza się do limitu 3 intensywnych dni na tydzień i może wchodzić dzień po wspinaniu. Jeśli „pompa" w przedramionach utrzymuje się do następnego dnia — intensywność była za wysoka; mocniej odciąż stopą, nie skracaj serii.',
     tech:[
-      {t:'Co dokładnie budujesz w tym protokole', h:'To jest <b>fundament wytrzymałości siłowej</b>: rozbudowa drobnych naczyń (kapilar) i „elektrowni" tlenowych (mitochondriów) w zginaczach przedramienia. Fizjologia jest prosta: powyżej ok. 40% maksymalnego ściśnięcia mięsień przedramienia <b>zaciska własne naczynia</b> i pracuje bez dopływu krwi. Rytm 10 s pracy / 5 s luzu robi z każdej przerwy <b>okno przepływu</b> — krew wraca falą, wypłukuje metabolity i dostarcza tlen, a powtarzany co kilkanaście sekund skok przepływu to właśnie bodziec do rozrostu naczyń. Warunek działa tylko przy NISKIEJ intensywności: gdy wisisz za ciężko, naczynia są zaciśnięte także „z rozpędu" w przerwach i cały mechanizm znika. Dlatego za ciężkie robienie tego protokołu to nie „więcej treningu", tylko <b>inny, gorszy trening</b>.'},
+      {t:'Co dokładnie budujesz w tym protokole', h:'Rozbudowa drobnych naczyń (kapilar) i mitochondriów w zginaczach przedramienia — podstawa wytrzymałości siłowej. Powyżej ok. 40% maksymalnego ściśnięcia mięsień przedramienia <b>zaciska własne naczynia</b> i pracuje bez dopływu krwi. Rytm 10 s pracy / 5 s luzu robi z każdej przerwy <b>okno przepływu</b> — krew wraca falą, wypłukuje metabolity i dostarcza tlen, a powtarzany co kilkanaście sekund skok przepływu to właśnie bodziec do rozrostu naczyń. Działa to tylko przy <b>niskiej intensywności</b>: gdy wisisz za ciężko, przepływ w przerwach nie wraca w pełni i ten efekt znika.'},
       {t:'Ustawienie', h:'Największa dostępna listwa albo szczebel (w planie: 25–30 mm). Chwyt <b>otwarty</b>: palce lekko zgięte, bez dociskania kciukiem. Odciążenie: stopa oparta na szczeblu drabinki. W 5-sekundowej przerwie <b>nie schodzisz</b> — tylko zdejmujesz ciężar z palców i zostajesz przy tablicy.'},
-      {t:'Kalibracja — najważniejsza rzecz w tym protokole', h:'Dobierz odciążenie stopą tak, żeby po ósmym zwisie pierwszej serii czuć, że <b>spokojnie zwisałbyś drugie tyle</b>. Kontrola po fakcie: jeśli w ostatniej serii palce zaczynają się otwierać — było za ciężko; następnym razem mocniej odciąż.'},
-      {t:'Progresja — w tej kolejności, nie innej', h:'Dla wytrzymałości progresuje się <b>objętością i gęstością, nie ciężarem</b>:<ol><li>Najpierw dokładaj <b>serie</b>: 3 → 4 → 5 (przez „✎").</li><li>Potem <b>powtórzenia w serii</b>: 8 → 10.</li><li>Potem <b>gęstość</b>: luz 5 s → 4 s.</li><li>Intensywność (mniejsza listwa, mniej odciążenia) ruszasz na SAMYM końcu — i tylko jeśli całość nadal spełnia regułę „spokojnie drugie tyle".</li></ol>Każdy krok utrzymaj przez ok. 2 tygodnie, zanim zrobisz następny.'},
+      {t:'Kalibracja odciążenia', h:'Dobierz odciążenie stopą tak, żeby po ósmym zwisie pierwszej serii czuć, że <b>spokojnie zwisałbyś drugie tyle</b>. Kontrola po fakcie: jeśli w ostatniej serii palce zaczynają się otwierać — było za ciężko; następnym razem mocniej odciąż.'},
+      {t:'Progresja — kolejność kroków', h:'Dla wytrzymałości progresuje się <b>objętością i gęstością, nie ciężarem</b>:<ol><li>Najpierw dokładaj <b>serie</b>: 3 → 4 → 5 (przez „✎").</li><li>Potem <b>powtórzenia w serii</b>: 8 → 10.</li><li>Potem <b>gęstość</b>: luz 5 s → 4 s.</li><li>Intensywność (mniejsza listwa, mniej odciążenia) ruszasz na samym końcu — i tylko jeśli całość nadal spełnia regułę „spokojnie drugie tyle".</li></ol>Każdy krok utrzymaj przez ok. 2 tygodnie, zanim zrobisz następny.'},
       {t:'Po czym poznać, że było dobrze', h:'<ul><li>Lekka pompa na końcu serii, znikająca w czasie przerwy.</li><li>Po treningu przedramiona sprawne, bez uczucia „nabitych".</li><li>Pompa do następnego dnia = za ciężko (najczęstszy błąd w tym protokole).</li></ul>'},
       ...WS_MODUL,
       ...HANGBOARD_SAFETY,
@@ -944,11 +979,11 @@ const HANGBOARD_PROTOCOLS = {
     cue:'6 × (7 s zwisu / 3 s przerwy) = 1 seria (60 s). Ostatnie powtórzenie ma być trudne, ale wykonane w pełni.',
     warn:'Wg Twojego planu Protokół B wchodzi dopiero od 3. tygodnia (w skróconej formie, 3 serie). W tygodniach 1–2 robisz wyłącznie Protokół A.',
     tech:[
-      {t:'Co dokładnie budujesz w tym protokole', h:'To „kwaśna" połowa modułu wytrzymałości siłowej. Minutowa seria 6 × (7 s / 3 s) przy wyraźnym obciążeniu zmusza zginacze do pracy, gdy metabolity już narastają — trzysekundowe okna nie wystarczają na pełne wypłukanie. Tego właśnie chcesz: mięsień uczy się <b>buforować zakwaszenie i utrzymywać chwyt mimo „palenia"</b>, a głowa uczy się, że pompa to jeszcze nie koniec. To dokładnie ten rodzaj zmęczenia, który kończy przechwyty na dłuższych bulderach i drogach. Warunek sensu: wszystkie serie <b>ukończone</b> — repeatery zrywane w połowie trenują głównie frustrację.'},
+      {t:'Co dokładnie budujesz w tym protokole', h:'Druga część modułu wytrzymałości siłowej: praca w zakwaszeniu. Minutowa seria 6 × (7 s / 3 s) przy wyraźnym obciążeniu zmusza zginacze do pracy, gdy metabolity już narastają — trzysekundowe okna nie wystarczają na pełne wypłukanie. Mięsień uczy się <b>buforować zakwaszenie i utrzymywać chwyt mimo „palenia"</b> — to ten rodzaj zmęczenia, który kończy przechwyty na dłuższych bulderach i drogach. Warunek: wszystkie serie <b>ukończone</b> — jeśli zrywasz serię w połowie, odciąż.'},
       {t:'Ustawienie', h:'Listwa 20–25 mm. Chwyt: <b>half-crimp i otwarty naprzemiennie</b> — zmieniasz między seriami, żeby nie obciążać w kółko tej samej struktury. Half-crimp = palce zgięte ok. 90° w środkowym stawie, kciuk swobodny (nie na palcach!).'},
-      {t:'Jak dobrać ciężar', h:'Intensywność wyższa niż w Protokole A: ostatnie powtórzenie serii ma być wyraźnie trudne, ale wykonane w pełnym czasie i bez otwierania się palców. Jeśli nie kończysz serii — odciąż. Jeśli kończysz z dużym zapasem — zmniejsz odciążenie. Orientacyjnie to praca rzędu 60–75% maksimum — pompa na końcu serii MA być.'},
+      {t:'Jak dobrać ciężar', h:'Intensywność wyższa niż w Protokole A: ostatnie powtórzenie serii ma być wyraźnie trudne, ale wykonane w pełnym czasie i bez otwierania się palców. Jeśli nie kończysz serii — odciąż. Jeśli kończysz z dużym zapasem — zmniejsz odciążenie. Orientacyjnie to praca rzędu 60–75% maksimum — pompa na końcu serii ma być.'},
       {t:'Przerwy', h:'Między seriami 2–3 minuty. W 3-sekundowej przerwie wewnątrz serii zdejmujesz ciężar z palców, ale zostajesz przy tablicy.'},
-      {t:'Progresja', h:'<ol><li>Najpierw <b>serie</b>: 3 → 4 → 5 (przez „✎").</li><li>Potem minimalnie <b>mniejsze odciążenie</b> (ta sama listwa).</li><li>Listwę zmniejszasz na końcu — i nigdy „na siłę": kryterium zawsze brzmi „ostatnie powtórzenie trudne, ale pełne".</li></ol>Pamiętaj: to ekspozycja INTENSYWNA — 1× w tygodniu wystarczy, a limit 3 intensywnych na tydzień liczy też wspinanie.'},
+      {t:'Progresja', h:'<ol><li>Najpierw <b>serie</b>: 3 → 4 → 5 (przez „✎").</li><li>Potem minimalnie <b>mniejsze odciążenie</b> (ta sama listwa).</li><li>Listwę zmniejszasz na końcu — i nigdy „na siłę": kryterium zawsze brzmi „ostatnie powtórzenie trudne, ale pełne".</li></ol>To sesja intensywna — 1× w tygodniu wystarczy; limit 3 intensywnych dni na tydzień liczy też wspinanie.'},
       ...WS_MODUL,
       ...HANGBOARD_SAFETY,
     ]
@@ -957,15 +992,15 @@ const HANGBOARD_PROTOCOLS = {
     id:'hangboard_D', key:'D', kind:'hangboard',
     name:'Protokół D — lekkie zwisy z odciążeniem stopą',
     series:3, reps:6, hang:10, hangRest:50, seriesRest:180,
-    qualNote:'Ma być ŁATWO. Jeśli w trakcie serii czujesz wysiłek w palcach — odciąż mocniej.',
+    qualNote:'Ma być łatwo. Jeśli w trakcie serii czujesz wysiłek w palcach — odciąż mocniej.',
     cue:'6 × (10 s zwisu / 50 s przerwy) = 1 seria. Intensywność ok. 40–50% ciężaru ciała — resztę bierze stopa.',
-    warn:'Protokół NISKOINTENSYWNY: nie zużywa limitu 3 intensywnych ekspozycji na tydzień i może wchodzić także dzień po wspinaniu lub ciężkiej tablicy — pod warunkiem, że naprawdę jest lekki. Szczegóły w sekcji o częstotliwości poniżej.',
+    warn:'Protokół niskointensywny: nie wlicza się do limitu 3 intensywnych dni na tydzień i może wchodzić także dzień po wspinaniu lub ciężkiej tablicy — pod warunkiem, że naprawdę jest lekki. Szczegóły w sekcji o częstotliwości poniżej.',
     tech:[
-      {t:'Po co ten protokół', h:'To najlżejsza forma pracy palców w całej aplikacji. Cel nie jest siłowy ani wytrzymałościowy w klasycznym sensie — chodzi o <b>przepływ krwi przez ścięgna i pobudzenie syntezy kolagenu</b> przy obciążeniu na tyle niskim, że nie zjada zapasu regeneracyjnego. Używaj go jako uzupełnienia lub w tygodniu, w którym nie robisz Protokołu A/B/C.'},
+      {t:'Po co ten protokół', h:'To najlżejsza forma pracy palców w całej aplikacji. Cel nie jest siłowy ani wytrzymałościowy w klasycznym sensie — chodzi o <b>przepływ krwi przez ścięgna i pobudzenie syntezy kolagenu</b> przy obciążeniu na tyle niskim, że nie utrudnia regeneracji. Używaj go jako uzupełnienia lub w tygodniu, w którym nie robisz Protokołu A/B/C.'},
       {t:'Jak ustawić obciążenie — konkretnie', h:'Stopa na szczeblu, taborecie albo krześle pod tablicą przejmuje część ciężaru. <b>Zmierz to raz wagą łazienkową:</b> postaw wagę tam, gdzie opierasz stopę, zawiśnij i odczytaj, ile kilogramów bierze stopa. Twoja masa ciała minus ten odczyt = realne obciążenie palców. Celuj w <b>40–50% masy ciała</b> na palcach. Zapisz wynik w polu „Odciążenie stopą" — dzięki temu następnym razem powtórzysz to samo, zamiast zgadywać.'},
       {t:'Wykonanie', h:'<ol><li>Największa dostępna listwa lub szczebel, chwyt <b>otwarty</b>.</li><li>10 sekund zwisu — spokojnie, bez napinania całego ciała.</li><li>Schodzisz i odpoczywasz <b>50 sekund</b> (w przeciwieństwie do Protokołu A, gdzie zostajesz przy tablicy).</li><li>6 zwisów = 1 seria, potem 3 minuty przerwy.</li></ol>'},
       {t:'Skąd ten pomysł i jakie ma ograniczenia', h:'Analiza danych użytkowników aplikacji treningowej (Gilmore i wsp. 2024) pokazała, że lekkie, częste zwisy około 40% maksimum dawały przyrost siły chwytu porównywalny z max hangs (rzędu 2,5–3,2%), a połączenie obu metod działało addytywnie (ok. 6%). <b>Uczciwie o sile dowodu:</b> to analiza retrospektywna danych z aplikacji, nie badanie z randomizacją — efekt jest realny, ale umiarkowany i nie tak pewny jak przy klasycznych protokołach.'},
-      {t:'A czy można to robić częściej?', h:'Tak — i to jest właśnie rola tego protokołu po Twojej analizie dowodów (sierpień 2026). Zasady:<ul><li>Protokół D <b>nie zużywa</b> limitu 3 intensywnych ekspozycji palców na tydzień.</li><li>Może wchodzić <b>dzień po wspinaniu albo po ciężkiej tablicy</b> — jako „dzień niskointensywny" w układzie: dzień intensywny → dzień lekki. Dwa lekkie dni z rzędu też są w porządku.</li><li>Warunki twarde: chwyt otwarty (możesz rotować z half-crimpem i chwytem trójpalczastym między seriami — byle lekko), <b>nigdy zamknięty crimp</b>, duża listwa, całość ma być ŁATWA od pierwszego do ostatniego zwisu.</li><li>Dni objawowe (poranna sztywność, jakikolwiek ból punktowy) = bez tablicy, także tej lekkiej.</li></ul><b>Uczciwie:</b> schemat dni z rzędu nie ma badań z randomizacją — to ekstrapolacja z kinetyki tkanek i danych obserwacyjnych. Dlatego intensywne sesje pozostają twardo limitowane, a ten protokół jest wentylem częstotliwości, nie furtką do „więcej ciężko".'},
+      {t:'A czy można to robić częściej?', h:'Tak — i to jest właśnie rola tego protokołu po Twojej analizie dowodów (sierpień 2026). Zasady:<ul><li>Protokół D <b>nie wlicza się</b> do limitu 3 intensywnych dni na tydzień.</li><li>Może wchodzić <b>dzień po wspinaniu albo po ciężkiej tablicy</b> — jako „dzień niskointensywny" w układzie: dzień intensywny → dzień lekki. Dwa lekkie dni z rzędu też są w porządku.</li><li>Warunki twarde: chwyt otwarty (możesz rotować z half-crimpem i chwytem trójpalczastym między seriami — byle lekko), <b>nigdy zamknięty crimp</b>, duża listwa, całość ma być łatwa od pierwszego do ostatniego zwisu.</li><li>Dni objawowe (poranna sztywność, jakikolwiek ból punktowy) = bez tablicy, także tej lekkiej.</li></ul><b>Uczciwie:</b> schemat dni z rzędu nie ma badań z randomizacją — to ekstrapolacja z kinetyki tkanek i danych obserwacyjnych. Dlatego limit intensywnych sesji zostaje bez zmian; ten protokół służy tylko do dokładania lekkich dni.'},
       ...HANGBOARD_SAFETY,
     ]
   },
@@ -973,14 +1008,14 @@ const HANGBOARD_PROTOCOLS = {
     id:'hangboard_C', key:'C', kind:'hangboard',
     name:'Protokół C — siła maksymalna (max hangs, bouldering)',
     series:4, reps:1, hang:9, hangRest:0, seriesRest:240,
-    qualNote:'Domyślnie dawka PODTRZYMUJĄCA — tryb budujący opisany niżej.',
-    cue:'4 pojedyncze zwisy po 8–10 s, przerwa 3–5 min. Domyślnie dawka PODTRZYMUJĄCA — tryb budujący opisany w technice.',
+    qualNote:'Domyślnie dawka podtrzymująca — tryb budujący opisany niżej.',
+    cue:'4 pojedyncze zwisy po 8–10 s, przerwa 3–5 min. Domyślnie dawka podtrzymująca — tryb budujący opisany w technice.',
     warn:'Wg Twojego planu Protokół C wchodzi od 5. tygodnia, a z kamizelką nie wcześniej niż od 11. tygodnia (start 2,5% masy ciała). W tygodniach 1–2 robisz wyłącznie Protokół A.',
     tech:[
-      {t:'Co dokładnie budujesz w tym protokole', h:'Czystą <b>siłę maksymalną palców</b> — walutę boulderingu. Bulder to kilka–kilkanaście maksymalnych przechwytów: o utrzymaniu chwytu decyduje siła szczytowa, nie zaplecze tlenowe. Pojedyncze krótkie zwisy przy wysokim obciążeniu i PEŁNYCH przerwach uczą układ nerwowy rekrutować włókna na raz, bez zakwaszenia — dlatego przerwy 3–5 min są częścią treningu, nie stratą czasu. Bonus dla wytrzymałości: mocniejsze palce trzymają ten sam chwyt na niższym procencie maksimum, więc później przekraczasz próg, przy którym mięsień zaciska sobie dopływ krwi.'},
+      {t:'Co dokładnie budujesz w tym protokole', h:'Czystą <b>siłę maksymalną palców</b> — podstawę w boulderingu. Bulder to kilka–kilkanaście maksymalnych przechwytów: o utrzymaniu chwytu decyduje siła szczytowa, nie zaplecze tlenowe. Pojedyncze krótkie zwisy przy wysokim obciążeniu i pełnych przerwach uczą układ nerwowy rekrutować włókna na raz, bez zakwaszenia — dlatego przerwy 3–5 min są pełne. Dla wytrzymałości: mocniejsze palce trzymają ten sam chwyt na niższym procencie maksimum, więc później przekraczasz próg, przy którym mięsień zaciska sobie dopływ krwi.'},
       {t:'Ustawienie', h:'Listwa 20 mm, chwyt <b>half-crimp</b> (palce zgięte ok. 90° w środkowym stawie, kciuk swobodny; możesz rotować z chwytem otwartym między sesjami). Pojedyncze zwisy, pełna przerwa między nimi. Nigdy na zmęczonych palcach i nigdy bez pełnej rozgrzewki.'},
-      {t:'Tryb 1 — dawka podtrzymująca (domyślna w planie)', h:'4 pojedyncze zwisy po 8–10 s z wyraźnym zapasem, 1× w tygodniu. Ma utrzymać poziom siły w sezonie, w którym priorytetem planu jest wytrzymałość siłowa (moduł A+B). W tym trybie <b>nie gonisz rekordów</b> — ściganie się zjada zapas regeneracyjny potrzebny na wspinanie.'},
-      {t:'Tryb 2 — budowanie siły pod bouldering (Twoja decyzja, 09.2026)', h:'Kiedy chcesz przez blok treningowy realnie BUDOWAĆ siłę, użyj osobnej pozycji <b>„Protokół C+ — budowanie siły (bouldering)"</b> w zakładce <b>Timery</b>: 5 pojedynczych zwisów po 7–10 s, przerwy 3–5 min, na końcu zwisu 2–3 sekundy zapasu. Ma własny timer, własną edycję „✎" i osobną historię, więc dawka podtrzymująca (C) i blok budujący (C+) się nie mieszają. Pełne prowadzenie bloku — progresja czas → obciążenie, częstotliwość, koszt w limicie intensywnych ekspozycji — jest opisane przy C+.'},
+      {t:'Tryb 1 — dawka podtrzymująca (domyślna w planie)', h:'4 pojedyncze zwisy po 8–10 s z wyraźnym zapasem, 1× w tygodniu. Ma utrzymać poziom siły w sezonie, w którym priorytetem planu jest wytrzymałość siłowa (moduł A+B). W tym trybie <b>nie gonisz rekordów</b> — ściganie się utrudnia regenerację potrzebną na wspinanie.'},
+      {t:'Tryb 2 — budowanie siły pod bouldering (Twoja decyzja, 09.2026)', h:'Kiedy chcesz przez blok treningowy budować siłę, użyj osobnej pozycji <b>„Protokół C+ — budowanie siły (bouldering)"</b> w zakładce <b>Timery</b>: 5 pojedynczych zwisów po 7–10 s, przerwy 3–5 min, na końcu zwisu 2–3 sekundy zapasu. Ma własny timer, własną edycję „✎" i osobną historię, więc dawka podtrzymująca (C) i blok budujący (C+) się nie mieszają. Pełne prowadzenie bloku — progresja czas → obciążenie, częstotliwość, koszt w limicie intensywnych dni — jest opisane przy C+.'},
       {t:'Kiedy przerwać', h:'Zwis kończysz, gdy palce zaczynają się otwierać — nie „na maksa". Ból lub trzask w podstawie palca = <span class="warn">natychmiastowy koniec pracy palców i konsultacja</span>.'},
       ...HANGBOARD_SAFETY,
     ]
@@ -991,13 +1026,13 @@ const HANGBOARD_PROTOCOLS = {
     series:5, reps:1, hang:7, hangRest:0, seriesRest:240,
     qualNote:'Na końcu zwisu 2–3 sekundy zapasu — ciężko, ale nigdy do zerwania.',
     cue:'5 pojedynczych zwisów po 7–10 s, przerwa 3–5 min. Na końcu zwisu 2–3 sekundy zapasu — ciężko, ale nigdy do zerwania.',
-    warn:'Tryb INTENSYWNY — liczy się do limitu 3 ekspozycji palców na tydzień; przy 2× w tygodniu zostaje Ci JEDNA sesja wspinania. Blok prowadź 4–6 tygodni, potem wróć do dawki podtrzymującej (Protokół C). Obciążenie zewnętrzne wg planu nie wcześniej niż od 11. tygodnia (start 2,5% masy ciała).',
+    warn:'Tryb intensywny — liczy się do limitu 3 intensywnych dni na tydzień; przy 2× w tygodniu zostaje Ci tylko jedna sesja wspinania. Blok prowadź 4–6 tygodni, potem wróć do dawki podtrzymującej (Protokół C). Obciążenie zewnętrzne wg planu nie wcześniej niż od 11. tygodnia (start 2,5% masy ciała).',
     tech:[
       {t:'Czym to się różni od Protokołu C', h:'Protokół C to dawka <b>podtrzymująca</b> wpisana w plan (4 zwisy, wyraźny zapas, bez gonienia rekordów). C+ to jego wersja <b>budująca</b> — świadomie wybierany blok, w którym siła maksymalna palców na kilka tygodni staje się priorytetem, np. pod bouldering. Ma osobny timer, osobną edycję „✎" i osobną historię wyników, żeby nie mieszać dawki podtrzymującej z blokiem budującym.'},
-      {t:'Co dokładnie budujesz', h:'Czystą <b>siłę maksymalną palców</b> — walutę boulderingu. Bulder to kilka–kilkanaście maksymalnych przechwytów: o utrzymaniu decyduje siła szczytowa, nie zaplecze tlenowe. Krótkie zwisy przy wysokim obciążeniu i PEŁNYCH przerwach uczą układ nerwowy rekrutować jak najwięcej włókien na raz, bez zakwaszenia — dlatego przerwy 3–5 minut są częścią treningu, nie stratą czasu. Bonus: mocniejsze palce trzymają ten sam chwyt na niższym procencie maksimum, co wspiera też wytrzymałość.'},
+      {t:'Co dokładnie budujesz', h:'Czystą <b>siłę maksymalną palców</b> — podstawę w boulderingu. Bulder to kilka–kilkanaście maksymalnych przechwytów: o utrzymaniu decyduje siła szczytowa, nie zaplecze tlenowe. Krótkie zwisy przy wysokim obciążeniu i pełnych przerwach uczą układ nerwowy rekrutować jak najwięcej włókien na raz, bez zakwaszenia — dlatego przerwy 3–5 minut są pełne. Przy okazji: mocniejsze palce trzymają ten sam chwyt na niższym procencie maksimum, co wspiera też wytrzymałość.'},
       {t:'Ustawienie', h:'Listwa 20 mm, chwyt <b>half-crimp</b> (palce zgięte ok. 90° w środkowym stawie, kciuk swobodny; możesz rotować z chwytem otwartym między sesjami). Pojedyncze zwisy, pełna przerwa między nimi. Zawsze po pełnej rozgrzewce palców, nigdy na zmęczonych palcach i tylko na początku treningu.'},
-      {t:'Intensywność — jak ją ustawić', h:'Dobierz obciążenie tak, żeby na końcu każdego zwisu zostawały <b>2–3 sekundy zapasu</b>: ciężko, ale nigdy do zerwania i nigdy do otwierania się palców. Regulujesz dwiema śrubami: mniejszym odciążeniem stopą albo — gdy zwisasz już z pełną masą ciała — dodatkowym obciążeniem (plecak/kamizelka, start 2,5% masy ciała).'},
-      {t:'Prowadzenie bloku — progresja', h:'<ol><li>Najpierw progresja <b>czasem</b>: 7 s → 8 s → 10 s przy stałym obciążeniu (zmieniasz przez „✎").</li><li>Gdy 5 × 10 s wychodzi z zapasem — <b>dodaj obciążenie</b> (ok. +1–2% masy ciała na tydzień) ALBO zmniejsz listwę. Nigdy obie zmiany naraz.</li><li>Częstotliwość: 1–2× w tygodniu, zawsze na świeżych palcach i co najmniej 48 h od wspinania.</li><li>Po 4–6 tygodniach zakończ blok i wróć do Protokołu C; tydzień deloadu z makrocyklu obowiązuje normalnie (zero tablicy).</li></ol>'},
+      {t:'Intensywność — jak ją ustawić', h:'Dobierz obciążenie tak, żeby na końcu każdego zwisu zostawały <b>2–3 sekundy zapasu</b>: ciężko, ale nigdy do zerwania i nigdy do otwierania się palców. Regulujesz to na dwa sposoby: mniejszym odciążeniem stopą albo — gdy zwisasz już z pełną masą ciała — dodatkowym obciążeniem (plecak/kamizelka, start 2,5% masy ciała).'},
+      {t:'Prowadzenie bloku — progresja', h:'<ol><li>Najpierw progresja <b>czasem</b>: 7 s → 8 s → 10 s przy stałym obciążeniu (zmieniasz przez „✎").</li><li>Gdy 5 × 10 s wychodzi z zapasem — <b>dodaj obciążenie</b> (ok. +1–2% masy ciała na tydzień) <b>albo</b> zmniejsz listwę. Nigdy obie zmiany naraz.</li><li>Częstotliwość: 1–2× w tygodniu, zawsze na świeżych palcach i co najmniej 48 h od wspinania.</li><li>Po 4–6 tygodniach zakończ blok i wróć do Protokołu C; tydzień deloadu z makrocyklu obowiązuje normalnie (zero tablicy).</li></ol>'},
       {t:'Uczciwie o dowodach', h:'Sama struktura max hangs (krótki zwis, wysokie obciążenie, długie przerwy, progresja ciężaru) ma wsparcie w badaniach wspinaczy — m.in. progresywne dokładanie obciążenia poprawiało siłę chwytu w badaniu z randomizacją. Konkretna liczba serii i tempo progresji to już praktyka trenerska, nie twardy dowód. Ból, „pop" albo poranna sztywność = natychmiast koniec bloku i powrót do zasad z sekcji progów.'},
       {t:'Kiedy przerwać', h:'Zwis kończysz, gdy palce zaczynają się otwierać — nie „na maksa". Ból lub trzask w podstawie palca = <span class="warn">natychmiastowy koniec pracy palców i konsultacja</span>.'},
       ...HANGBOARD_SAFETY,
@@ -1234,7 +1269,7 @@ const TEST_DEFS = [
   {id:'E2', type:'number', label:'Podciągnięcia klasyczne — maks. powtórzeń',
    how:'Nachwyt na szerokość barków, pełny zakres, bez kiwania nogami. Kończysz przy pierwszym kiwnięciu lub niepełnym powtórzeniu.',
    map:v=> v<=0?0 : v<=4?1 : v<=9?2 : 3},
-  {id:'E3', type:'number', label:'Pistol bez deficytu — maks. powtórzeń na SŁABSZĄ nogę',
+  {id:'E3', type:'number', label:'Pistol bez deficytu — maks. powtórzeń na słabszą nogę',
    how:'Stopa płasko na podłodze, palce jednej ręki na drabince tylko dla równowagi. Liczysz powtórzenia w pełnej kontroli.',
    map:v=> v<=0?0 : v<=2?1 : 2},
   {id:'E4', type:'select', label:'Front lever — który wariant utrzymasz ok. 8 sekund na granicy możliwości?',
@@ -1245,7 +1280,7 @@ const TEST_DEFS = [
    how:'Kolana na macie, stopy pod szczeblem. Opuść się raz w przód najwolniej, jak umiesz.',
    options:['Kontroluję tylko z taśmą jako asystą','Bez taśmy, ale ręce muszą przejąć wcześnie','Pełne 4 s kontroli, ręce dopiero przy podłodze'],
    map:v=>v},
-  {id:'E6', type:'number', label:'Pompki pike ze stopami na PODŁODZE — maks. powtórzeń',
+  {id:'E6', type:'number', label:'Pompki pike ze stopami na podłodze — maks. powtórzeń',
    how:'Biodra wysoko (odwrócone „V"), głowa schodzi przed linię dłoni. Bez podwyższenia pod stopami.',
    map:v=> v<=2?0 : v<=7?1 : 2},
   {id:'E7', type:'number', label:'Pompki klasyczne — maks. powtórzeń',
@@ -1402,7 +1437,7 @@ const YT_DIFFS = {
   hangboard_B:'Niezależnie od filmu: zero full crimpu; Twoje serie wg aplikacji.',
   hangboard_C:'Dawka podtrzymująca — nie goń rekordów z filmów.',
   hangboard_Cbud:'Tryb budujący: zawsze 2–3 s zapasu na końcu zwisu; progresja czas → obciążenie wg opisu w aplikacji, nie wg filmu.',
-  hangboard_D:'U Ciebie to protokół NISKOINTENSYWNY: może wchodzić dzień po intensywnej sesji i nie zużywa limitu 3 intensywnych ekspozycji na tydzień.',
+  hangboard_D:'U Ciebie to protokół niskointensywny: może wchodzić dzień po intensywnej sesji i nie wlicza się do limitu 3 intensywnych dni na tydzień.',
   E3:'Pilnuj pięty na podłożu — na filmach często się odrywa.',
   G07:'Pilnuj pięty na podłożu — na filmach często się odrywa.',
   E8:'Na filmach często pełna głębokość — Ty masz stop na 100–110° (Twoja stacja jest szersza niż barki).',
@@ -1471,15 +1506,15 @@ const SCHEMATY = {
   G07: {imgs:['img/E3.jpg'], autor:'wakanda90', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
         uwaga:'Na zdjęciu ciężarek trzymany przed sobą to tylko przeciwwaga — u Ciebie wystarczą wyciągnięte ręce. Pięta pracującej nogi cały czas na podłożu.'},
   E6:  {imgs:['img/E6.jpg'], autor:'wger.de (grafika generowana)', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
-        uwaga:'Kluczowe jak na schemacie: głowa schodzi PRZED linię dłoni, łokcie ok. 45° od tułowia.'},
+        uwaga:'Kluczowe jak na schemacie: głowa schodzi <b>przed</b> linię dłoni, łokcie ok. 45° od tułowia.'},
   G01: {imgs:['img/E6.jpg'], autor:'wger.de (grafika generowana)', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
-        uwaga:'Kluczowe jak na schemacie: głowa schodzi PRZED linię dłoni, łokcie ok. 45° od tułowia.'},
+        uwaga:'Kluczowe jak na schemacie: głowa schodzi <b>przed</b> linię dłoni, łokcie ok. 45° od tułowia.'},
   E26: {imgs:['img/E6.jpg'], autor:'wger.de (grafika generowana)', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
         uwaga:'Schemat pokazuje wersję z podłogi — u Ciebie dłonie na podwyższeniu (deficyt), więc głowa schodzi niżej poziomu dłoni.'},
   E8:  {imgs:['img/E8.jpg'], autor:'cshep442', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
-        uwaga:'Rysunek pokazuje pełne zejście — u Ciebie STOP na 100–110° zgięcia łokcia (Twoja stacja jest szersza niż barki).'},
+        uwaga:'Rysunek pokazuje pełne zejście — u Ciebie zatrzymanie na 100–110° zgięcia łokcia (Twoja stacja jest szersza niż barki).'},
   E27: {imgs:['img/E8.jpg'], autor:'cshep442', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
-        uwaga:'Rysunek pokazuje pełne zejście — u Ciebie STOP na 100–110° i pauza 1 s na dole.'},
+        uwaga:'Rysunek pokazuje pełne zejście — u Ciebie zatrzymanie na 100–110° i pauza 1 s na dole.'},
   E9:  {imgs:['img/E9.jpg'], autor:'wger.de', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
         uwaga:'Schemat pokazuje pozycję wytoczoną z prostymi nogami — u Ciebie start z klęku, a zakres kończy się tam, gdzie lędźwie zaczynają uciekać w łuk.'},
   G04: {imgs:['img/E9.jpg'], autor:'wger.de', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
@@ -1491,7 +1526,7 @@ const SCHEMATY = {
   G10: {imgs:['img/E10.jpg'], autor:'erikocobra', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
         uwaga:'Na schemacie wersja obunóż — u Ciebie jednonóż, w wolnym tempie z planu.'},
   E13: {imgs:['img/E13a.png','img/E13b.png'], autor:'Everkinetic', lic:'CC BY-SA 3.0', zrodlo:'wger.de',
-        uwaga:'Dwie fazy: zejście i wyprost TYLKO do linii ciała — druga pozycja na rysunku (tułów w linii nóg) to Twój STOP, ani stopnia wyżej.'},
+        uwaga:'Dwie fazy: zejście i wyprost <b>tylko</b> do linii ciała — druga pozycja na rysunku (tułów w linii nóg) to koniec ruchu, bez przeprostu.'},
   E14: {imgs:['img/E14.jpg'], autor:'Imobard', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
         uwaga:'Klasyczne podciąganie jak na rysunku — u Ciebie z pauzą 2 s na górze i wolnym opuszczaniem.'},
   E23: {imgs:['img/E14.jpg'], autor:'Imobard', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
@@ -1501,7 +1536,7 @@ const SCHEMATY = {
   E16: {imgs:['img/E16.jpg'], autor:'wger.de', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
         uwaga:'Na zdjęciach mostek obunóż — u Ciebie jedna noga wyprostowana w powietrzu, biodra przez cały czas równo.'},
   E17: {imgs:['img/E17.jpg'], autor:'wger.de (grafika generowana)', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
-        uwaga:'U Ciebie TYLKO statyczne utrzymanie jak w pozycji z lewej — bez schodzenia głową w dół pokazanego z prawej (to inne, trudniejsze ćwiczenie).'},
+        uwaga:'U Ciebie <b>tylko</b> statyczne utrzymanie jak w pozycji z lewej — bez schodzenia głową w dół pokazanego z prawej (to inne, trudniejsze ćwiczenie).'},
   E19: {imgs:['img/E19.jpg'], autor:'wger.de (grafika generowana)', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
         uwaga:'Dokładnie jak na schemacie: ze spokojnego zwisu, bez bujania, nogi do poziomu.'},
   E20: {imgs:['img/E20.jpg'], autor:'prevail90', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
@@ -1511,7 +1546,7 @@ const SCHEMATY = {
   E21: {imgs:['img/E21.jpg'], autor:'AlucardEvil40', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
         uwaga:'Jak na schemacie: siad, kolana zgięte ~90°, obciążenie położone na kolanie (u Ciebie plecak zamiast hantli).'},
   E24: {imgs:['img/E24.jpg'], autor:'wger.de (grafika generowana)', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
-        uwaga:'Na schemacie step na ławkę — u Ciebie szczebel drabinki, a najważniejsza jest faza SCHODZENIA przez 4 sekundy.'},
+        uwaga:'Na schemacie step na ławkę — u Ciebie szczebel drabinki, a najważniejsza jest <b>faza schodzenia</b> przez 4 sekundy.'},
   E25: {imgs:['img/E25.jpg'], autor:'Tierrasverdes', lic:'CC BY-SA 4.0', zrodlo:'wger.de',
         uwaga:'Na rysunku wersja z hantlą i podparciem ręki o ławkę — u Ciebie wolnostojąca (ewentualnie plecak). Najważniejsze jak na rysunku: tułów i tylna noga w jednej linii.'},
   E28: {imgs:['img/E28.jpg'], autor:'fot. West Point Public Affairs', lic:'domena publiczna', zrodlo:'Wikimedia Commons',
@@ -1575,7 +1610,7 @@ function openVideos(){
 function renderVideos(){
   rebuildRegistry();
   let html = `<div class="notes-box" style="margin-top:0;">
-    <b>Jak korzystać:</b> „▶" otwiera film w YouTube, a „📄" artykuł lub poradnik ze zdjęciami i schematami na stronie internetowej (jedno i drugie wymaga internetu). Wszystkie propozycje to linki znalezione wyszukiwarką — istnienie sprawdzone, ale <b>treści nie oglądałem ani nie czytałem w całości</b>, więc oceń sam, czy technika pasuje do opisu w aplikacji; przy różnicy <b>rozstrzyga opis w aplikacji</b> (jest dopasowany do Twojego planu i historii urazów). „🔍" szuka na YouTube po dobranym zapytaniu. „✎" zapisuje Twój własny wybór (film albo artykuł) — od tej pory to on będzie pod „▶". Te same linki (oraz schematy wykonania, tam gdzie są) znajdziesz też przy każdym ćwiczeniu, w zwijanej części „Wykonanie".
+    <b>Jak korzystać:</b> „▶" otwiera film w YouTube, a „📄" artykuł lub poradnik ze zdjęciami i schematami na stronie internetowej (jedno i drugie wymaga internetu). Wszystkie propozycje to linki znalezione wyszukiwarką — istnienie sprawdzone, ale <b>treści nie zostały obejrzane ani przeczytane w całości</b>, więc oceń sam, czy technika pasuje do opisu w aplikacji; przy różnicy <b>rozstrzyga opis w aplikacji</b> (jest dopasowany do Twojego planu i historii urazów). „🔍" szuka na YouTube po dobranym zapytaniu. „✎" zapisuje Twój własny wybór (film albo artykuł) — od tej pory to on będzie pod „▶". Te same linki (oraz schematy wykonania, tam gdzie są) znajdziesz też przy każdym ćwiczeniu, w zwijanej części „Wykonanie".
   </div>`;
 
   const groups = [
@@ -1654,7 +1689,7 @@ function proposalHTML(ex){
   } else {
     tytul = '📉 Propozycja: stopień niżej';
     tekst = `W dwóch ostatnich sesjach na tym poziomie (${kiedy}) przynajmniej jedna seria nie domknęła dolnego zakresu albo któraś seria przed ostatnią była już na granicy (RPE 10). Łatwiejszy wariant: <b>${target.name}</b>.`
-      + '<br><br>To nie krok w tył: robisz pełne serie z dobrą techniką, a gdy wrócą zapas i górny zakres, aplikacja sama zaproponuje powrót.';
+      + '<br><br>Gdy w łatwiejszym wariancie wrócą zapas i górny zakres, aplikacja zaproponuje powrót.';
   }
   return `<div class="card prop-card">
     <b>${tytul}</b>
@@ -1709,7 +1744,7 @@ function buildWeek(){
     cue:'4 s w dół · 1 s pauzy na dole · dynamicznie w górę. Pięta cały czas na podłożu.',
     tech:[
       {t:'Ustawienie', h:'Przysiad na jednej nodze. Stopa robocza stoi na dolnym szczeblu drabinki — dzięki temu noga wolna może swobodnie zejść niżej (to jest ten „deficyt"). Palce jednej ręki opierasz o drabinkę <b>wyłącznie dla równowagi</b> — jeśli łapiesz się mocno i podciągasz, to już nie jest pistol.'},
-      {t:'Wykonanie', h:'<ol><li>Noga wolna wyprostowana w przód, uniesiona.</li><li><b>4 sekundy</b> kontrolowanego schodzenia. Kolano prowadzone nad linią stopy — nie zapada się do środka.</li><li><b>1 sekunda pauzy</b> w najniższej pozycji, bez „odbicia" ze ścięgien.</li><li>Wyjście w górę z pełną intencją przyspieszenia, ale bez utraty kontroli. „X" w zapisie tempa nie znaczy „szarpnij" — znaczy „nie zwalniaj celowo".</li></ol>'},
+      {t:'Wykonanie', h:'<ol><li>Noga wolna wyprostowana w przód, uniesiona.</li><li><b>4 sekundy</b> kontrolowanego schodzenia. Kolano prowadzone nad linią stopy — nie zapada się do środka.</li><li><b>1 sekunda pauzy</b> w najniższej pozycji, bez „odbicia" ze ścięgien.</li><li>Wyjście w górę dynamicznie, ale bez utraty kontroli. „X" w zapisie tempa nie znaczy „szarpnij" — znaczy „nie zwalniaj celowo".</li></ol>'},
       {t:'Pięta — ważne przy Twoim Achillesie', h:'<b>Pięta zostaje na podłożu przez cały ruch.</b> Głęboki przysiad na jednej nodze wymaga dużego zgięcia stawu skokowego — jeśli pięta się odrywa, ogranicz głębokość zamiast kompensować.'},
       {t:'Najczęstsze błędy', h:'<ul><li>Kolano ucieka do środka w dolnej fazie.</li><li>Zaokrąglenie odcinka lędźwiowego na dole — zatrzymuj się tuż nad tym punktem.</li><li>Ręka na drabince niepostrzeżenie przejmuje 20–30% ciężaru.</li></ul>'},
       {t:'Za trudne / za łatwe?', h:'Regresja: przysiad jednonóż do podwyższenia (skrócony zakres) → pistol bez deficytu → pistol z deficytu. Progresja z obciążeniem wejdzie dopiero od 5. tygodnia.'},
@@ -1719,9 +1754,9 @@ function buildWeek(){
     id:'E5', name:'Nordic curl', sets:4, repsRange:'3–5 powt.', rest:180, tempo:null,
     cue:'Biodra w jednej linii z tułowiem. Opuszczanie w przód minimum 4 sekundy.',
     tech:[
-      {t:'Ustawienie', h:'Klęk na macie, stopy zablokowane pod najniższym szczeblem drabinki. Pod rzepki podłóż coś miękkiego — to warunek utrzymania dobrej pozycji, nie kwestia wygody.'},
+      {t:'Ustawienie', h:'Klęk na macie, stopy zablokowane pod najniższym szczeblem drabinki. Pod rzepki podłóż coś miękkiego.'},
       {t:'Wykonanie', h:'<ol><li>Tułów, biodra i uda ustawione w <b>jednej linii</b> — i ta linia nie łamie się przez cały ruch.</li><li>Opuszczaj się w przód <b>minimum 4 sekundy</b>, tak daleko, jak utrzymujesz kontrolę.</li><li>Wróć siłą tylnej strony ud; jeśli nie dasz rady — pomóż sobie rękami od podłogi albo taśmą przypiętą wyżej na drabince.</li></ol>'},
-      {t:'Najczęstsze błędy', h:'<ul><li><b>„Spadanie"</b> po przekroczeniu punktu granicznego — zakres, nad którym nie panujesz, jest bezwartościowy i ryzykowny. Użyj taśmy jako asysty.</li><li>Zginanie się w biodrach („kłanianie") — zamienia ćwiczenie w dużo łatwiejszy i bezcelowy ruch.</li></ul>'},
+      {t:'Najczęstsze błędy', h:'<ul><li><b>„Spadanie"</b> po przekroczeniu punktu granicznego — tego zakresu nie rób bez asysty — użyj taśmy.</li><li>Zginanie się w biodrach („kłanianie") — zamienia ćwiczenie w dużo łatwiejszy i bezcelowy ruch.</li></ul>'},
     ]
   };
   const EX_PIKE = {
@@ -1735,10 +1770,10 @@ function buildWeek(){
   };
   const EX_ABWHEEL = {
     id:'E9', name:'Ab wheel z kolan', sets:4, repsRange:'10–15 powt.', rest:90, tempo:null,
-    cue:'Miednica podwinięta ZANIM ruszysz. Koniec zakresu = moment, w którym lędźwie zaczynają się wyginać.',
+    cue:'Miednica podwinięta, zanim ruszysz. Koniec zakresu = moment, w którym lędźwie zaczynają się wyginać.',
     warn:'Ból w lędźwiach przy tym ćwiczeniu → skróć zakres i sprawdź, czy miednica na pewno jest podwinięta przez cały ruch.',
     tech:[
-      {t:'Wykonanie', h:'<ol><li>Klęk, kółko pod barkami. <b>Zanim ruszysz:</b> podwiń miednicę (ogon „schowany" pod siebie), żebra ściągnięte w dół.</li><li>Wysuwaj kółko w przód, utrzymując dokładnie tę samą pozycję miednicy i żeber.</li><li>Zakres kończy się w momencie, w którym czujesz, że lędźwie zaczynają się wyginać w łuk — <b>ani centymetra dalej</b>. To jest Twój limit, nie odległość od ściany.</li><li>Wróć ruchem z brzucha, nie z bioder.</li></ol>'},
+      {t:'Wykonanie', h:'<ol><li>Klęk, kółko pod barkami. <b>Zanim ruszysz:</b> podwiń miednicę (ogon „schowany" pod siebie), żebra ściągnięte w dół.</li><li>Wysuwaj kółko w przód, utrzymując dokładnie tę samą pozycję miednicy i żeber.</li><li>Zakres kończy się w momencie, w którym czujesz, że lędźwie zaczynają się wyginać w łuk — <b>ani centymetra dalej</b>.</li><li>Wróć ruchem z brzucha, nie z bioder.</li></ol>'},
       {t:'Jak progresować', h:'Zwiększaj zakres wysunięcia, nie tempo. Gdy 15 powtórzeń w pełnym zakresie stanie się łatwe, następnym krokiem będzie wersja ze stania.'},
       {t:'Najczęstsze błędy', h:'<ul><li>Wygięcie lędźwi w łuk w momencie maksymalnego wysunięcia — najczęstszy i najbardziej ryzykowny błąd.</li><li>Wypychanie bioder do tyłu przy powrocie — ruch zamienia się w składanie w biodrach zamiast pracy brzucha.</li></ul>'},
     ]
@@ -1779,7 +1814,7 @@ function buildWeek(){
     tech:[
       {t:'Scapular pull-ups (na drążku)', h:'<ol><li>Zwis na drążku, ramiona wyprostowane — <b>i takie pozostają</b>.</li><li>Unieś ciało o 3–5 cm wyłącznie ściągnięciem łopatek w dół — barki oddalają się od uszu, klatka lekko idzie do góry.</li><li>Wróć kontrolowanie do zwisu, ale bez całkowitego „rozklejenia się" na końcu.</li></ol><b>Test poprawności:</b> jeśli łokcie zginają się choćby o kilka stopni — robisz mikro-podciągnięcie, nie pracę łopatek.'},
       {t:'Protrakcja (w podporze)', h:'<ol><li>Pozycja deski na wyprostowanych rękach.</li><li>„Wypchnij" plecy w górę między łopatkami — bez zginania łokci i bez ruchu bioder.</li><li>Wróć do pozycji ze ściągniętymi łopatkami — pełny zakres w obie strony.</li></ol>'},
-      {t:'Po co to jest', h:'Wspinanie i wszystkie ćwiczenia ciągnące obciążają obręcz barkową w jednym kierunku. Ta pozycja jest przeciwwagą — dlatego w planie ma status pełnoprawnego ćwiczenia (nigdy jej nie ucinaj), a nie rozgrzewki.'},
+      {t:'Po co to jest', h:'Wspinanie i wszystkie ćwiczenia ciągnące obciążają obręcz barkową w jednym kierunku. Ta pozycja jest przeciwwagą — dlatego w planie ma status pełnoprawnego ćwiczenia, a nie rozgrzewki.'},
     ]
   };
   const EX_EXT = {
@@ -1789,7 +1824,7 @@ function buildWeek(){
       {t:'Prostowniki palców', h:'Gumka założona na palce (albo dłoń zanurzona w naczyniu z ryżem). Prostuj palce przeciw oporowi, powoli, w pełnym zakresie. Cel: równowaga dla zginaczy, które we wspinaniu pracują bez przerwy.'},
       {t:'Rotacja zewnętrzna na taśmie', h:'Taśma przypięta do drabinki na wysokości łokcia. Łokieć przy tułowiu, zgięty 90°, obracaj przedramię na zewnątrz. Łokieć <b>nie odsuwa się od ciała</b> — ruch wychodzi z barku.'},
       {t:'Pronacja i supinacja z dźwignią', h:'Weź przedmiot z długim trzonkiem i ciężarem na końcu (młotek, patelnia, klucz francuski) — chwyt za koniec trzonka, łokieć oparty o udo lub szczebel, zgięty 90°. <b>Powoli</b> obracaj przedramię dłonią w dół (pronacja) i w górę (supinacja), 2 × 10–12 w każdą stronę. Dźwignię regulujesz miejscem chwytu: bliżej ciężaru = łatwiej. To bezpośrednia profilaktyka nadkłykcia przyśrodkowego („łokcia golfisty") — najczęstszego problemu łokcia u wspinaczy.'},
-      {t:'Dlaczego to nie jest opcjonalne', h:'Od 5. tygodnia, gdy wejdzie podciąganie z kamizelką, ta pozycja stanie się wbudowaną profilaktyką przeciążenia wewnętrznej strony łokcia (entezopatii). Plan mówi wprost: to nie ozdobnik.'},
+      {t:'Rola od 5. tygodnia', h:'Od 5. tygodnia, gdy wejdzie podciąganie z kamizelką, ta pozycja stanie się wbudowaną profilaktyką przeciążenia wewnętrznej strony łokcia (entezopatii).'},
     ]
   };
 
@@ -1944,7 +1979,7 @@ function buildWeek(){
   };
   const EX_PIKE_DEF = {
     id:'E26', name:'Pompki pike z deficytu', sets:5, repsRange:'3–5 powt.', rest:180, tempo:null,
-    cue:'Stopy wysoko, dłonie na podporach — głowa schodzi PONIŻEJ linii dłoni.',
+    cue:'Stopy wysoko, dłonie na podporach — głowa schodzi poniżej linii dłoni.',
     warn:'Ból przedniej strony barku → wróć do zwykłych pompek pike i sprawdź ustawienie łokci (~45° od tułowia).',
     tech:[
       {t:'Ustawienie', h:'Jak pompki pike z Modułu A (stopy na szczeblu, biodra wysoko), ale dłonie na dwóch stabilnych podporach (grube książki, kostki, niskie stopnie), żeby głowa mogła zejść niżej niż dłonie.'},
@@ -1963,7 +1998,7 @@ function buildWeek(){
         return 'Identyczne jak dipy z Modułu A: barki wciśnięte w dół, tułów lekko pochylony, zejście do ustalonego kąta' + note + '.';
       })()},
       {t:'Wykonanie', h:'<ol><li>Schodź 2–3 s do ustalonego kąta.</li><li><b>1 sekunda pauzy</b> — bark nie może „wjechać" do ucha, łopatki cały czas w depresji.</li><li>Wyjście w górę bez wyrzutu barków.</li></ol>'},
-      {t:'Po co pauza', h:'Zatrzymanie w najtrudniejszym punkcie odbiera rozpęd i uczciwie sprawdza kontrolę pozycji barku — dokładnie tam, gdzie dipy bywają ryzykowne. Siła rośnie, ryzyko nie.'},
+      {t:'Po co pauza', h:'Zatrzymanie w najtrudniejszym punkcie odbiera rozpęd i uczciwie sprawdza kontrolę pozycji barku — dokładnie tam, gdzie dipy bywają ryzykowne.'},
     ]
   };
   const EX_LSIT = {
@@ -2004,16 +2039,16 @@ function buildWeek(){
      RIR 2–3 (nigdy do upadku), przerwy 3–5 min, maksymalna INTENCJA
      przyspieszenia. Objętość celowo niska (≤4–5 serii na grupę tygodniowo).
      ======================================================================= */
-  const RIR_NOTE = 'Kończysz serię z zapasem 2–3 powtórzeń — nigdy do upadku. Każde powtórzenie z maksymalną intencją przyspieszenia, nawet jeśli realnie idzie wolno; to intencja, nie prędkość, buduje siłę neuronalną.';
+  const RIR_NOTE = 'Kończysz serię z zapasem 2–3 powtórzeń — nigdy do upadku. Każde powtórzenie jak najszybciej, nawet jeśli realnie idzie wolno.';
 
   const G01 = {
     id:'G01', name:'Wspieranie przy ścianie / pompki pike', sets:4, repsRange:'3–5 powt.', rest:210, tempo:null,
-    cue:'Główny wzorzec pchania nad głowę. Wyciskasz z maksymalną intencją, schodzisz kontrolowanie. ' + RIR_NOTE,
+    cue:'Główny wzorzec pchania nad głowę. Wyciskasz jak najszybciej, schodzisz kontrolowanie. ' + RIR_NOTE,
     warn:'Ból przedniej strony barku albo nadgarstka → zejdź do pompek pike o mniejszym kącie. Nie ćwicz przez ból karku.',
     tech:[
       {t:'Wybór wariantu', h:'Zacznij od <b>pompek pike ze stopami na podłodze</b> (pozycja odwróconego „V", biodra wysoko). Trudniej: stopy na kanapie lub krzesle. Najtrudniej: <b>wspieranie przy ścianie</b> — brzuchem do ściany, stopy wchodzą po niej w górę, dłonie 30 cm od ściany. Wybierz wariant, w którym <b>5 powtórzeń to granica</b>.'},
-      {t:'Wykonanie', h:'<ol><li>Dłonie nieco szerzej niż barki, palce szeroko rozstawione, ciężar na całej dłoni.</li><li>Barki aktywnie wypchnięte („długie ramiona"), miednica podwinięta, żebra w dół.</li><li>Schodzisz tak, żeby głowa wyszła <b>przed</b> linię dłoni — nie między dłonie.</li><li>Łokcie ok. 45° od tułowia, nie na boki.</li><li>Wyjście z pełną intencją przyspieszenia, na końcu wypchnięcie barków.</li></ol>'},
-      {t:'Jak progresować bez ciężaru', h:'Kolejność: stopy coraz wyżej → dłonie na podporach (większy zakres) → wspieranie przy ścianie → wspieranie z dłońmi bliżej ściany → pauza 2 s w dole. <b>Gdy zrobisz 6 czystych powtórzeń — zmień wariant, nie dokładaj powtórzeń.</b> Dokładanie powtórzeń buduje masę, zmiana wariantu buduje siłę.'},
+      {t:'Wykonanie', h:'<ol><li>Dłonie nieco szerzej niż barki, palce szeroko rozstawione, ciężar na całej dłoni.</li><li>Barki aktywnie wypchnięte („długie ramiona"), miednica podwinięta, żebra w dół.</li><li>Schodzisz tak, żeby głowa wyszła <b>przed</b> linię dłoni — nie między dłonie.</li><li>Łokcie ok. 45° od tułowia, nie na boki.</li><li>Wyjście dynamicznie, na końcu wypchnięcie barków.</li></ol>'},
+      {t:'Jak progresować bez ciężaru', h:'Kolejność: stopy coraz wyżej → dłonie na podporach (większy zakres) → wspieranie przy ścianie → wspieranie z dłońmi bliżej ściany → pauza 2 s w dole. <b>Gdy zrobisz 6 czystych powtórzeń — zmień wariant, nie dokładaj powtórzeń.</b>'},
       {t:'Bezpieczeństwo przy ścianie', h:'Zejście zawsze stopami po ścianie, nigdy przewrotem ani zeskokiem. Jeśli tracisz kontrolę — wariant za trudny.'},
     ]
   };
@@ -2022,7 +2057,7 @@ function buildWeek(){
     cue:'Pchanie jednostronne — namiastka bardzo ciężkiej pompki bez dokładania obciążenia. ' + RIR_NOTE,
     tech:[
       {t:'Ustawienie', h:'Pozycja pompki z rękami rozstawionymi szeroko. Ciężar przenosisz na jedną rękę i schodzisz w jej kierunku; ręka „wolna" zostaje <b>wyprostowana w bok</b>, dłoń na podłodze jako podpora, nie jako druga pchająca ręka.'},
-      {t:'Wykonanie', h:'<ol><li>Ciało w jednej linii, bez skręcania miednicy i bez zapadania barku po stronie pracującej.</li><li>Schodzisz kontrolowanie do zgięcia łokcia pracującej ręki.</li><li>Wyjście z maksymalną intencją przyspieszenia.</li></ol>'},
+      {t:'Wykonanie', h:'<ol><li>Ciało w jednej linii, bez skręcania miednicy i bez zapadania barku po stronie pracującej.</li><li>Schodzisz kontrolowanie do zgięcia łokcia pracującej ręki.</li><li>Wyjście jak najszybciej (nawet jeśli realnie idzie wolno).</li></ol>'},
       {t:'Drabinka trudności', h:'Pompki zwykłe → szerokie → archer z nogami na podłodze → archer z nogami wyżej (kanapa) → archer z coraz mniejszym udziałem ręki wolnej → pompka jednorącz z szeroko rozstawionymi stopami → jednorącz ze stopami wąsko. Progresujesz wariantem, nie liczbą powtórzeń.'},
       {t:'Najczęstsze błędy', h:'<ul><li>Ręka wolna zgina się i zaczyna pchać — wtedy to zwykła szeroka pompka.</li><li>Skręcanie tułowia zamiast przesunięcia w bok.</li><li>Zapadanie bioder (brak napięcia core).</li></ul>'},
     ]
@@ -2040,7 +2075,7 @@ function buildWeek(){
   };
   const G04 = {
     id:'G04', name:'Ab wheel — rollout', sets:3, repsRange:'3–5 powt.', rest:180, tempo:null,
-    cue:'Miednica podwinięta ZANIM ruszysz. Zakres kończy się tam, gdzie lędźwie zaczynają się wyginać.',
+    cue:'Miednica podwinięta, zanim ruszysz. Zakres kończy się tam, gdzie lędźwie zaczynają się wyginać.',
     warn:'Ból w lędźwiach → skróć zakres i sprawdź podwinięcie miednicy. To ćwiczenie daje silny bodziec ekscentryczny, dlatego objętość jest celowo niska — nie dokładaj serii.',
     tech:[
       {t:'Wykonanie', h:'<ol><li>Klęk, kółko pod barkami. <b>Przed ruchem</b>: miednica podwinięta, żebra ściągnięte w dół.</li><li>Wytaczasz kółko w przód, utrzymując dokładnie tę pozycję.</li><li>Zakres kończy się w momencie, w którym czujesz, że lędźwie zaczynają się wyginać w łuk — ani centymetra dalej.</li><li>Powrót pracą brzucha, nie składaniem bioder.</li></ol>'},
@@ -2064,7 +2099,7 @@ function buildWeek(){
     tech:[
       {t:'Ustawienie', h:'Stań przy ścianie (albo futrynie) w odległości, w której łokcie są zgięte pod kątem <b>ok. 90–100°</b>, dłonie na ścianie na wysokości klatki. Możesz też pchać w blat lub w podłogę w pozycji pompki zatrzymanej w dole.'},
       {t:'Wykonanie', h:'<ol><li>Napnij całe ciało, potem <b>w ciągu ułamka sekundy</b> rozwiń maksymalną siłę pchania — jakbyś chciał przesunąć ścianę.</li><li>Utrzymaj maksimum 5 sekund, oddychając płytko.</li><li>Rozluźnij całkowicie i odczekaj pełną przerwę.</li></ol>'},
-      {t:'Dlaczego szybkie narastanie siły', h:'Intencja balistyczna (szybkie dojście do maksimum) daje wyraźnie lepszy przyrost szybkości rozwijania siły i aktywacji nerwowej niż powolne narastanie — a jednocześnie <b>mniejszy przyrost masy</b> niż długo podtrzymywane napięcie. To dokładnie ten kompromis, który chcesz.'},
+      {t:'Dlaczego szybkie narastanie siły', h:'Intencja balistyczna (szybkie dojście do maksimum) daje wyraźnie lepszy przyrost szybkości rozwijania siły i aktywacji nerwowej niż powolne narastanie — a jednocześnie <b>mniejszy przyrost masy</b> niż długo podtrzymywane napięcie.'},
       {t:'Ograniczenie, o którym warto wiedzieć', h:'Siła izometryczna rośnie przede wszystkim <b>w trenowanym kącie</b>. Dlatego ćwiczenie stoi w programie obok pracy dynamicznej, a nie zamiast niej — samo nie da siły w całym zakresie ruchu.'},
     ]
   };
@@ -2076,7 +2111,7 @@ function buildWeek(){
     warn:'Pięta musi zostać na podłodze przez cały ruch. Jeśli się odrywa — ogranicz głębokość, nie kompensuj.',
     tech:[
       {t:'Wybór wariantu', h:'Zacznij od <b>przysiadu na jednej nodze do siedziska</b> (krzesło, kanapa) i wstawania z niego. Potem: niższe siedzisko → pistol bez deficytu, pełny zakres, płasko → pistol z pauzą 2 s → pistol z taśmą dającą dodatkowy opór. Wybierz wariant, w którym 5 powtórzeń to granica.'},
-      {t:'Wykonanie', h:'<ol><li>Noga wolna wyprostowana w przód, uniesiona.</li><li><b>3 sekundy</b> kontrolowanego schodzenia, kolano nad linią stopy — nie zapada się do środka.</li><li><b>1 sekunda pauzy</b> na dole, bez odbicia ze ścięgien.</li><li>Wyjście z maksymalną intencją przyspieszenia.</li></ol>'},
+      {t:'Wykonanie', h:'<ol><li>Noga wolna wyprostowana w przód, uniesiona.</li><li><b>3 sekundy</b> kontrolowanego schodzenia, kolano nad linią stopy — nie zapada się do środka.</li><li><b>1 sekunda pauzy</b> na dole, bez odbicia ze ścięgien.</li><li>Wyjście jak najszybciej (nawet jeśli realnie idzie wolno).</li></ol>'},
       {t:'Bez drabinki — jak trzymać równowagę', h:'Możesz opierać opuszki palców jednej ręki o ścianę albo o framugę <b>wyłącznie dla równowagi</b>. Jeśli łapiesz się mocno i podciągasz — to już nie jest pistol i ćwiczenie traci sens.'},
       {t:'Najczęstsze błędy', h:'<ul><li>Koślawienie kolana w dolnej fazie.</li><li>Zaokrąglenie lędźwi na samym dole — zatrzymaj się nad tym punktem.</li><li>Ręka na ścianie niepostrzeżenie przejmuje część ciężaru.</li></ul>'},
     ]
@@ -2084,11 +2119,11 @@ function buildWeek(){
   const G08 = {
     id:'G08', name:'Nordic curl — negatywy', sets:3, repsRange:'3–5 powt.', rest:180, tempo:null,
     cue:'Opuszczanie w przód minimum 4 sekundy. Tułów, biodra i uda w jednej linii — biodra się nie zginają.',
-    warn:'Zanim obciążysz — przetestuj zakotwiczenie stóp bez pełnego ciężaru. Wyrwanie się stóp w połowie ruchu to realne ryzyko urazu, nie potknięcie.',
+    warn:'Zanim obciążysz — przetestuj zakotwiczenie stóp bez pełnego ciężaru. Wyrwanie się stóp w połowie ruchu grozi urazem.',
     tech:[
       {t:'Zakotwiczenie stóp bez drabinki i bez partnera', h:'Trzy działające opcje: <b>(1)</b> stopy wciśnięte pod ciężką kanapę lub szafkę — sprawdź, czy mebel się nie przesuwa; <b>(2)</b> stopy pod zamkniętymi drzwiami, na ręczniku chroniącym pięty, ćwiczysz od strony, w którą drzwi się nie otwierają; <b>(3)</b> taśma zapętlona wokół niskiego ciężkiego mebla i przełożona nad kostkami. Pod rzepki zawsze coś miękkiego.'},
       {t:'Wykonanie', h:'<ol><li>Tułów, biodra i uda ustawione w <b>jednej linii</b> — i ta linia nie łamie się przez cały ruch.</li><li>Opuszczasz się w przód <b>minimum 4 sekundy</b>, tak daleko, jak utrzymujesz kontrolę.</li><li>Przy podłodze łapiesz ją rękami i odpychasz się nimi do powrotu — powrót nie musi być siłą samych ud.</li></ol>'},
-      {t:'Najczęstsze błędy', h:'<ul><li><b>„Spadanie"</b> po przekroczeniu punktu granicznego — zakres, nad którym nie panujesz, jest bezwartościowy i ryzykowny.</li><li>Zgięcie w biodrach („kłanianie się") — zamienia ćwiczenie w dużo łatwiejszy ruch.</li></ul>'},
+      {t:'Najczęstsze błędy', h:'<ul><li><b>„Spadanie"</b> po przekroczeniu punktu granicznego — tego zakresu nie rób bez asysty.</li><li>Zgięcie w biodrach („kłanianie się") — zamienia ćwiczenie w dużo łatwiejszy ruch.</li></ul>'},
       {t:'Progresja', h:'Taśma jako mocna asysta → asysta rąk od wczesnej fazy → asysta rąk tylko przy podłodze → pełny negatyw bez rąk → powrót siłą ud.'},
     ]
   };
@@ -2119,7 +2154,7 @@ function buildWeek(){
     cue:'Maksymalne pchanie w nieruchomy opór przy kolanach zgiętych 90–100°. Szybkie dojście do maksimum, 5–6 s utrzymania.',
     tech:[
       {t:'Jak zrobić opór nieruchomy', h:'Dwie opcje: <b>(1)</b> półprzysiad z plecami na ścianie i mocne pchanie stopami w podłogę oraz plecami w ścianę; <b>(2)</b> mocna taśma zapętlona pod stopami i przełożona przez barki — w półprzysiadzie próbujesz wstać przeciwko taśmie, która nie pozwala się wyprostować.'},
-      {t:'Kąt ma znaczenie', h:'Trenuj przy <b>kolanach zgiętych 90–100°</b>, czyli w pozycji, w której mięsień jest długi. Izometria w długiej długości mięśnia przenosi się na wyraźnie szerszy zakres kątów niż izometria w pozycji skróconej — a to właśnie tego chcesz od jednego ćwiczenia.'},
+      {t:'Kąt ma znaczenie', h:'Trenuj przy <b>kolanach zgiętych 90–100°</b>, czyli w pozycji, w której mięsień jest długi. Izometria w długiej długości mięśnia przenosi się na wyraźnie szerszy zakres kątów niż izometria w pozycji skróconej.'},
       {t:'Wykonanie', h:'<ol><li>Ustaw kąt, napnij całe ciało.</li><li>Rozwiń maksymalną siłę <b>szybko</b>, nie narastając powoli.</li><li>5–6 s maksimum, potem pełne rozluźnienie i pełna przerwa.</li></ol>'},
     ]
   };
@@ -2127,7 +2162,7 @@ function buildWeek(){
     id:'G12', name:'Hollow body hold', sets:2, holdRange:[10,20], rest:90, tempo:null, holdBased:true,
     cue:'Lędźwie dociśnięte do podłogi przez cały czas. Jeśli odstają — podciągnij kolana, skróć dźwignię.',
     tech:[
-      {t:'Wykonanie', h:'<ol><li>Leżenie tyłem, miednica podwinięta, <b>lędźwie mocno dociśnięte do podłogi</b> — to warunek konieczny, nie wskazówka.</li><li>Unieś barki i nogi nad podłogę, ramiona przy uszach lub przy biodrach (łatwiej).</li><li>Utrzymujesz pozycję, oddychając płytko. Kończysz w momencie, w którym lędźwie odrywają się od podłogi.</li></ol>'},
+      {t:'Wykonanie', h:'<ol><li>Leżenie tyłem, miednica podwinięta, <b>lędźwie mocno dociśnięte do podłogi</b>.</li><li>Unieś barki i nogi nad podłogę, ramiona przy uszach lub przy biodrach (łatwiej).</li><li>Utrzymujesz pozycję, oddychając płytko. Kończysz w momencie, w którym lędźwie odrywają się od podłogi.</li></ol>'},
       {t:'Progresja', h:'Kolana ugięte i ramiona przy biodrach → jedna noga prosta → obie nogi proste → ramiona wyciągnięte przy uszach → dłuższy czas. Dopiero potem wydłużasz utrzymanie.'},
     ]
   };
@@ -2139,7 +2174,7 @@ function buildWeek(){
       {t:'Ustawienie i kotwica', h:'Taśma przypięta na wysokości klatki albo bioder do <b>pewnej niskiej kotwicy</b>: klamka zamkniętych drzwi (taśma przełożona po drugiej stronie), noga ciężkiego łóżka, słupek balustrady. Stań w wykroku, żeby móc pracować przeciwko napięciu bez przesuwania się.'},
       {t:'Wykonanie', h:'<ol><li>Start z ramieniem wyprostowanym, łopatka wysunięta w przód.</li><li>Ciągnij, prowadząc <b>łokieć wzdłuż tułowia</b> do tyłu, kończąc ściągnięciem łopatki w dół i do siebie.</li><li>Krótka pauza w końcowej pozycji — to tam guma daje największy opór, więc tam jest najcenniejszy bodziec.</li><li>Powrót kontrolowany, bez pozwalania taśmie na szarpnięcie ramienia.</li></ol>'},
       {t:'Jak zwiększać opór bez nowych taśm', h:'Skróć taśmę (chwyt bliżej kotwicy) → odejdź dalej od kotwicy (większe wydłużenie na starcie) → zawiąż krótszą pętlę → połącz dwie taśmy równolegle (opór ok. dwukrotny) → dodaj pauzę → zwolnij powrót.'},
-      {t:'Uczciwie o ograniczeniu', h:'Taśma daje najmniejszy opór na początku ruchu, gdzie mięsień jest rozciągnięty — czyli tam, gdzie zwykle jesteś najsłabszy. Dlatego pauza w końcowej fazie i wysoka intencja mają tu zastąpić brak ciężaru. To dobre ćwiczenie, ale nie identyczne z wiosłowaniem ze sztangą.'},
+      {t:'Uczciwie o ograniczeniu', h:'Taśma daje najmniejszy opór na początku ruchu, gdzie mięsień jest rozciągnięty — czyli tam, gdzie zwykle jesteś najsłabszy. Dlatego pauza w końcowej fazie i szybkie przyciąganie mają tu zastąpić brak ciężaru. To dobre ćwiczenie, ale nie identyczne z wiosłowaniem ze sztangą.'},
     ]
   };
   const G14 = {
@@ -2157,7 +2192,7 @@ function buildWeek(){
     tech:[
       {t:'Pull-apart', h:'Taśma trzymana oburącz przed klatką na wyprostowanych rękach. Rozciągasz ją na boki, aż dotknie mostka, łopatki ściągnięte — i powoli wracasz. Ramiona cały czas na wysokości barków.'},
       {t:'Face pull', h:'Taśma przypięta na wysokości twarzy (albo przełożona przez klamkę). Ciągniesz końce do czoła, łokcie wysoko i szeroko, na końcu rotacja przedramion tak, że kciuki kierują się w tył. Powrót powoli.'},
-      {t:'Po co, przy celu „minimum masy"', h:'To jedyne miejsce w programie z wyższymi powtórzeniami — i jest to świadome. Małe stabilizatory łopatki i tylnego barku odpowiadają na taką pracę zdrowiem stawu, nie przyrostem masy. Bez tej przeciwwagi cała reszta programu (pchanie) ściągałaby barki do przodu.'},
+      {t:'Po co, przy celu „minimum masy"', h:'To jedyne miejsce w programie z wyższymi powtórzeniami. Małe stabilizatory łopatki i tylnego barku odpowiadają na taką pracę zdrowiem stawu, nie przyrostem masy. Bez tej przeciwwagi cała reszta programu (pchanie) ściągałaby barki do przodu.'},
     ]
   };
   const G16 = {
@@ -2166,14 +2201,14 @@ function buildWeek(){
     tech:[
       {t:'Ustawienie', h:'Taśma przypięta <b>nisko przy podłodze</b> za Tobą. Leżąc na plecach (albo w klęku, twarzą od kotwicy) chwytasz taśmę oburącz nad głową, ramiona wyprostowane.'},
       {t:'Wykonanie', h:'<ol><li>Z ramionami <b>wyprostowanymi przez cały ruch</b> przeciągasz taśmę po łuku nad głową w stronę bioder.</li><li>Kończysz, gdy ręce dojdą nad klatkę, z wyraźnym napięciem pod pachami.</li><li>Powolny powrót do rozciągnięcia nad głową.</li></ol>'},
-      {t:'Uczciwie o tym ćwiczeniu', h:'To <b>częściowa</b> namiastka pracy najszerszego grzbietu. Bez drążka nie odtworzysz pełnego przywodzenia ramienia pod dużym obciążeniem ani siły chwytu zwisowego — to największa luka całego programu. Pullover ratuje część funkcji, ale nie udaję, że zastępuje podciąganie.'},
+      {t:'Uczciwie o tym ćwiczeniu', h:'To <b>częściowa</b> namiastka pracy najszerszego grzbietu. Bez drążka nie odtworzysz pełnego przywodzenia ramienia pod dużym obciążeniem ani siły chwytu zwisowego — to największa luka całego programu. Pullover ratuje część funkcji, ale nie zastępuje podciągania.'},
     ]
   };
   const G17 = {
     id:'G17', name:'Y / T / W raises (leżenie przodem)', sets:2, repsRange:'8 powt. każda litera', rest:60, tempo:null,
     cue:'Leżenie przodem, ruch prowadzony łopatkami. Unosisz nisko, ale z pełnym napięciem i pauzą.',
     tech:[
-      {t:'Wykonanie', h:'<ol><li>Leżenie przodem, czoło oparte na zwiniętym ręczniku, żebra ściągnięte, pośladki lekko napięte.</li><li><b>Y</b> — ramiona wyprostowane po skosie nad głową, kciuki w górę; unieś, pauza 2 s.<br><b>T</b> — ramiona w bok na wysokości barków; unieś, pauza 2 s.<br><b>W</b> — łokcie zgięte przy tułowiu, dłonie na zewnątrz; ściągnij łopatki, pauza 2 s.</li><li>Ruch jest mały — nie próbuj unosić wysoko, licz się z jakością.</li></ol>'},
+      {t:'Wykonanie', h:'<ol><li>Leżenie przodem, czoło oparte na zwiniętym ręczniku, żebra ściągnięte, pośladki lekko napięte.</li><li><b>Y</b> — ramiona wyprostowane po skosie nad głową, kciuki w górę; unieś, pauza 2 s.<br><b>T</b> — ramiona w bok na wysokości barków; unieś, pauza 2 s.<br><b>W</b> — łokcie zgięte przy tułowiu, dłonie na zewnątrz; ściągnij łopatki, pauza 2 s.</li><li>Ruch jest mały — nie próbuj unosić wysoko — liczy się jakość, nie wysokość.</li></ol>'},
       {t:'Po co to w programie', h:'Dolna część kaptura i prostowniki grzbietu, których taśma sama nie obciąża w tej pozycji. Przy pracy w fartuchu ołowianym i pochyleniu nad pacjentem to bezpośrednia przeciwwaga dla protrakcji barków.'},
     ]
   };
@@ -2182,7 +2217,7 @@ function buildWeek(){
     cue:'Jedna ręka zgina, druga stawia opór. 5 s maksymalnego napięcia na stronę.',
     tech:[
       {t:'Wykonanie', h:'<ol><li>Jedna ręka zgięta w łokciu pod kątem 90°, dłoń do góry.</li><li>Drugą dłonią naciskasz na przedramię z góry, stawiając opór.</li><li>Zginasz ramię z maksymalną siłą przeciwko własnemu oporowi przez <b>5 sekund</b>, po czym zmieniasz stronę. Możesz powtórzyć przy dwóch–trzech różnych kątach łokcia.</li></ol>'},
-      {t:'Uczciwie o skuteczności', h:'Metoda działa, ale efekt jest <b>umiarkowany</b> — w badaniu 6-tygodniowym dała ok. 6% przyrostu siły zginaczy łokcia przy istotnym wzroście aktywacji mięśnia. To sensowna łatka na brak podciągania, a nie jego zamiennik. Drugie ograniczenie: nie zmierzysz oporu, więc progresję prowadzisz „na czucie".'},
+      {t:'Uczciwie o skuteczności', h:'Metoda działa, ale efekt jest <b>umiarkowany</b> — w badaniu 6-tygodniowym dała ok. 6% przyrostu siły zginaczy łokcia przy istotnym wzroście aktywacji mięśnia. To sensowne częściowe zastępstwo podciągania, a nie jego zamiennik. Drugie ograniczenie: nie zmierzysz oporu, więc progresję prowadzisz „na czucie".'},
     ]
   };
   const G19 = {
@@ -2517,15 +2552,15 @@ function checkFingerLimits(forWhat, hbId, climbKind){ // forWhat: 'hangboard' | 
     if(!sessionIntensive && forWhat === 'climb'){
       out.warns.push({t:'Dzień po intensywnej sesji — na ścianie tylko lekko', b:'Wczoraj palce miały intensywny dzień. Dzisiejsza sesja lekka jest w porządku pod warunkiem, że naprawdę jest lekka: pompa najwyżej 2–3/10, duże chwyty, bez prób na limicie i bez małych krawędzi. Jeśli czujesz wczorajszy dzień w palcach — zostań przy bardzo łatwych obwodach albo odpuść.'});
     } else if(sessionIntensive){
-      out.blocks.push({t:'Wczoraj intensywna praca palców', b:'Wczoraj było wspinanie albo intensywna tablica (Protokół B/C/własny). Dwie <b>intensywne</b> ekspozycje palców dzień po dniu są w tym planie zabronione — wczesny bilans kolagenu w ścięgnie jest po ciężkiej sesji przejściowo ujemny, mimo że siła mięśni wraca szybciej. Dziś najwyżej praca niskointensywna (Protokół A lub D) albo przerwa.'});
+      out.blocks.push({t:'Wczoraj intensywna praca palców', b:'Wczoraj było wspinanie albo intensywna tablica (Protokół B/C/własny). Dwa <b>intensywne</b> dni dla palców pod rząd są w tym planie zabronione — wczesny bilans kolagenu w ścięgnie jest po ciężkiej sesji przejściowo ujemny, mimo że siła mięśni wraca szybciej. Dziś najwyżej praca niskointensywna (Protokół A lub D) albo przerwa.'});
     } else {
-      out.warns.push({t:'Dzień po intensywnej sesji — dziś tylko LEKKO', b:'Taki układ (dzień intensywny → dzień niskointensywny) jest dopuszczalny, ale warunki są twarde: chwyt otwarty lub half-crimp (zero zamkniętego crimpu), duża listwa, wyraźne odciążenie — ma być ŁATWO od pierwszego do ostatniego zwisu. Jeśli czujesz wczorajszą sesję w palcach, po prostu odpuść.'});
+      out.warns.push({t:'Dzień po intensywnej sesji — dziś tylko LEKKO', b:'Taki układ (dzień intensywny → dzień niskointensywny) jest dopuszczalny, ale warunki są twarde: chwyt otwarty lub half-crimp (zero zamkniętego crimpu), duża listwa, wyraźne odciążenie — ma być łatwo od pierwszego do ostatniego zwisu. Jeśli czujesz wczorajszą sesję w palcach, po prostu odpuść.'});
     }
   }
 
   // Wczoraj tylko lekka praca, dziś sesja intensywna — dozwolone, z uwagą.
   if(!loads[today] && yesterday && !dayIntensive(yesterday) && sessionIntensive){
-    out.infos.push({t:'Wczoraj lekka praca palców', b:'Intensywna sesja najlepiej wychodzi na świeżych palcach. Wczorajszy Protokół A/D był z założenia podprogowy, więc plan na dziś zostaje — ale jeśli cokolwiek czujesz w palcach lub przedramionach, przełóż sesję.'});
+    out.infos.push({t:'Wczoraj lekka praca palców', b:'Intensywna sesja najlepiej wychodzi na świeżych palcach. Wczorajszy Protokół A/D był z założenia lekki, więc plan na dziś zostaje — ale jeśli cokolwiek czujesz w palcach lub przedramionach, przełóż sesję.'});
   }
 
   // Maks. 3 INTENSYWNE ekspozycje na 7 dni (wspinanie + tablica B/C/własna).
@@ -2538,9 +2573,9 @@ function checkFingerLimits(forWhat, hbId, climbKind){ // forWhat: 'hangboard' | 
     }
     if(count >= 3){
       if(sessionIntensive){
-        out.blocks.push({t:'Limit intensywnych ekspozycji wyczerpany ('+count+'/3)', b:'Palce miały już '+count+' intensywne ekspozycje w ostatnich 7 dniach (wspinanie + tablica B/C łącznie). Limit planu to 3 — dzisiejsza sesja byłaby czwarta. Ten limit nie rośnie niezależnie od samopoczucia.'});
+        out.blocks.push({t:'Limit intensywnych dni wyczerpany ('+count+'/3)', b:'Palce miały już '+count+' intensywne dni w ostatnich 7 dniach (wspinanie + tablica B/C łącznie). Limit planu to 3 — dzisiejsza sesja byłaby czwarta.'});
       } else {
-        out.infos.push({t:'Limit intensywnych wyczerpany — dobrze, że wybierasz lekką pracę', b:'W ostatnich 7 dniach były już '+count+' intensywne ekspozycje palców. Wersja niskointensywna nie zużywa tego limitu, ale pilnuj, żeby naprawdę była lekka — to nie jest sposób na przemycenie czwartej ciężkiej sesji.'});
+        out.infos.push({t:'Limit intensywnych dni wyczerpany — dziś tylko lekko', b:'W ostatnich 7 dniach były już '+count+' intensywne dni dla palców. Wersja lekka nie wlicza się do limitu, o ile jest naprawdę lekka.'});
       }
     }
   }
@@ -2810,7 +2845,7 @@ function engineFinish(){
   const btn = document.getElementById('timerStartBtn');
   if(btn) btn.textContent = 'Start';
   const fsN = document.getElementById('fsNext');
-  if(fsN) fsN.textContent = 'Koniec — wracam do zapisu';
+  if(fsN) fsN.textContent = 'Koniec';
   // pełny ekran znika po chwili (chyba że od razu ruszyła kolejna sekwencja, np. przerwa)
   setTimeout(()=>{ if(!engine.running) closeTimerFull(); }, 1200);
   if(cb) cb();
@@ -2992,6 +3027,9 @@ function openClimb(kind){
   climbPumpPicked = c.pump != null ? c.pump : null;
   showChips('climbKindRow', climbKindPicked);
   showChips('climbPumpRow', climbPumpPicked);
+  document.getElementById('climbGradeRoutes').innerHTML = gradeBoxHTML('routes', climbKindPicked);
+  document.getElementById('climbGradeBoulders').innerHTML = gradeBoxHTML('boulders', climbKindPicked);
+  setTimeout(scrollGradeRows, 0);
   showClimbLimits();
 }
 let climbKindPicked = null, climbPumpPicked = null;
@@ -3146,6 +3184,133 @@ function recordTs(iso){
 function quickLogButtonHTML(){
   return `<button class="btn btn-secondary" style="width:auto;margin:12px 8px 0 0;padding:9px 14px;font-weight:700;font-size:0.85rem;" onclick="openQuickLog()">✍️ Zapisz bez timera</button>`;
 }
+/* Licznik dróg i bulderów na karcie dnia na ścianie — opcjonalny, na bieżąco albo po treningu.
+   Zapisuje od razu do dziennika (to samo pole co „Zapis sesji"). */
+function climbCounterHTML(entry, kind){
+  const c = entry.climb || {};
+  const row = (field, label) => {
+    const v = Number(c[field]) || 0;
+    return `<div class="cc-row"><span class="cc-lbl">${label}</span>
+      <button class="cc-btn" onclick="climbCount('${field}',-1,'${kind || ''}')" aria-label="${label}: mniej">−</button>
+      <span class="cc-val">${v}</span>
+      <button class="cc-btn cc-plus" onclick="climbCount('${field}',1,'${kind || ''}')" aria-label="${label}: więcej">+</button></div>`;
+  };
+  return `<div class="card cc-card">
+    ${row('routes', 'Drogi')}${gradeBoxHTML('routes', kind)}
+    <div style="height:8px;"></div>
+    ${row('boulders', 'Buldery')}${gradeBoxHTML('boulders', kind)}
+    <div class="meta" style="margin-top:8px;">Opcjonalnie: dotknij trudności (albo „+") po drodze czy bulderze — albo nic nie klikaj i wpisz wszystko po treningu.</div>
+  </div>`;
+}
+/* ---------- Trudności dróg i bulderów (skale wybierane w Ustawieniach) ---------- */
+const GRADE_SCALES = {
+  routes: {
+    fr:      {name:'francuska', anchor:'5A', grades:['4A','4B','4C','5A','5A+','5B','5B+','5C','5C+','6A','6A+','6B','6B+','6C','6C+','7A','7A+','7B','7B+','7C','7C+','8A','8A+','8B','8B+','8C']},
+    uiaa:    {name:'UIAA', anchor:'V', grades:['IV','IV+','V-','V','V+','VI-','VI','VI+','VII-','VII','VII+','VIII-','VIII','VIII+','IX-','IX','IX+','X-','X','X+']},
+    kurtyka: {name:'polska (Kurtyki)', anchor:'VI', grades:['IV','V','V+','VI','VI+','VI.1','VI.1+','VI.2','VI.2+','VI.3','VI.3+','VI.4','VI.4+','VI.5','VI.5+','VI.6']},
+    yds:     {name:'amerykańska (YDS)', anchor:'5.9', grades:['5.6','5.7','5.8','5.9','5.10a','5.10b','5.10c','5.10d','5.11a','5.11b','5.11c','5.11d','5.12a','5.12b','5.12c','5.12d','5.13a','5.13b','5.13c','5.13d']},
+  },
+  boulders: {
+    font:    {name:'Fontainebleau', anchor:'5', grades:['3','4','4+','5','5+','6A','6A+','6B','6B+','6C','6C+','7A','7A+','7B','7B+','7C','7C+','8A','8A+']},
+    v:       {name:'V-scale', anchor:'V1', grades:['VB','V0','V1','V2','V3','V4','V5','V6','V7','V8','V9','V10','V11','V12']},
+  },
+};
+const GRADE_FIELD = {routes:'routeGrades', boulders:'boulderGrades'};
+const SCALE_FIELD = {routes:'routeScale', boulders:'boulderScale'};
+function gradeScaleKey(field){
+  const k = store.get(field === 'routes' ? 'gradeScaleRoutes' : 'gradeScaleBoulders', field === 'routes' ? 'fr' : 'font');
+  return GRADE_SCALES[field][k] ? k : Object.keys(GRADE_SCALES[field])[0];
+}
+function gradeScale(field){ return GRADE_SCALES[field][gradeScaleKey(field)]; }
+function gradesOf(c, field){ return (c && Array.isArray(c[GRADE_FIELD[field]])) ? c[GRADE_FIELD[field]] : []; }
+/* „5B, 5C ×2, 6A" — w kolejności skali, w której je zapisano. */
+function gradesSummary(c, field){
+  const list = gradesOf(c, field);
+  if(!list.length) return '';
+  const sc = GRADE_SCALES[field][c[SCALE_FIELD[field]]] || gradeScale(field);
+  const order = g => { const i = sc.grades.indexOf(g); return i < 0 ? 999 : i; };
+  const counts = {};
+  list.forEach(g => { counts[g] = (counts[g] || 0) + 1; });
+  return Object.keys(counts).sort((a, b) => order(a) - order(b)).map(g => g + (counts[g] > 1 ? ' ×' + counts[g] : '')).join(', ');
+}
+function gradeBoxHTML(field, kind){
+  const c = loadEntry(state.selectedDate).climb || {};
+  const sc = gradeScale(field);
+  const list = gradesOf(c, field);
+  const chips = sc.grades.map(g => `<button type="button" class="grade-chip" data-g="${g}" onclick="climbAddGrade('${field}','${g}','${kind || ''}')">${g}</button>`).join('');
+  const done = list.map((g, i) => `<button type="button" class="grade-pill" title="Usuń" onclick="climbRemoveGrade('${field}',${i})">${esc(g)} ✕</button>`).join('');
+  return `<div class="gradebox" data-field="${field}" data-kind="${kind || ''}">
+    <div class="grade-row" data-anchor="${esc(list.length ? list[list.length - 1] : sc.anchor)}">${chips}</div>
+    ${done ? `<div class="grade-done">${done}</div>` : `<div class="meta" style="font-size:0.75rem;">Dotknij trudności, żeby dopisać ${field === 'routes' ? 'drogę' : 'bulder'} (skala ${sc.name}). „+" dopisuje bez trudności.</div>`}
+  </div>`;
+}
+/* Pasek trudności przewinięty tak, żeby było widać Twoje okolice (ostatnio wpisaną albo typowy start). */
+function scrollGradeRows(){
+  document.querySelectorAll('.grade-row').forEach(row => {
+    const a = row.dataset && row.dataset.anchor;
+    const chip = a && row.querySelector ? row.querySelector(`[data-g="${a}"]`) : null;
+    if(chip && chip.offsetLeft != null) row.scrollLeft = Math.max(0, chip.offsetLeft - 60);
+  });
+}
+function saveGradeScale(field, key){
+  if(!GRADE_SCALES[field][key]) return;
+  store.set(field === 'routes' ? 'gradeScaleRoutes' : 'gradeScaleBoulders', key);
+  vibrate(20);
+}
+function climbScreenActive(id){ const s = document.getElementById(id); return !!(s && s.classList && s.classList.contains('active')); }
+function refreshClimbBoxes(){
+  const c = loadEntry(state.selectedDate).climb || {};
+  document.querySelectorAll('.gradebox').forEach(el => { el.outerHTML = gradeBoxHTML(el.dataset.field, el.dataset.kind); });
+  ['climbRoutes','ql_routes'].forEach(id => { const el = document.getElementById(id); if(el) el.value = c.routes || ''; });
+  ['climbBoulders','ql_boulders'].forEach(id => { const el = document.getElementById(id); if(el) el.value = c.boulders || ''; });
+  setTimeout(scrollGradeRows, 0);
+}
+function saveClimbPatch(c){
+  const iso = state.selectedDate;
+  const e = loadEntry(iso);
+  const empty = !(Number(c.routes) || Number(c.boulders)) && !gradesOf(c,'routes').length && !gradesOf(c,'boulders').length
+    && c.pump == null && !c.boulderEffort && !c.feel && !(c.note || '').trim();
+  if(empty){ delete e.climb; saveEntry(iso, e); }
+  else mergeEntry(iso, {climb:c});
+  vibrate(15);
+  if(climbScreenActive('screen-today')) renderAll(); else refreshClimbBoxes();
+}
+function climbAddGrade(field, g, kind){
+  const c = {...(loadEntry(state.selectedDate).climb || {})};
+  const list = gradesOf(c, field).concat(g);
+  c[GRADE_FIELD[field]] = list;
+  c[SCALE_FIELD[field]] = gradeScaleKey(field);
+  c[field] = String((Number(c[field]) || 0) + 1);          // trudność = kolejna droga / bulder
+  if(!c.savedAt) c.savedAt = recordTs(state.selectedDate);
+  if(!c.kind && kind && linaOn()) c.kind = kind;
+  saveClimbPatch(c);
+}
+function climbRemoveGrade(field, i){
+  const c = {...(loadEntry(state.selectedDate).climb || {})};
+  const list = gradesOf(c, field).slice();
+  list.splice(i, 1);
+  c[GRADE_FIELD[field]] = list;
+  c[field] = String(Math.max(0, (Number(c[field]) || 0) - 1));
+  saveClimbPatch(c);
+}
+function climbCount(field, delta, kind){
+  const iso = state.selectedDate;
+  const e = loadEntry(iso);
+  const c = {...(e.climb || {})};
+  c[field] = String(Math.max(0, (Number(c[field]) || 0) + delta));
+  // mniej dróg niż wpisanych trudności → zdejmij ostatnią trudność
+  const gl = gradesOf(c, field);
+  if(gl.length > Number(c[field])) c[GRADE_FIELD[field]] = gl.slice(0, Number(c[field]));
+  const empty = !(Number(c.routes) || Number(c.boulders)) && c.pump == null && !c.boulderEffort && !c.feel && !(c.note || '').trim();
+  if(empty && delta < 0){ delete e.climb; saveEntry(iso, e); }
+  else {
+    if(!c.savedAt) c.savedAt = recordTs(iso);
+    if(!c.kind && kind && linaOn()) c.kind = kind;
+    mergeEntry(iso, {climb:c});
+  }
+  vibrate(15);
+  renderAll();
+}
 let QL_ITEMS = [];
 function qlPumpSelect(id, val){
   let o = `<option value="">pompa —</option>`;
@@ -3176,6 +3341,10 @@ function openQuickLog(){
         <div><label>Ile dróg</label><input type="number" id="ql_routes" value="${esc(c.routes || '')}" placeholder="np. 6"></div>
         <div><label>Ile bulderów</label><input type="number" id="ql_boulders" value="${esc(c.boulders || '')}" placeholder="np. 9"></div>
       </div>
+      <label style="font-size:0.7rem;color:var(--chalk-500);display:block;margin-top:10px;">Trudności dróg (opcjonalnie — każda dopisuje drogę)</label>
+      ${gradeBoxHTML('routes', kind)}
+      <label style="font-size:0.7rem;color:var(--chalk-500);display:block;margin-top:10px;">Trudności bulderów (opcjonalnie)</label>
+      ${gradeBoxHTML('boulders', kind)}
       <div class="log-row"><div><label>Notatka</label><input type="text" id="ql_note" value="${esc(c.note || '')}" placeholder="opcjonalnie"></div></div>`;
   }
   units.forEach(u => {
@@ -3218,6 +3387,7 @@ function openQuickLog(){
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-quick').classList.add('active');
   document.getElementById('quickBody').innerHTML = html;
+  setTimeout(scrollGradeRows, 0);
   window.scrollTo && window.scrollTo(0, 0);
 }
 function saveQuickLog(){
@@ -3231,7 +3401,8 @@ function saveQuickLog(){
   if(document.getElementById('ql_climb') && checked('ql_climb')){
     const c = entry.climb || {};
     const pump = val('ql_pump');
-    patch.climb = {...c, routes: val('ql_routes'), boulders: val('ql_boulders'), note: val('ql_note'),
+    const atLeast = (v, field) => { const n = gradesOf(c, field).length; return n && (Number(v) || 0) < n ? String(n) : v; };
+    patch.climb = {...c, routes: atLeast(val('ql_routes'), 'routes'), boulders: atLeast(val('ql_boulders'), 'boulders'), note: val('ql_note'),
       kind: val('ql_kind') || c.kind || undefined,
       pump: pump !== '' ? Number(pump) : c.pump,
       savedAt: c.savedAt || ts, quick: true};
@@ -3366,7 +3537,7 @@ function extraExercisesHTML(units, entry){
   html += `<details class="tech" id="extraPicker" style="margin-top:12px;"${state.extraPickerOpen?' open':''} ontoggle="state.extraPickerOpen=this.open">
     <summary>Dołóż pojedyncze ćwiczenie do tego dnia</summary>
     <div class="inner">
-      <div class="meta" style="margin-bottom:12px;">Dokładasz <b>dowolną liczbę</b> pojedynczych ćwiczeń — bez zmieniania całej jednostki. Wyniki zapisują się tak samo jak przy ćwiczeniach z planu. Zasady bezpieczeństwa planu obowiązują nadal (np. dipy nigdy w dobie po mocnym wspinaniu, palce maks. 3 intensywne ekspozycje na 7 dni).</div>
+      <div class="meta" style="margin-bottom:12px;">Dokładasz <b>dowolną liczbę</b> pojedynczych ćwiczeń — bez zmieniania całej jednostki. Wyniki zapisują się tak samo jak przy ćwiczeniach z planu.</div>
       ${opts}
     </div>
   </details>`;
@@ -3385,7 +3556,7 @@ function comboWarningHTML(day, extra){
 
   if(hasHangboard){
     return bannerHTML('block', '⛔', 'Chwytotablica i wspinanie tego samego dnia',
-      `Plan wymaga co najmniej <b>48 godzin odstępu</b> między tablicą a wspinaniem — ten sam dzień to najostrzejsze możliwe naruszenie tej zasady.
+      `Plan wymaga co najmniej <b>48 godzin odstępu</b> między tablicą a wspinaniem .
        Do tego tablicę robi się wyłącznie <b>na początku jednostki, na świeżych palcach</b>, więc po wspinaniu i tak nie miałaby sensu.
        <br><br><b>Rozwiązanie:</b> zrób dziś moduł siłowy bez tablicy (odpuść ją tylko dzisiaj), a tablicę przenieś na inny dzień.
        ${hasDips ? '<br><br>Dodatkowo dipy: plan zabrania ich w dobie po mocnym wspinaniu — jeśli wspinasz się dziś mocno, dipy odpuść.' : ''}`);
@@ -3429,7 +3600,6 @@ function dayPickerHTML(planned, day, overridden, extras){
       ${opt('setDayOverride','gumC','🎒','Gumy C — Pull + kondycja')}
       ${(overridden || extras.length) ? `<button class="btn btn-primary" style="margin-top:4px;" onclick="setDayOverride('plan')">✓ Wróć do planu (${planned.title})</button>` : ''}
       ${addSection}
-      <div class="meta" style="margin-top:10px;">Limity bezpieczeństwa palców obowiązują niezależnie od tych zmian: maks. 3 <b>intensywne</b> ekspozycje / 7 dni (wspinanie + tablica B/C), dzień po intensywnej sesji najwyżej lekka tablica (Protokół A/D), 48 h między wspinaniem a intensywną tablicą.</div>
     </div>
   </details>`;
 }
@@ -3717,12 +3887,11 @@ const LINA_WALL_WARMUP = {
     {label:'Automat: 1 spokojne wejście na najlżejszą 5A', reps:'1 wejście',
      desc:'Zjazd z opuszczonymi rękami — potrząsasz nimi w trakcie zjazdu.'},
     {label:'Oddech: 1 min (4 s wdech, 6 s wydech)', seconds:60,
-     desc:'Wydech dłuższy niż wdech. To ustawia spokojny rytm na całą sesję.'},
+     desc:'Wydech dłuższy niż wdech.'},
   ]
 };
 const LINA_WALL_COOL = {
   id:'lw_cool', name:'Schłodzenie (5 min)', kind:'warmup',
-  intro:'Koniec sesji: przedramiona dostają sygnał „koniec pracy".',
   steps:[
     {label:'Bardzo łatwo na obwodach', seconds:180, desc:'Duże chwyty, wolny oddech, zero pompy.'},
     {label:'Rozciąganie przedramion', seconds:120, desc:'Zginacze i prostowniki po 30 s na stronę, delikatnie, bez sprężynowania.'},
@@ -3744,13 +3913,9 @@ function linaCircuits(n){
     phases,
   };
 }
-function linaAutoPhases(n, rest, labels){
-  const p = [{label:'Wejdź ok. 1 m i usiądź w uprzęży', tap:true, tapLabel:'Automat trzyma ✓', kind:'work'}];
-  for(let i = 1; i <= n; i++){
-    p.push({label:(labels && labels[i-1]) || `Wejście ${i}/${n} — dotknij po wylądowaniu`, tap:true, tapLabel:'Wylądowałem ✓', kind:'work'});
-  }
-  p.push({label:'Przerwa od lądowania', seconds:rest, kind:'seriesRest'});
-  return p;
+/* Na ścianie nic nie klikasz w trakcie serii — timer to tylko opcjonalna przerwa po serii. */
+function linaAutoPhases(n, rest){
+  return [{label:'Przerwa od lądowania', seconds:rest, kind:'rest'}];
 }
 function linaPumpOf(iso, id){
   const log = (loadEntry(iso).exercises || {})[id];
@@ -3817,12 +3982,7 @@ function linaWallNote(st){
 }
 
 function linaLightBlocks(){
-  const drills = ['zawieszenie dłoni nad chwytem', 'ciche stopy', 'wysoki stopień bez ciągnięcia rękami', 'wydech na każdy ruch'];
-  const phases = [{label:'Wejdź ok. 1 m i usiądź w uprzęży', tap:true, tapLabel:'Automat trzyma ✓', kind:'work'}];
-  drills.forEach((dr, i) => {
-    phases.push({label:`Wejście ${i+1}/4 — ${dr}`, tap:true, tapLabel:'Wylądowałem ✓', kind:'work'});
-    if(i < 3) phases.push({label:'Przerwa 3 min', seconds:180, kind:'rest'});
-  });
+  const phases = [{label:'Przerwa między wejściami', seconds:180, kind:'rest'}];
   return [
     {id:'lw_light_warm', name:'Rozgrzewka (12 min)', kind:'warmup',
      intro:'<b>Sprawdzenie po rozgrzewce:</b> zostajesz na 15 min bardzo łatwych obwodów albo odpuszczasz, jeśli palce bolą przy ucisku lub chwytaniu, boli łokieć, przedramiona są sztywne albo 5A wydaje się ciężka (powyżej 5/10).',
@@ -3833,7 +3993,7 @@ function linaLightBlocks(){
     {id:'lw_light', kind:'guided', climbKind:'lekka', pumpLog:true,
      name:'Automat: 4 pojedyncze wejścia na najlżejszą 5A',
      sub:'4 × ok. 3 min, przerwa 3 min · pompa najwyżej 2–3/10',
-     intro:'Technika i rozruszanie, <b>nie bodziec wytrzymałościowy</b>: pompa najwyżej 2–3/10, każde wejście osobno, z pełną przerwą. Najlepiej pion albo połóg z dużymi chwytami. Każde wejście wolno, ok. 3 min, z 2–3 shake-outami; zjazd z opuszczonymi rękami.<br><br>Zadania: wejście 1 — zawieszenie dłoni ok. 2 cm nad chwytem na 2–3 s; wejście 2 — ciche stopy; wejście 3 — wysoki stopień bez ciągnięcia rękami (rozluźnij dłonie, barki nad kolano, wstań z nogi); wejście 4 — wydech na każdy ruch.<br><br><b>Uczciwie:</b> sesje regeneracyjne robi się zwykle ok. 4 stopnie poniżej możliwości — przy minimum 5A na automacie tego nie spełnisz, więc nadrabiasz wolnym tempem, długimi przerwami i małą liczbą wejść.',
+     intro:'Technika i rozruszanie, <b>nie bodziec wytrzymałościowy</b>: pompa najwyżej 2–3/10, każde wejście osobno, z pełną przerwą. Najlepiej pion albo połóg z dużymi chwytami. Każde wejście wolno, ok. 3 min, z 2–3 shake-outami; zjazd z opuszczonymi rękami. Przed pierwszym wejściem wejdź ok. 1 m i usiądź w uprzęży, czując, że automat trzyma.<br><br>Zadania: wejście 1 — zawieszenie dłoni ok. 2 cm nad chwytem na 2–3 s; wejście 2 — ciche stopy; wejście 3 — wysoki stopień bez ciągnięcia rękami (rozluźnij dłonie, barki nad kolano, wstań z nogi); wejście 4 — wydech na każdy ruch.<br><br><b>Uczciwie:</b> sesje regeneracyjne robi się zwykle ok. 4 stopnie poniżej możliwości — przy minimum 5A na automacie tego nie spełnisz, więc nadrabiasz wolnym tempem, długimi przerwami i małą liczbą wejść.',
      phases},
     {id:'lw_light_feet', name:'Obwody: praca stóp (5 min)', kind:'warmup',
      intro:'Duże chwyty, uwaga wyłącznie na stopach.',
@@ -3874,16 +4034,12 @@ function linaBoulderBlocks(tech){
        steps:[{label:'Buldery co najmniej 3 stopnie poniżej limitu', seconds:900, desc:'Płynnie, z drillami nóg. Pompa najwyżej 3/10, zero walki na małych chwytach.'}]},
       cool];
   }
-  const phases = [];
-  for(let b = 1; b <= 5; b++) for(let a = 1; a <= 4; a++){
-    phases.push({label:`Bulder ${b} · próba ${a} — dotknij po zejściu`, tap:true, tapLabel:'Zszedłem ✓', kind:'work'});
-    if(!(b === 5 && a === 4)) phases.push({label:'Przerwa — pełne 3 min', seconds:180, kind:'rest'});
-  }
+  const phases = [{label:'Przerwa między próbami', seconds:180, kind:'rest'}];
   return [warm, feet,
     {id:'lb_main', kind:'guided', climbKind:'boulder', pumpLog:false,
      name:'Część główna: buldery blisko limitu (30–40 min)',
      sub:'4–5 bulderów × 3–4 próby · pełne 3 min przerwy',
-     intro:'Siła i moc: 4–5 bulderów blisko Twojego limitu, na każdy 3–4 próby, między próbami <b>pełne 3 minuty</b> — siłę buduje się na świeżych przedramionach, nie na pompie. Kończysz wcześniej, gdy jakość ruchu wyraźnie spada albo dwie kolejne próby są gorsze od poprzednich. Timer prowadzi przerwy; przycisk „Pomiń" przechodzi do następnego bulderu.<br><br><b>Achilles:</b> schodzisz po chwytach; jeśli musisz zeskoczyć — tylko z niska, na obie stopy, na ugiętych kolanach. Nigdy zeskok z wysokości.<br><b>Palce:</b> na małych krawędziach unikaj pełnego zamkniętego crimpu — half-crimp albo chwyt otwarty.<br><br><i>To propozycja trenerska — dokument mówi tylko „siła i moc + technika nóg", bez szczegółów sesji.</i>',
+     intro:'Siła i moc: 4–5 bulderów blisko Twojego limitu, na każdy 3–4 próby, między próbami <b>pełne 3 minuty</b> — siłę buduje się na świeżych przedramionach, nie na pompie. Kończysz wcześniej, gdy jakość ruchu wyraźnie spada albo dwie kolejne próby są gorsze od poprzednich. Timer poniżej to zwykła 3-minutowa przerwa — włączasz go po próbie, jeśli chcesz.<br><br><b>Achilles:</b> schodzisz po chwytach; jeśli musisz zeskoczyć — tylko z niska, na obie stopy, na ugiętych kolanach. Nigdy zeskok z wysokości.<br><b>Palce:</b> na małych krawędziach unikaj pełnego zamkniętego crimpu — half-crimp albo chwyt otwarty.<br><br><i>To propozycja trenerska — dokument mówi tylko „siła i moc + technika nóg", bez szczegółów sesji.</i>',
      phases},
     cool];
 }
@@ -3897,7 +4053,7 @@ const LINA_LEAD = {
     {label:'2–3 drogi 4c–5B na prowadzeniu', reps:'2–3 drogi', desc:'Przed wejściem zaplanuj wpinki i odpoczynki. Każda wpinka z wysokości klatki do pasa, na wydechu. Przerwa ok. 5 min — zwykle wypada sama, gdy wspina się partner.'},
     {label:'Odpadanie stopniowane: 3–5 lotów', reps:'3–5 lotów', desc:'Najpierw z ekspresem na wysokości pasa, potem kolan, potem stóp. Tylko teren pionowy albo przewieszony bez półek, po wpięciu kilku pierwszych ekspresów, z doświadczonym asekurującym. Przez cały lot wydech. Kontakt ze ścianą przyjmujesz stopami na ugiętych kolanach, miękko — oszczędzasz Achillesa.'},
     {label:'1–2 próby trudniejszej drogi', reps:'1–2', desc:'W tygodniu 4: 5B+ albo 5C. W tygodniu 8: 6A.'},
-    {label:'Partner zapisuje, gdzie milkniesz albo sztywniejesz', reps:'—', desc:'Przy których wpinkach zamilkłeś albo zesztywniałeś — to Twoja mapa stresu na prowadzeniu.'},
+    {label:'Partner zapisuje, gdzie milkniesz albo sztywniejesz', reps:'—', desc:'Przy których wpinkach zamilkłeś albo zesztywniałeś — tam ćwiczysz wpinkę na wydechu.'},
     {label:'Schłodzenie', seconds:300, desc:'Bardzo łatwo, wolny oddech, rozciąganie przedramion.'},
   ]
 };
@@ -4040,7 +4196,7 @@ HANGBOARD_PROTOCOLS.IH = {
   series:3, reps:4, hang:10, hangRest:5, seriesRest:60,
   qualNote:'Ostatnie powtórzenie ostatniej serii trudne, ale czyste technicznie.',
   cue:'10 s zwisu / 5 s przerwy, 4–5 powtórzeń w serii, 1 min między seriami. Ostatnie powtórzenie ostatniej serii trudne, ale czyste technicznie.',
-  warn:'Ekspozycja INTENSYWNA — jedyna sesja palców w domu w tym planie, liczy się do limitu 3 intensywnych dni na 7. Nie w dniu sesji lekkiej na ścianie ani nazajutrz.',
+  warn:'Sesja intensywna — jedyna sesja palców w domu w tym planie, liczy się do limitu 3 intensywnych dni na 7. Nie w dniu sesji lekkiej na ścianie ani nazajutrz.',
   tech:[
     {t:'Ustawienie', h:'Listwa 20 mm, chwyt otwarty albo półzamknięty (half-crimp) — <b>bez pełnego crimpa</b>. Łopatki aktywne (ściągnięte w dół), łokcie lekko ugięte. Za ciężko → odciąż się stopami na krześle.'},
     {t:'Oddech', h:'Spokojny wydech w zwisie, wdech w przerwie — bez wstrzymywania oddechu.'},
@@ -4071,7 +4227,7 @@ function linaMakeDay(slot, iso, st){
       + (st.wk === 8 ? ' W tym tygodniu, jeśli masz partnera, zamiast testów możesz zrobić dzień prowadzenia z próbą 6A.' : ''));
     case 'lead': return C('Ściana: dzień prowadzenia', '🤝', 'prow', [LINA_LEAD], 'Stres prowadzenia oswaja się głównie prowadząc — przy jednym dniu na 4–6 tygodni ta część będzie się poprawiać wolniej niż wytrzymałość.');
     case 'wallLight': return C('Ściana: sesja lekka (technika)', '🌿', 'lekka', linaLightBlocks(),
-      'Sesja lekka nie liczy się do limitu intensywnych dni, ale <b>tego dnia i następnego nie ma chwytotablicy</b> — plan tego pilnuje.');
+      'Sesja lekka nie liczy się do limitu intensywnych dni, ale <b>tego dnia i następnego nie ma chwytotablicy</b>.');
     case 'boulder': return C('Ściana: bouldering', '🪨', 'boulder', linaBoulderBlocks(false), 'Siła i moc + technika nóg.');
     case 'boulderTech': return C('Ściana: bouldering techniczny (lekko)', '🪨', 'lekka', linaBoulderBlocks(true),
       'Dziś tylko technika i łatwa objętość — intensywne buldery nie mieszczą się w zasadach palców w tym tygodniu.');
@@ -4086,7 +4242,7 @@ function linaMakeDay(slot, iso, st){
     case 'homeBmob': return S('Dom B — tylko mobilność i oddech', '🧘', [LINA_ANKLE_HIPS, LINA_BREATH],
       'Jutro dodatkowy dzień na ścianie, więc dziś zgodnie z planem tylko mobilność i oddech.');
     case 'hb': return S('Dom: chwytotablica 10/5 + core', '✋', [FINGER_WARMUP, linaIH(st), linaCoreBlock(), COOLDOWN],
-      'Jedyna sesja palców w domu. Rozgrzewka palców w całości — dokument podaje 5 min, ale w tej aplikacji obowiązuje pełna (12–15 min), bez skracania.');
+      'Jedyna sesja palców w domu. Rozgrzewka palców pełna, 12–15 min (dokument podaje 5).');
     case 'testD': return S('Dom: test palców D + core', '✋', [FINGER_WARMUP, linaTestBlock('D'), linaCoreBlock(), COOLDOWN],
       'Test zamiast zwisów — tylko w dniu bez innego obciążenia palców.');
     case 'hbBreak': return S('Dom: core + mobilność (przerwa od tablicy)', '🧘', [linaCoreBlock(), LINA_HIPS, LINA_BREATH],
@@ -4106,7 +4262,7 @@ function linaDayFor(iso){
   day.linaAuto = d.slot !== d.base;
   day.linaBase = d.base;
   if(d.slot === 'wallLight' && d.base === 'wallLight')
-    day.note = 'W tym tygodniu bouldery są w czwartek, więc środa jest sesją lekką — dwa intensywne dni pod rząd łamią zasadę ok. 48 h. Główny bodziec wytrzymałościowy w tym tygodniu odpada; jako wyjątek — w porządku, ale jeśli zdarza się często, wróć do bulderów w poniedziałek. ' + day.note;
+    day.note = 'W tym tygodniu bouldery są w czwartek, więc środa jest sesją lekką — dwa intensywne dni pod rząd łamią zasadę ok. 48 h. W tym tygodniu nie ma głównej sesji wytrzymałościowej. ' + day.note;
   return day;
 }
 
@@ -4122,7 +4278,7 @@ function linaWeekInfo(st, plan){
   if(st.hbBreak) t += ' <b>Przerwa od chwytotablicy</b> (2 tygodnie po 8 tygodniach zwisów).';
   if(st.cycle >= 3) t += '<br><br>Po 2–3 cyklach, gdy 6A jest stabilne, dokument proponuje 4–6 tygodni bloku na wytrzymałość siłową (np. 4×4) przed wyjazdem w skały — to osobny blok, aplikacja go nie prowadzi.';
   t += '<br><br><b>Ten tydzień:</b><br>' + plan.days.map(d => `• ${LINA_DOW_SHORT[d.idx]} — ${LINA_SLOT_TITLE[d.final] || d.final}${d.extra ? ' + ' + (LINA_SLOT_TITLE[d.extra] || d.extra) : ''}`).join('<br>');
-  t += '<br><br>Etap cyklu przesuwa się po tygodniu z zapisaną sesją na ścianie (lina albo obwody) — bez niej tydzień się powtarza, zamiast „zaliczać" niezrobiony bodziec.';
+  t += '<br><br>Etap cyklu przesuwa się po tygodniu z zapisaną sesją na ścianie (lina albo obwody) — bez niej tydzień się powtarza.';
   return t;
 }
 function linaTodayHTML(iso){
@@ -4133,7 +4289,7 @@ function linaTodayHTML(iso){
   const thisMon = mondayOf(todayISO()), prevMon = addDaysISO(thisMon, -7);
   if(mon === thisMon && (st.repeats || []).indexOf(prevMon) !== -1){
     html += bannerHTML('warn', '🔁', 'Etap powtórzony — w zeszłym tygodniu brak sesji na ścianie',
-      `Etap cyklu idzie naprzód tylko po tygodniu z sesją na linie albo obwodach (sam bouldering jej nie zastępuje). W zeszłym tygodniu takiej sesji nie ma w zapisach, więc ten tydzień powtarza poprzedni etap — progresja ma sens tylko po zrobionym bodźcu.<br><br>Jeśli sesja była, tylko jej nie zapisałeś:
+      `Etap cyklu idzie naprzód tylko po tygodniu z sesją na linie albo obwodach (sam bouldering jej nie zastępuje). W zeszłym tygodniu takiej sesji nie ma w zapisach, więc ten tydzień powtarza poprzedni etap.<br><br>Jeśli sesja była, tylko jej nie zapisałeś:
        <button class="btn btn-ghost" style="margin-top:10px;" onclick="linaMarkWeekDone('${prevMon}')">✓ Zalicz zeszły tydzień</button>`);
   }
   const d = plan.days.find(x => x.iso === iso);
@@ -4223,6 +4379,7 @@ function linaRefHTML(){
 }
 function linaClimbDayHTML(dayObj, entry){
   let html = limitsBannerHTML(checkFingerLimits('climb', null, dayObj.climbKind));
+  if(state.selectedDate <= todayISO()) html += climbCounterHTML(entry, dayObj.climbKind);
   if(dayObj.note) html += `<div class="notes-box" style="margin-top:0;">${dayObj.note}</div>`;
   html += `<div class="notes-box"><b>Achilles:</b> z bulderów schodzisz po chwytach — <span class="warn">nigdy zeskok z wysokości</span>. Zjazd na automacie kończysz miękko, na ugiętych kolanach.</div>`;
   html += blocksListHTML(dayObj.blocks, entry);
@@ -4293,13 +4450,14 @@ function renderGuidedBody(data){
   if(data.intro) html += `<div class="notes-box" style="margin-top:0;">${data.intro}</div>`;
   if(data.phases && data.phases.length){
     html += `<div class="card">` + timerRingHTML() + `</div>`;
-    if(data.phases.some(p => p.tap)) html += `<div class="meta" style="margin:-4px 0 10px;">Przy wejściach timer czeka na Ciebie — dotknij przycisku po wylądowaniu, dopiero wtedy liczy przerwę.</div>`;
+    if(data.phases.every(p => p.kind === 'rest')) html += `<div class="meta" style="margin:-4px 0 10px;">Licznik przerwy jest opcjonalny — włącz go po serii, jeśli chcesz pilnować czasu. W trakcie wspinania nic nie musisz klikać.</div>`;
   }
   if(data.pumpLog){
     html += `<div style="margin-top:12px;"><label style="font-size:0.7rem;color:var(--chalk-500);display:block;margin-bottom:6px;">Pompa pod koniec (0 = żadna, 10 = przedramiona „zalane")</label>${pumpChipsHTML('pumpRow','pickPump')}</div>`;
   }
   html += `<div class="log-row"><div><label>Notatka (droga, zadanie, odczucia)</label><input type="text" id="guidedNote" value="${esc((log && log.note) || '')}" placeholder="opcjonalnie"></div></div>`;
   html += `<button class="btn btn-primary" style="margin-top:12px;" onclick="saveGuided('${data.id}')">${log ? 'Zapisz zmiany' : 'Zapisz jako zrobione'}</button>`;
+  if(data.climbKind) html += `<div class="meta" style="margin-top:8px;">Możesz to zapisać teraz albo po całym treningu: na karcie dnia „✍️ Zapisz bez timera".</div>`;
   if(log && log.completedAt) html += `<div class="meta" style="margin-top:8px;text-align:center;">✓ Zapisane${log.pump != null ? ' · pompa ' + log.pump + '/10' : ''}</div>`;
   if(data.tech) html += techBlock(data, false);
   setTimeout(() => {
@@ -4431,7 +4589,8 @@ function dayComponentHTML(dayObj, entry){
     if(dayObj.lina) return linaClimbDayHTML(dayObj, entry);
     const res = checkFingerLimits('climb');
     html += limitsBannerHTML(res);
-    html += `<div class="notes-box"><b>Plan na sesję:</b> długie łatwe wspinanie ciągiem (20–30 min), powtarzane przewiązki, trening odpoczywania na drodze. <span class="warn">Z bulderów schodź po chwytach — nigdy nie zeskakuj.</span></div>`;
+    if(state.selectedDate <= todayISO()) html += climbCounterHTML(entry, null);
+    html += `<div class="notes-box"><b>Plan na sesję:</b> długie łatwe wspinanie ciągiem (20–30 min), powtarzanie tej samej drogi, trening odpoczywania na drodze. <span class="warn">Z bulderów schodź po chwytach — nigdy nie zeskakuj.</span></div>`;
     html += `<div style="margin-top:12px;"><button class="btn btn-primary" onclick="openClimb()">Otwórz zapis sesji</button></div>`;
     if(entry.climb) html += `<div class="meta" style="margin-top:10px;text-align:center;">✓ Sesja zapisana: ${climbSummaryTxt(entry.climb)}</div>`;
     // wyciszenie po wspinaniu — przedramiona po sesji na ścianie to priorytet
@@ -4443,7 +4602,7 @@ function dayComponentHTML(dayObj, entry){
   }
   if(dayObj.skipped) return '';   // opis i „Przywróć" są w banerze nad listą
   if(dayObj.type==='rest'){
-    html += `<div class="notes-box">Dziś nic nie trenujesz — regeneracja jest częścią planu, nie przerwą w nim. Jeśli chcesz, możesz dołożyć lekką mobilność albo wyciszenie.</div>`;
+    html += `<div class="notes-box">Dziś wolne. Jeśli chcesz, możesz zrobić lekką mobilność albo rozciąganie.</div>`;
     if(dayObj.lina && dayObj.note) html += `<div class="notes-box">${dayObj.note}</div>`;
     if(dayObj.lina && dayObj.optBlocks && dayObj.optBlocks.length) html += blocksListHTML(dayObj.optBlocks, entry, 'Opcjonalnie: ');
     return html;
@@ -4455,7 +4614,7 @@ function dayComponentHTML(dayObj, entry){
     return html;
   }
   html += blocksListHTML(dayObj.blocks, entry);
-  html += `<div class="meta" style="margin-top:14px;">Kolejność na liście jest celowa: rozgrzewki → palce (na świeżo) → reszta. Jeśli zabraknie czasu, jako pierwsze odpuszczasz pompki archer, potem ab wheel — nigdy chwytotablicy, podciągania, dipów ani pracy łopatek.</div>`;
+  html += `<div class="meta" style="margin-top:14px;">Kolejność: rozgrzewki → palce (na świeżo) → reszta. Jeśli zabraknie czasu, jako pierwsze odpuszczasz pompki archer, potem ab wheel — nigdy chwytotablicy, podciągania, dipów ani pracy łopatek.</div>`;
   return html;
 }
 
@@ -4541,15 +4700,15 @@ function renderToday(){
   const pos = planned.pos;
   if(pos && pos.deload && !overridden){
     html += bannerHTML('warn', '🪫', 'Tydzień odciążeniowy (deload)',
-      'Co trzeci cykl organizm dostaje tydzień na odbudowę: liczba serii jest automatycznie <b>zmniejszona o połowę</b>, chwytotablica i kamizelka całkowicie odpadają. Ciężary i technika zostają — schodzi tylko objętość. To nie strata tygodnia, to warunek dalszych postępów.');
+      'Co trzeci cykl tydzień 2 jest odciążeniowy: liczba serii jest automatycznie <b>zmniejszona o połowę</b>, chwytotablica i kamizelka całkowicie odpadają. Ciężary i technika zostają — schodzi tylko objętość.');
   }
   if(day.gumProgram){
     html += bannerHTML('warn', '🎒', 'Program gumowy — inne zasady niż plan główny',
-      'Ten trening obchodzi się bez drążka i drabinki: taśmy, masa ciała, ab wheel. Cel to <b>siła maksymalna przy minimum przyrostu masy</b>, więc reguły są inne niż w Twoim planie FBW: <b>3–5 powtórzeń albo 5–6 s izometrii, zapas 2–3 powtórzeń (nigdy do upadku), przerwy 3–5 minut</b> i maksymalna intencja przyspieszenia w każdym powtórzeniu.<br><br>Progresja idzie przez <b>trudniejszy wariant</b>, nie przez więcej powtórzeń — gdy zrobisz 6 czystych, zmień wariant. Objętość jest celowo niska.<br><br><b>Świadome ograniczenie:</b> bez drążka nie da się w pełni obciążyć najszerszego grzbietu w ciągnięciu pionowym ani siły chwytu zwisowego. Wiosłowanie i pullover to częściowa łatka, nie zamiennik podciągania.');
+      'Ten trening obchodzi się bez drążka i drabinki: taśmy, masa ciała, ab wheel. Cel to <b>siła maksymalna przy minimum przyrostu masy</b>, więc reguły są inne niż w Twoim planie FBW: <b>3–5 powtórzeń albo 5–6 s izometrii, zapas 2–3 powtórzeń (nigdy do upadku), przerwy 3–5 minut</b> i każde powtórzenie wykonywane jak najszybciej.<br><br>Progresja idzie przez <b>trudniejszy wariant</b>, nie przez więcej powtórzeń — gdy zrobisz 6 czystych, zmień wariant. Objętość jest niska.<br><br><b>Ograniczenie:</b> bez drążka nie da się w pełni obciążyć najszerszego grzbietu w ciągnięciu pionowym ani siły chwytu zwisowego. Wiosłowanie i pullover to częściowe zastępstwo, nie zamiennik podciągania.');
   }
   if(day.proposed && !overridden){
     html += bannerHTML('warn', '🧩', day.title.split(' ').slice(0,2).join(' ') + ' — propozycja trenerska',
-      'Ten moduł przygotowałem według założeń Twojego planu (te same wzorce ruchowe co Moduł A w innych wariantach, zakresy siłowe, soleus dla Achillesa). Nie pochodzi z Twojego projektu treningowego — jeśli kiedyś dostaniesz „oficjalne" moduły B/C, podmienimy treść.');
+      'Propozycja trenerska według założeń Twojego planu: te same wzorce ruchowe co Moduł A w innych wariantach, zakresy siłowe, soleus dla Achillesa. Nie pochodzi z Twojego projektu treningowego.');
   }
   if(overridden && day.skipped){
     html += bannerHTML('info', '✕', 'Jednostka usunięta — nie zrobiona',
@@ -4560,8 +4719,8 @@ function renderToday(){
       `Według planu ten dzień to „${planned.title}", a Ty wybrałeś „${day.title}". Reszta tygodnia jest już przeliczona pod tę zmianę — zobacz pasek tygodnia i baner „Plan przeliczony".`);
   } else if(overridden){
     const tail = day.type === 'rest'
-      ? 'Pauza zamiast treningu jest zawsze w porządku — regeneracja też buduje formę.'
-      : 'Pamiętaj, że dzień odpoczynku w planie nie jest przypadkowy — traktuj tę zmianę jako wyjątek, nie regułę.';
+      ? ''
+      : 'Sprawdź limity palców na ten dzień.';
     html += bannerHTML('warn', '📅', 'Modyfikacja planu',
       `Według planu ten dzień to „${planned.title}", a Ty wybrałeś „${day.title}". ${tail}`);
   }
@@ -4596,6 +4755,7 @@ function renderToday(){
     ? `Cykl ${pos.cycleIndex+1} · Tydz. ${pos.weekInCycle}${pos.deload?' (deload)':''} · ${pos.planWeek}. tydzień planu`
     : '';
   document.getElementById('headerSub').textContent = hdr + ' · ' + allTitles.join(' + ');
+  setTimeout(scrollGradeRows, 0);
 }
 
 function rowHTML(id, name, sub, done){
@@ -4743,7 +4903,7 @@ function techExtrasHTML(id, name){
 
 function techBlock(data, openFirst){
   if(!data.tech || !data.tech.length) return '';
-  let html = `<div class="tech-head">Technika — przeczytaj przed pierwszym razem</div>`;
+  let html = `<div class="tech-head">Technika</div>`;
   let extrasIdx = data.tech.findIndex(sec=>sec.t === 'Wykonanie');
   if(extrasIdx === -1) extrasIdx = 0;
   const extras = techExtrasHTML(data.id, data.name);
@@ -4886,7 +5046,6 @@ function renderHangboardBody(data){
   const blocked = res.blocks.length > 0;
 
   let html = limitsBannerHTML(res);
-  if(blocked) html += `<button class="btn btn-ghost" style="margin-bottom:12px;" onclick="unlockHangboard(this)">Przeczytałem ostrzeżenie — odblokuj timer</button>`;
   html += cueBlock(data);
   html += hangboardEditPanel(data);
   html += `<div class="card">` + timerRingHTML() + `</div>`;
@@ -4917,17 +5076,8 @@ function renderHangboardBody(data){
   }
   setTimeout(()=>{
     engineLoad(phases, {onComplete: ()=>completeHangboard(data.id)});
-    if(blocked){
-      const btn = document.getElementById('timerStartBtn');
-      if(btn){ btn.disabled = true; btn.textContent = 'Zablokowane'; }
-    }
   }, 0);
   return html;
-}
-function unlockHangboard(btn){
-  const s = document.getElementById('timerStartBtn');
-  if(s){ s.disabled = false; s.textContent = 'Start'; }
-  btn.remove();
 }
 function completeHangboard(id){
   const entry = loadEntry(state.selectedDate);
@@ -5055,7 +5205,8 @@ function updateSetTracker(){
 function setupExerciseTimer(ex){
   updateSetTracker();
   if(ex.tempo){
-    const phases = ex.tempo.phases.map(p=>({label:p.l, seconds:p.s||1, kind:'work', tap:p.s===0}));
+    // faza „X" (dynamicznie w górę) trwa 1 s — timer nie czeka na dotknięcie w trakcie serii
+    const phases = ex.tempo.phases.map(p=>({label:p.l, seconds:p.s||1, kind:'work'}));
     engineLoad(phases, {loop:true});
   } else if(ex.holdBased){
     engineLoad([{label:'Utrzymanie', seconds:ex.holdRange[1], kind:'work'}],
@@ -5120,15 +5271,25 @@ function climbSummaryTxt(c){
   const r = Number(c.routes) || 0, b = Number(c.boulders) || 0;
   const parts = [];
   if(c.kind && LINA_CLIMB_KINDS[c.kind]) parts.push(LINA_CLIMB_KINDS[c.kind]);
-  if(r) parts.push(`lina: ${r} ${plural(r,'droga','drogi','dróg')}`);
-  if(b || c.boulderEffort) parts.push(`bouldering: ${b} ${plural(b,'bulder','buldery','bulderów')}` + (c.boulderEffort ? ` (${BOULDER_EFFORT[c.boulderEffort]})` : ''));
+  const rg = gradesSummary(c, 'routes'), bg = gradesSummary(c, 'boulders');
+  if(r) parts.push(`lina: ${r} ${plural(r,'droga','drogi','dróg')}` + (rg ? ` (${rg})` : ''));
+  const bIn = [bg, c.boulderEffort ? BOULDER_EFFORT[c.boulderEffort] : ''].filter(Boolean).join('; ');
+  if(b || c.boulderEffort) parts.push(`bouldering: ${b} ${plural(b,'bulder','buldery','bulderów')}` + (bIn ? ` (${bIn})` : ''));
   if(c.pump != null) parts.push(`pompa ${c.pump}/10`);
   return parts.length ? parts.join(' · ') : 'bez liczb';
 }
 function saveClimb(){
+  const prev = loadEntry(state.selectedDate).climb || {};
+  // liczba nie mniejsza niż liczba wpisanych trudności (każda trudność = droga / bulder)
+  const atLeast = (val, field) => {
+    const n = gradesOf(prev, field).length;
+    return n && (Number(val) || 0) < n ? String(n) : val;
+  };
   const data = {
-    routes: document.getElementById('climbRoutes').value,
-    boulders: document.getElementById('climbBoulders').value,
+    routes: atLeast(document.getElementById('climbRoutes').value, 'routes'),
+    boulders: atLeast(document.getElementById('climbBoulders').value, 'boulders'),
+    routeGrades: prev.routeGrades, routeScale: prev.routeScale,
+    boulderGrades: prev.boulderGrades, boulderScale: prev.boulderScale,
     feel: document.getElementById('climbFeel').value || undefined,   // brak wyboru = brak oceny
     boulderEffort: boulderEffortPicked || undefined,                  // 1 lekko · 2 średnio · 3 ciężko
     kind: climbKindPicked || undefined,                              // plan na linę: rodzaj sesji
@@ -5320,19 +5481,19 @@ function renderTools(){
     else if(r.type === 'guided') guided.push(r);
   }
 
-  html += `<div class="block-title"><div class="idx">✦</div><h3>Ściana i oddech</h3></div>`;
-  html += `<div class="meta" style="margin-bottom:10px;">Timery z planu na drogi z liną — obwody, seria na automacie (czeka, aż dotkniesz po wylądowaniu) i oddech 4/6.</div>`;
+  html += `<div class="block-title"><div class="idx">2</div><h3>Ściana i oddech</h3></div>`;
+  html += `<div class="meta" style="margin-bottom:10px;">Timery z planu na drogi z liną — obwody, przerwa między seriami na automacie i oddech 4/6.</div>`;
   guided.forEach(r=>{
     html += launchRow('ex:'+r.data.id, r.data.name, exSummary(r.data), `openFromTools('${r.data.id}')`);
   });
 
-  html += `<div class="block-title"><div class="idx">2</div><h3>Pojedyncze ćwiczenia</h3></div>`;
+  html += `<div class="block-title"><div class="idx">3</div><h3>Pojedyncze ćwiczenia</h3></div>`;
   html += `<div class="meta" style="margin-bottom:10px;">Każde z opisem techniki, timerem tempa i odliczaniem przerw — możesz odpalić o dowolnej porze.</div>`;
   exercises.forEach(r=>{
     html += launchRow('ex:'+r.data.id, r.data.name, exSummary(r.data), `openFromTools('${r.data.id}')`);
   });
 
-  html += `<div class="block-title"><div class="idx">3</div><h3>Rozgrzewki</h3></div>`;
+  html += `<div class="block-title"><div class="idx">4</div><h3>Rozgrzewki</h3></div>`;
   warmups.forEach(r=>{
     html += launchRow('ex:'+r.data.id, r.data.name, exSummary(r.data), `openFromTools('${r.data.id}')`);
   });
@@ -5348,7 +5509,7 @@ function renderHistory(){
   const list = document.getElementById('historyList');
   const keys = store.keys('entries:').sort().reverse().slice(0,14);
   if(!keys.length){
-    list.innerHTML = '<div class="empty-hint">Brak zapisanych dni. Zaloguj pierwszą serię albo sesję wspinania.</div>';
+    list.innerHTML = '<div class="empty-hint">Brak zapisanych dni. Zapisz pierwszą serię albo sesję wspinania.</div>';
     return;
   }
   let html = '';
@@ -5362,6 +5523,9 @@ function renderHistory(){
       if(b || c.boulderEffort) tags.push(`<span class="pill">🪨 ${b} buld.${c.boulderEffort ? ' · '+BOULDER_EFFORT[c.boulderEffort] : ''}</span>`);
       if(!r && !b && !c.boulderEffort) tags.push(`<span class="pill">🧗 ${LINA_CLIMB_KINDS[c.kind] || 'wspinanie'}</span>`);
       if(c.pump != null) tags.push(`<span class="pill">pompa ${c.pump}/10</span>`);
+      const rgs = gradesSummary(c, 'routes'), bgs = gradesSummary(c, 'boulders');
+      if(rgs) tags.push(`<span class="pill">🧗 ${esc(rgs)}</span>`);
+      if(bgs) tags.push(`<span class="pill">🪨 ${esc(bgs)}</span>`);
     }
     if(entry.exercises){
       const n = Object.keys(entry.exercises).length;
@@ -5454,6 +5618,9 @@ function aiHistory(days, today){
         +(!rt && feel ? ', '+feel : ''));
       if(!rt && !bl && !c.boulderEffort) items.push('• Wspinanie (bez liczb)'+(feel ? ': '+feel : ''));
       if(c.kind || c.pump != null) items.push('• Rodzaj sesji: '+(LINA_CLIMB_KINDS[c.kind] || 'nie podano')+(c.pump != null ? ', pompa na koniec '+c.pump+'/10' : ''));
+      const rgs = gradesSummary(c, 'routes'), bgs = gradesSummary(c, 'boulders');
+      if(rgs) items.push('• Trudności dróg (skala '+(GRADE_SCALES.routes[c.routeScale] || gradeScale('routes')).name+'): '+rgs);
+      if(bgs) items.push('• Trudności bulderów (skala '+(GRADE_SCALES.boulders[c.boulderScale] || gradeScale('boulders')).name+'): '+bgs);
       if(aiTxt(c.note)) items.push('• Notatka ze wspinania: „'+aiTxt(c.note)+'"');
       sum.climb++;
     }
@@ -5564,8 +5731,8 @@ function claudeSummary(days, today){
   L.push('', '=== PLAN NA NAJBLIŻSZE 7 DNI ===', ...aiUpcoming(today));
   L.push('', '=== ZASADY BEZPIECZEŃSTWA (nienaruszalne) ===');
   if(lina) L.push('• Palce (plan na linę): maks. 3 intensywne dni na 7 (bouldering, sesja na ścianie, testy, prowadzenie, chwytotablica 10/5); sesja lekka na ścianie (pompa ≤2–3/10) się nie liczy, ale w jej dniu i nazajutrz bez tablicy. Ok. 48 h między intensywnymi dniami. Co najmniej jeden dzień w tygodniu całkiem wolny. Po 8 tygodniach zwisów 2 tygodnie przerwy od tablicy.');
-  else L.push('• Palce: maks. 3 intensywne ekspozycje na 7 dni (wspinanie + chwytotablica B, C, C+ lub własna). Dwie intensywne dzień po dniu są zabronione; dzień po intensywnej najwyżej lekka tablica (protokół A lub D). Co najmniej 48 h między wspinaniem a intensywną tablicą. Tablica tylko na początku jednostki, na świeżych palcach.');
-  L.push('• Intensywne ekspozycje palców w ostatnich 7 dniach: '+aiFingerWeek(today)+'.');
+  else L.push('• Palce: maks. 3 intensywne dni na 7 (wspinanie + chwytotablica B, C, C+ lub własna). Dwie intensywne dzień po dniu są zabronione; dzień po intensywnej najwyżej lekka tablica (protokół A lub D). Co najmniej 48 h między wspinaniem a intensywną tablicą. Tablica tylko na początku jednostki, na świeżych palcach.');
+  L.push('• Intensywne dni dla palców w ostatnich 7 dniach: '+aiFingerWeek(today)+'.');
   L.push('• Achilles (przebyte zapalenie ścięgna): z bulderów schodzę po chwytach, bez zeskoków; żadnych ćwiczeń z wyskokami; pistol squat bez przechodzenia wyżej; wspięcia na palce: '+(SETTINGS.achillesTrack === 'fast' ? 'jednonóż' : 'obunóż (ostrożnie)')+'.');
   L.push('• Dipy: '+(SETTINGS.dipsDepth === '90' ? 'do kąta prostego' : 'stop na 100–110°')+'; nie w dobie po mocnym wspinaniu.');
   if(!lina) L.push('• Maks. 5 jednostek siłowych na 14 dni.');
@@ -5665,6 +5832,8 @@ function loadSettingsForm(){
     ? `Masz zmienione liczby w ${n} ${plural(n,'pozycji','pozycjach','pozycjach')}.`
     : 'Wszystko jeszcze na wartościach z planu.';
   document.getElementById('setVolumeBox').innerHTML = volumeRowHTML();
+  document.getElementById('setScaleRoutes').value = gradeScaleKey('routes');
+  document.getElementById('setScaleBoulders').value = gradeScaleKey('boulders');
   const lina = linaOn();
   document.getElementById('setProgram').value = lina ? 'lina' : 'fbw';
   document.getElementById('linaSettings').style.display = lina ? '' : 'none';
@@ -5825,7 +5994,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
     const b = document.createElement('div');
     b.className = 'banner block';
     b.style.margin = '12px 16px 0';
-    b.innerHTML = '⚠️ <b>Ten sposób otwarcia aplikacji nie pozwala zapisywać danych.</b> Timery działają, ale dziennik, ustawienia i ulubione ZNIKNĄ po zamknięciu. Żeby wszystko się zapisywało, aplikacja musi być zainstalowana z adresu internetowego (https).';
+    b.innerHTML = '⚠️ <b>Ten sposób otwarcia aplikacji nie pozwala zapisywać danych.</b> Timery działają, ale dziennik, ustawienia i ulubione <b>znikną</b> po zamknięciu. Żeby wszystko się zapisywało, aplikacja musi być zainstalowana z adresu internetowego (https).';
     document.querySelector('main').prepend(b);
   }
 })();
