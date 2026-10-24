@@ -290,17 +290,21 @@
   .slider-row .val{ font-size:1.4rem; font-weight:800; color:var(--rope-400); }
   input[type=range]{ width:100%; accent-color:var(--lichen-500); height:28px; }
   /* Trudności dróg / bulderów */
-  .grade-row{ display:flex; gap:6px; overflow-x:auto; padding:6px 0 6px; -webkit-overflow-scrolling:touch; scrollbar-width:thin; }
+  .grade-row{ display:flex; gap:6px; overflow-x:auto; padding:6px 0 6px; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+  .grade-row::-webkit-scrollbar{ display:none; }
   .grade-chip{ flex:0 0 auto; min-width:46px; height:40px; padding:0 8px; border-radius:10px; cursor:pointer;
     background:var(--stone-900); border:1px solid var(--stone-700); color:var(--chalk-100); font-weight:700; font-size:0.85rem; }
   .grade-chip:active{ background:var(--lichen-900); border-color:var(--lichen-500); }
   .grade-done{ display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
   .grade-pill{ border-radius:999px; padding:5px 10px; cursor:pointer; font-size:0.78rem; font-weight:700;
     background:var(--lichen-900); border:1px solid var(--lichen-500); color:var(--lichen-400); }
-  /* Licznik dróg / bulderów */
+  /* Licznik dróg, obwodów i bulderów */
   .cc-card{ padding:12px 14px; }
   .cc-row{ display:flex; align-items:center; gap:12px; padding:4px 0; }
   .cc-lbl{ flex:1; font-weight:600; color:var(--chalk-100); }
+  .cc-sub{ display:block; font-weight:400; font-size:0.75rem; color:var(--lichen-400); margin-top:1px; }
+  .cc-tabs{ margin:10px 0 6px; }
+  .cc-tabs .rpe-chip{ flex:1; padding:8px 4px; font-size:0.8rem; }
   .cc-val{ min-width:36px; text-align:center; font-size:1.4rem; font-weight:800; color:var(--chalk-100); }
   .cc-btn{ width:52px; height:44px; border-radius:12px; cursor:pointer; font-size:1.4rem; font-weight:700;
     background:var(--stone-900); border:1px solid var(--stone-700); color:var(--chalk-300); }
@@ -451,7 +455,7 @@
     </div>
     <div class="card" style="margin-top:14px;">
       <h2>Zapis sesji</h2>
-      <div class="meta">Wypełnij to, co dziś robiłeś: linę, bouldering albo jedno i drugie.</div>
+      <div class="meta">Wypełnij tylko to, co dziś robiłeś — resztę zostaw pustą.</div>
       <div id="climbLinaBox" style="display:none;">
         <h3 class="climb-part">Rodzaj sesji</h3>
         <div class="rpe-row pump-row" id="climbKindRow" style="margin-top:8px;">
@@ -467,13 +471,23 @@
           <button type="button" class="rpe-chip" data-v="0" onclick="pickClimbPump(this)">0</button><button type="button" class="rpe-chip" data-v="1" onclick="pickClimbPump(this)">1</button><button type="button" class="rpe-chip" data-v="2" onclick="pickClimbPump(this)">2</button><button type="button" class="rpe-chip" data-v="3" onclick="pickClimbPump(this)">3</button><button type="button" class="rpe-chip" data-v="4" onclick="pickClimbPump(this)">4</button><button type="button" class="rpe-chip" data-v="5" onclick="pickClimbPump(this)">5</button><button type="button" class="rpe-chip" data-v="6" onclick="pickClimbPump(this)">6</button><button type="button" class="rpe-chip" data-v="7" onclick="pickClimbPump(this)">7</button><button type="button" class="rpe-chip" data-v="8" onclick="pickClimbPump(this)">8</button><button type="button" class="rpe-chip" data-v="9" onclick="pickClimbPump(this)">9</button><button type="button" class="rpe-chip" data-v="10" onclick="pickClimbPump(this)">10</button>
         </div>
       </div>
-      <h3 class="climb-part">🧗 Lina</h3>
+      <h3 class="climb-part">🧗 Drogi z liną</h3>
       <div class="log-row">
-        <div><label>Ile dróg</label><input type="number" id="climbRoutes" placeholder="np. 6"></div>
+        <div><label>Ile dróg z liną (z partnerem)</label><input type="number" id="climbRoutes" placeholder="np. 6"></div>
       </div>
       <div id="climbGradeRoutes"></div>
+      <h3 class="climb-part">🔄 Drogi na automacie</h3>
+      <div class="log-row">
+        <div><label>Ile wejść na automacie</label><input type="number" id="climbAutos" placeholder="np. 6"></div>
+      </div>
+      <div id="climbGradeAutos"></div>
+      <h3 class="climb-part">🔁 Obwody</h3>
+      <div class="log-row">
+        <div><label>Ile obwodów</label><input type="number" id="climbCircuits" placeholder="np. 4"></div>
+      </div>
+      <div id="climbGradeCircuits"></div>
       <div style="margin-top:12px;">
-        <label style="font-size:0.7rem;color:var(--chalk-500);display:block;margin-bottom:4px;">Jak wypadła wytrzymałość (czy przedramiona „puchły" szybciej/wolniej niż zwykle)</label>
+        <label style="font-size:0.7rem;color:var(--chalk-500);display:block;margin-bottom:4px;">Jak wypadła wytrzymałość na drogach i obwodach (czy przedramiona „puchły" szybciej/wolniej niż zwykle)</label>
         <select id="climbFeel">
           <option value="">— nie oceniam —</option>
           <option value="better">Lepiej niż zwykle</option>
@@ -586,7 +600,7 @@
     <div class="card">
       <h2 style="margin-bottom:10px;">Skale trudności</h2>
       <div class="setting-row">
-        <label>Drogi</label>
+        <label>Drogi (z liną i na automacie)</label>
         <select id="setScaleRoutes" onchange="saveGradeScale('routes', this.value)">
           <option value="fr">francuska (5A, 6B+…)</option>
           <option value="uiaa">UIAA (V+, VI-…)</option>
@@ -601,7 +615,16 @@
           <option value="v">V-scale (V0, V3…)</option>
         </select>
       </div>
-      <div class="meta" style="margin-top:8px;">Z tej skali wybierasz trudność przy zapisie dróg i bulderów. Zmiana skali nie przelicza starych wpisów — każdy zapis pamięta skalę, w której powstał.</div>
+      <div class="setting-row">
+        <label>Obwody</label>
+        <select id="setScaleCircuits" onchange="saveGradeScale('circuits', this.value)">
+          <option value="fr">francuska (5A, 6B+…)</option>
+          <option value="uiaa">UIAA (V+, VI-…)</option>
+          <option value="kurtyka">polska — Kurtyki (VI.1, VI.2…)</option>
+          <option value="yds">amerykańska YDS (5.10a…)</option>
+        </select>
+      </div>
+      <div class="meta" style="margin-top:8px;">Z tej skali wybierasz trudność przy zapisie dróg, obwodów i bulderów. Zmiana skali nie przelicza starych wpisów — każdy zapis pamięta skalę, w której powstał.</div>
     </div>
     <div class="card">
       <h2 style="margin-bottom:10px;">Program treningowy</h2>
@@ -695,7 +718,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.28.0';
+const APP_VERSION = '1.29.0';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -3049,6 +3072,8 @@ function openClimb(kind){
   const c = e.climb || {};
   document.getElementById('climbRoutes').value = c.routes || '';
   document.getElementById('climbBoulders').value = c.boulders || '';
+  document.getElementById('climbAutos').value = c.autos || '';
+  document.getElementById('climbCircuits').value = c.circuits || '';
   document.getElementById('climbFeel').value = c.feel || '';
   boulderEffortPicked = c.boulderEffort || null;
   showBoulderEffort();
@@ -3062,6 +3087,8 @@ function openClimb(kind){
   showChips('climbPumpRow', climbPumpPicked);
   document.getElementById('climbGradeRoutes').innerHTML = gradeBoxHTML('routes', climbKindPicked);
   document.getElementById('climbGradeBoulders').innerHTML = gradeBoxHTML('boulders', climbKindPicked);
+  document.getElementById('climbGradeAutos').innerHTML = gradeBoxHTML('autos', climbKindPicked);
+  document.getElementById('climbGradeCircuits').innerHTML = gradeBoxHTML('circuits', climbKindPicked);
   setTimeout(scrollGradeRows, 0);
   showClimbLimits();
 }
@@ -3217,22 +3244,38 @@ function recordTs(iso){
 function quickLogButtonHTML(){
   return `<button class="btn btn-secondary" style="width:auto;margin:12px 8px 0 0;padding:9px 14px;font-weight:700;font-size:0.85rem;" onclick="openQuickLog()">✍️ Zapisz bez timera</button>`;
 }
-/* Licznik dróg i bulderów na karcie dnia na ścianie — opcjonalny, na bieżąco albo po treningu.
+/* Licznik dróg (z liną i na automacie), obwodów i bulderów na karcie dnia na ścianie — opcjonalny, na bieżąco albo po treningu.
    Zapisuje od razu do dziennika (to samo pole co „Zapis sesji"). */
+const CLIMB_LABEL = {routes:'Z liną', autos:'Automat', circuits:'Obwody', boulders:'Buldery'};
+// który pasek trudności widać na karcie dnia — domyślnie wg rodzaju sesji, potem ostatnio wybrany
+const CLIMB_FIELD_FOR_KIND = {wytrz:'autos', lekka:'circuits', boulder:'boulders', prow:'routes', test:'autos'};
+let climbGradeOpen = {date:null, field:null};
+function climbGradeField(c, kind){
+  if(climbGradeOpen.date === state.selectedDate && climbGradeOpen.field) return climbGradeOpen.field;
+  return CLIMB_FIELD_FOR_KIND[c.kind || kind] || 'routes';
+}
+function climbGradePick(field){
+  climbGradeOpen = {date:state.selectedDate, field};
+  vibrate(10);
+  renderAll();
+}
 function climbCounterHTML(entry, kind){
   const c = entry.climb || {};
-  const row = (field, label) => {
-    const v = Number(c[field]) || 0;
-    return `<div class="cc-row"><span class="cc-lbl">${label}</span>
+  const open = climbGradeField(c, kind);
+  const row = (field) => {
+    const v = Number(c[field]) || 0, label = CLIMB_LABEL[field];
+    const gs = gradesSummary(c, field);
+    return `<div class="cc-row"><span class="cc-lbl">${label}${gs ? `<span class="cc-sub">${esc(gs)}</span>` : ''}</span>
       <button class="cc-btn" onclick="climbCount('${field}',-1,'${kind || ''}')" aria-label="${label}: mniej">−</button>
       <span class="cc-val">${v}</span>
       <button class="cc-btn cc-plus" onclick="climbCount('${field}',1,'${kind || ''}')" aria-label="${label}: więcej">+</button></div>`;
   };
+  const tabs = CLIMB_FIELDS.map(f => `<button type="button" class="rpe-chip${f === open ? ' on' : ''}" onclick="climbGradePick('${f}')">${CLIMB_LABEL[f]}</button>`).join('');
   return `<div class="card cc-card">
-    ${row('routes', 'Drogi')}${gradeBoxHTML('routes', kind)}
-    <div style="height:8px;"></div>
-    ${row('boulders', 'Buldery')}${gradeBoxHTML('boulders', kind)}
-    <div class="meta" style="margin-top:8px;">Opcjonalnie: dotknij trudności (albo „+") po drodze czy bulderze — albo nic nie klikaj i wpisz wszystko po treningu.</div>
+    ${CLIMB_FIELDS.map(row).join('')}
+    <div class="rpe-row cc-tabs">${tabs}</div>
+    ${gradeBoxHTML(open, kind, true)}
+    <div class="meta" style="margin-top:6px;font-size:0.75rem;">Opcjonalnie — na bieżąco albo nic nie klikasz i wpisujesz po treningu.</div>
   </div>`;
 }
 /* ---------- Trudności dróg i bulderów (skale wybierane w Ustawieniach) ---------- */
@@ -3248,10 +3291,18 @@ const GRADE_SCALES = {
     v:       {name:'V-scale', anchor:'V1', grades:['VB','V0','V1','V2','V3','V4','V5','V6','V7','V8','V9','V10','V11','V12']},
   },
 };
-const GRADE_FIELD = {routes:'routeGrades', boulders:'boulderGrades'};
-const SCALE_FIELD = {routes:'routeScale', boulders:'boulderScale'};
+// automat: ta sama skala co drogi z liną; obwody: te same skale co drogi, osobny wybór (domyślnie francuska)
+GRADE_SCALES.autos = GRADE_SCALES.routes;
+GRADE_SCALES.circuits = {...GRADE_SCALES.routes, fr:{...GRADE_SCALES.routes.fr, anchor:'5B'}};
+const CLIMB_FIELDS = ['routes', 'autos', 'circuits', 'boulders'];
+const GRADE_FIELD = {routes:'routeGrades', boulders:'boulderGrades', autos:'autoGrades', circuits:'circuitGrades'};
+const SCALE_FIELD = {routes:'routeScale', boulders:'boulderScale', autos:'autoScale', circuits:'circuitScale'};
+const SCALE_STORE = {routes:'gradeScaleRoutes', boulders:'gradeScaleBoulders', autos:'gradeScaleRoutes', circuits:'gradeScaleCircuits'};
+const SCALE_DEFAULT = {routes:'fr', boulders:'font', autos:'fr', circuits:'fr'};
+const GRADE_UNIT = {routes:'drogę', boulders:'bulder', autos:'wejście', circuits:'obwód'};
+function climbTotal(c){ return CLIMB_FIELDS.reduce((a, f) => a + (Number(c[f]) || 0), 0); }
 function gradeScaleKey(field){
-  const k = store.get(field === 'routes' ? 'gradeScaleRoutes' : 'gradeScaleBoulders', field === 'routes' ? 'fr' : 'font');
+  const k = store.get(SCALE_STORE[field], SCALE_DEFAULT[field]);
   return GRADE_SCALES[field][k] ? k : Object.keys(GRADE_SCALES[field])[0];
 }
 function gradeScale(field){ return GRADE_SCALES[field][gradeScaleKey(field)]; }
@@ -3266,15 +3317,16 @@ function gradesSummary(c, field){
   list.forEach(g => { counts[g] = (counts[g] || 0) + 1; });
   return Object.keys(counts).sort((a, b) => order(a) - order(b)).map(g => g + (counts[g] > 1 ? ' ×' + counts[g] : '')).join(', ');
 }
-function gradeBoxHTML(field, kind){
+function gradeBoxHTML(field, kind, compact){
   const c = loadEntry(state.selectedDate).climb || {};
   const sc = gradeScale(field);
   const list = gradesOf(c, field);
   const chips = sc.grades.map(g => `<button type="button" class="grade-chip" data-g="${g}" onclick="climbAddGrade('${field}','${g}','${kind || ''}')">${g}</button>`).join('');
   const done = list.map((g, i) => `<button type="button" class="grade-pill" title="Usuń" onclick="climbRemoveGrade('${field}',${i})">${esc(g)} ✕</button>`).join('');
-  return `<div class="gradebox" data-field="${field}" data-kind="${kind || ''}">
+  const hint = compact ? '' : `<div class="meta" style="font-size:0.75rem;">Dotknij trudności, żeby dopisać ${GRADE_UNIT[field]}.</div>`;
+  return `<div class="gradebox" data-field="${field}" data-kind="${kind || ''}" data-compact="${compact ? 1 : ''}">
     <div class="grade-row" data-anchor="${esc(list.length ? list[list.length - 1] : sc.anchor)}">${chips}</div>
-    ${done ? `<div class="grade-done">${done}</div>` : `<div class="meta" style="font-size:0.75rem;">Dotknij trudności, żeby dopisać ${field === 'routes' ? 'drogę' : 'bulder'} (skala ${sc.name}). „+" dopisuje bez trudności.</div>`}
+    ${done ? `<div class="grade-done">${done}</div>` : hint}
   </div>`;
 }
 /* Pasek trudności przewinięty tak, żeby było widać Twoje okolice (ostatnio wpisaną albo typowy start). */
@@ -3287,21 +3339,23 @@ function scrollGradeRows(){
 }
 function saveGradeScale(field, key){
   if(!GRADE_SCALES[field][key]) return;
-  store.set(field === 'routes' ? 'gradeScaleRoutes' : 'gradeScaleBoulders', key);
+  store.set(SCALE_STORE[field], key);
   vibrate(20);
 }
 function climbScreenActive(id){ const s = document.getElementById(id); return !!(s && s.classList && s.classList.contains('active')); }
 function refreshClimbBoxes(){
   const c = loadEntry(state.selectedDate).climb || {};
-  document.querySelectorAll('.gradebox').forEach(el => { el.outerHTML = gradeBoxHTML(el.dataset.field, el.dataset.kind); });
+  document.querySelectorAll('.gradebox').forEach(el => { el.outerHTML = gradeBoxHTML(el.dataset.field, el.dataset.kind, !!el.dataset.compact); });
   ['climbRoutes','ql_routes'].forEach(id => { const el = document.getElementById(id); if(el) el.value = c.routes || ''; });
   ['climbBoulders','ql_boulders'].forEach(id => { const el = document.getElementById(id); if(el) el.value = c.boulders || ''; });
+  ['climbAutos','ql_autos'].forEach(id => { const el = document.getElementById(id); if(el) el.value = c.autos || ''; });
+  ['climbCircuits','ql_circuits'].forEach(id => { const el = document.getElementById(id); if(el) el.value = c.circuits || ''; });
   setTimeout(scrollGradeRows, 0);
 }
 function saveClimbPatch(c){
   const iso = state.selectedDate;
   const e = loadEntry(iso);
-  const empty = !(Number(c.routes) || Number(c.boulders)) && !gradesOf(c,'routes').length && !gradesOf(c,'boulders').length
+  const empty = !climbTotal(c) && !CLIMB_FIELDS.some(f => gradesOf(c, f).length)
     && c.pump == null && !c.boulderEffort && !c.feel && !(c.note || '').trim();
   if(empty){ delete e.climb; saveEntry(iso, e); }
   else mergeEntry(iso, {climb:c});
@@ -3334,7 +3388,7 @@ function climbCount(field, delta, kind){
   // mniej dróg niż wpisanych trudności → zdejmij ostatnią trudność
   const gl = gradesOf(c, field);
   if(gl.length > Number(c[field])) c[GRADE_FIELD[field]] = gl.slice(0, Number(c[field]));
-  const empty = !(Number(c.routes) || Number(c.boulders)) && c.pump == null && !c.boulderEffort && !c.feel && !(c.note || '').trim();
+  const empty = !climbTotal(c) && c.pump == null && !c.boulderEffort && !c.feel && !(c.note || '').trim();
   if(empty && delta < 0){ delete e.climb; saveEntry(iso, e); }
   else {
     if(!c.savedAt) c.savedAt = recordTs(iso);
@@ -3371,11 +3425,19 @@ function openQuickLog(){
         ${Object.keys(LINA_CLIMB_KINDS).map(k => `<option value="${k}"${k === kind ? ' selected' : ''}>${LINA_CLIMB_KINDS[k]}</option>`).join('')}
       </select></div><div><label>Pompa na koniec</label>${qlPumpSelect('ql_pump', c.pump != null ? c.pump : null)}</div></div>` : ''}
       <div class="log-row">
-        <div><label>Ile dróg</label><input type="number" id="ql_routes" value="${esc(c.routes || '')}" placeholder="np. 6"></div>
+        <div><label>Drogi z liną</label><input type="number" id="ql_routes" value="${esc(c.routes || '')}" placeholder="np. 6"></div>
+        <div><label>Na automacie</label><input type="number" id="ql_autos" value="${esc(c.autos || '')}" placeholder="np. 6"></div>
+      </div>
+      <div class="log-row">
+        <div><label>Ile obwodów</label><input type="number" id="ql_circuits" value="${esc(c.circuits || '')}" placeholder="np. 4"></div>
         <div><label>Ile bulderów</label><input type="number" id="ql_boulders" value="${esc(c.boulders || '')}" placeholder="np. 9"></div>
       </div>
-      <label style="font-size:0.7rem;color:var(--chalk-500);display:block;margin-top:10px;">Trudności dróg (opcjonalnie — każda dopisuje drogę)</label>
+      <label style="font-size:0.7rem;color:var(--chalk-500);display:block;margin-top:10px;">Trudności dróg z liną (opcjonalnie — każda dopisuje drogę)</label>
       ${gradeBoxHTML('routes', kind)}
+      <label style="font-size:0.7rem;color:var(--chalk-500);display:block;margin-top:10px;">Trudności na automacie (opcjonalnie)</label>
+      ${gradeBoxHTML('autos', kind)}
+      <label style="font-size:0.7rem;color:var(--chalk-500);display:block;margin-top:10px;">Trudności obwodów (opcjonalnie)</label>
+      ${gradeBoxHTML('circuits', kind)}
       <label style="font-size:0.7rem;color:var(--chalk-500);display:block;margin-top:10px;">Trudności bulderów (opcjonalnie)</label>
       ${gradeBoxHTML('boulders', kind)}
       <div class="log-row"><div><label>Notatka</label><input type="text" id="ql_note" value="${esc(c.note || '')}" placeholder="opcjonalnie"></div></div>`;
@@ -3435,7 +3497,7 @@ function saveQuickLog(){
     const c = entry.climb || {};
     const pump = val('ql_pump');
     const atLeast = (v, field) => { const n = gradesOf(c, field).length; return n && (Number(v) || 0) < n ? String(n) : v; };
-    patch.climb = {...c, routes: atLeast(val('ql_routes'), 'routes'), boulders: atLeast(val('ql_boulders'), 'boulders'), note: val('ql_note'),
+    patch.climb = {...c, routes: atLeast(val('ql_routes'), 'routes'), boulders: atLeast(val('ql_boulders'), 'boulders'), autos: atLeast(val('ql_autos'), 'autos'), circuits: atLeast(val('ql_circuits'), 'circuits'), note: val('ql_note'),
       kind: val('ql_kind') || c.kind || undefined,
       pump: pump !== '' ? Number(pump) : c.pump,
       savedAt: c.savedAt || ts, quick: true};
@@ -5302,11 +5364,14 @@ function showBoulderEffort(){
 }
 /* Krótki opis zapisanej sesji: „lina: 6 dróg · bouldering: 9 bulderów (ciężko)". */
 function climbSummaryTxt(c){
-  const r = Number(c.routes) || 0, b = Number(c.boulders) || 0;
+  const r = Number(c.routes) || 0, b = Number(c.boulders) || 0, a = Number(c.autos) || 0, o = Number(c.circuits) || 0;
   const parts = [];
   if(c.kind && LINA_CLIMB_KINDS[c.kind]) parts.push(LINA_CLIMB_KINDS[c.kind]);
   const rg = gradesSummary(c, 'routes'), bg = gradesSummary(c, 'boulders');
   if(r) parts.push(`lina: ${r} ${plural(r,'droga','drogi','dróg')}` + (rg ? ` (${rg})` : ''));
+  const ag = gradesSummary(c, 'autos'), og = gradesSummary(c, 'circuits');
+  if(a) parts.push(`automat: ${a} ${plural(a,'wejście','wejścia','wejść')}` + (ag ? ` (${ag})` : ''));
+  if(o) parts.push(`obwody: ${o}` + (og ? ` (${og})` : ''));
   const bIn = [bg, c.boulderEffort ? BOULDER_EFFORT[c.boulderEffort] : ''].filter(Boolean).join('; ');
   if(b || c.boulderEffort) parts.push(`bouldering: ${b} ${plural(b,'bulder','buldery','bulderów')}` + (bIn ? ` (${bIn})` : ''));
   if(c.pump != null) parts.push(`pompa ${c.pump}/10`);
@@ -5322,7 +5387,11 @@ function saveClimb(){
   const data = {
     routes: atLeast(document.getElementById('climbRoutes').value, 'routes'),
     boulders: atLeast(document.getElementById('climbBoulders').value, 'boulders'),
+    autos: atLeast(document.getElementById('climbAutos').value, 'autos'),
+    circuits: atLeast(document.getElementById('climbCircuits').value, 'circuits'),
     routeGrades: prev.routeGrades, routeScale: prev.routeScale,
+    autoGrades: prev.autoGrades, autoScale: prev.autoScale,
+    circuitGrades: prev.circuitGrades, circuitScale: prev.circuitScale,
     boulderGrades: prev.boulderGrades, boulderScale: prev.boulderScale,
     feel: document.getElementById('climbFeel').value || undefined,   // brak wyboru = brak oceny
     boulderEffort: boulderEffortPicked || undefined,                  // 1 lekko · 2 średnio · 3 ciężko
@@ -5552,14 +5621,19 @@ function renderHistory(){
     const entry = store.get(k, {});
     const tags = [];
     if(entry.climb){
-      const c = entry.climb, r = Number(c.routes) || 0, b = Number(c.boulders) || 0;
+      const c = entry.climb, r = Number(c.routes) || 0, b = Number(c.boulders) || 0, a = Number(c.autos) || 0, o = Number(c.circuits) || 0;
       if(r) tags.push(`<span class="pill">🧗 ${r} ${plural(r,'droga','drogi','dróg')}</span>`);
+      if(a) tags.push(`<span class="pill">🔄 ${a} na automacie</span>`);
+      if(o) tags.push(`<span class="pill">🔁 ${o} ${plural(o,'obwód','obwody','obwodów')}</span>`);
       if(b || c.boulderEffort) tags.push(`<span class="pill">🪨 ${b} buld.${c.boulderEffort ? ' · '+BOULDER_EFFORT[c.boulderEffort] : ''}</span>`);
-      if(!r && !b && !c.boulderEffort) tags.push(`<span class="pill">🧗 ${LINA_CLIMB_KINDS[c.kind] || 'wspinanie'}</span>`);
+      if(!r && !b && !a && !o && !c.boulderEffort) tags.push(`<span class="pill">🧗 ${LINA_CLIMB_KINDS[c.kind] || 'wspinanie'}</span>`);
       if(c.pump != null) tags.push(`<span class="pill">pompa ${c.pump}/10</span>`);
       const rgs = gradesSummary(c, 'routes'), bgs = gradesSummary(c, 'boulders');
       if(rgs) tags.push(`<span class="pill">🧗 ${esc(rgs)}</span>`);
       if(bgs) tags.push(`<span class="pill">🪨 ${esc(bgs)}</span>`);
+      const ags = gradesSummary(c, 'autos'), ogs = gradesSummary(c, 'circuits');
+      if(ags) tags.push(`<span class="pill">🔄 ${esc(ags)}</span>`);
+      if(ogs) tags.push(`<span class="pill">🔁 ${esc(ogs)}</span>`);
     }
     if(entry.exercises){
       const n = Object.keys(entry.exercises).length;
@@ -5644,16 +5718,21 @@ function aiHistory(days, today){
     const entry = loadEntry(iso);
     const items = [];
     if(entry.climb){
-      const c = entry.climb, rt = Number(c.routes) || 0, bl = Number(c.boulders) || 0;
+      const c = entry.climb, rt = Number(c.routes) || 0, bl = Number(c.boulders) || 0, au = Number(c.autos) || 0, ob = Number(c.circuits) || 0;
       const feel = c.feel ? 'wytrzymałość: '+(AI_FEEL[c.feel] || c.feel) : '';
-      if(rt) items.push('• Wspinanie na linie: '+rt+' '+plural(rt,'droga','drogi','dróg')+(feel ? ', '+feel : ''));
+      if(rt) items.push('• Wspinanie z liną (z partnerem): '+rt+' '+plural(rt,'droga','drogi','dróg')+(feel ? ', '+feel : ''));
+      if(au) items.push('• Na automacie: '+au+' '+plural(au,'wejście','wejścia','wejść')+(!rt && feel ? ', '+feel : ''));
+      if(ob) items.push('• Obwody: '+ob+(!rt && !au && feel ? ', '+feel : ''));
       if(bl || c.boulderEffort) items.push('• Bouldering: '+bl+' '+plural(bl,'bulder','buldery','bulderów')
         +(c.boulderEffort ? ', zmęczenie po sesji: '+c.boulderEffort+'/3 ('+BOULDER_EFFORT[c.boulderEffort]+')' : '')
-        +(!rt && feel ? ', '+feel : ''));
-      if(!rt && !bl && !c.boulderEffort) items.push('• Wspinanie (bez liczb)'+(feel ? ': '+feel : ''));
+        +(!rt && !au && !ob && feel ? ', '+feel : ''));
+      if(!rt && !bl && !au && !ob && !c.boulderEffort) items.push('• Wspinanie (bez liczb)'+(feel ? ': '+feel : ''));
       if(c.kind || c.pump != null) items.push('• Rodzaj sesji: '+(LINA_CLIMB_KINDS[c.kind] || 'nie podano')+(c.pump != null ? ', pompa na koniec '+c.pump+'/10' : ''));
       const rgs = gradesSummary(c, 'routes'), bgs = gradesSummary(c, 'boulders');
       if(rgs) items.push('• Trudności dróg (skala '+(GRADE_SCALES.routes[c.routeScale] || gradeScale('routes')).name+'): '+rgs);
+      const ags = gradesSummary(c, 'autos'), ogs = gradesSummary(c, 'circuits');
+      if(ags) items.push('• Trudności na automacie (skala '+(GRADE_SCALES.autos[c.autoScale] || gradeScale('autos')).name+'): '+ags);
+      if(ogs) items.push('• Trudności obwodów (skala '+(GRADE_SCALES.circuits[c.circuitScale] || gradeScale('circuits')).name+'): '+ogs);
       if(bgs) items.push('• Trudności bulderów (skala '+(GRADE_SCALES.boulders[c.boulderScale] || gradeScale('boulders')).name+'): '+bgs);
       if(aiTxt(c.note)) items.push('• Notatka ze wspinania: „'+aiTxt(c.note)+'"');
       sum.climb++;
@@ -5870,6 +5949,7 @@ function loadSettingsForm(){
   document.getElementById('setVolumeBox').innerHTML = volumeRowHTML();
   document.getElementById('setScaleRoutes').value = gradeScaleKey('routes');
   document.getElementById('setScaleBoulders').value = gradeScaleKey('boulders');
+  document.getElementById('setScaleCircuits').value = gradeScaleKey('circuits');
   const lina = linaOn();
   document.getElementById('setProgram').value = lina ? 'lina' : 'fbw';
   document.getElementById('linaSettings').style.display = lina ? '' : 'none';
