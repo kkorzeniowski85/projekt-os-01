@@ -112,6 +112,13 @@
     font-size:0.72rem; font-weight:700; color:var(--lichen-400);
   }
   .block-title h3{ font-size:0.95rem; color:var(--chalk-300); }
+  .exercise-row .row-idx{
+    width:22px;height:22px;border-radius:6px; background:var(--stone-800); flex-shrink:0; margin-right:12px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:0.72rem; font-weight:700; color:var(--lichen-400);
+  }
+  .exercise-row .row-idx + .left{ flex:1; }
+  .exercise-row.numbered{ margin-top:14px; }
 
   .exercise-row{
     display:flex; align-items:center; justify-content:space-between;
@@ -232,7 +239,7 @@
   .banner.open .banner-chev{ transform:rotate(180deg); }
   .banner-body{ display:none; padding:0 13px 12px 39px; }
   .banner.open .banner-body{ display:block; }
-  .banner-body a, .banner-body .lnk{
+  .banner-body a, .banner-body .lnk, .lvl-card .lnk{
     color:inherit; font-weight:700; text-decoration:underline; cursor:pointer;
   }
 
@@ -300,6 +307,15 @@
     background:var(--lichen-900); border:1px solid var(--lichen-500); color:var(--lichen-400); }
   /* Licznik dróg, obwodów i bulderów */
   .cc-card{ padding:12px 14px; }
+  .tools-group .tools-n{ font-size:0.75rem; color:var(--chalk-500); font-weight:600; margin-left:6px; }
+  .tools-group .inner{ padding-top:4px; }
+  .lvl-card{ padding:12px 14px; }
+  .lvl-row{ display:flex; align-items:center; gap:8px; }
+  .lvl-row b{ flex:1; }
+  .lvl-row .tabnum{ color:var(--rope-400); }
+  .lvl-btn{ width:auto; flex:0 0 auto; padding:9px 14px; font-size:0.85rem; }
+  .lvl-when{ margin-top:6px; }
+  .lvl-when summary{ cursor:pointer; font-size:0.8rem; color:var(--chalk-500); }
   .cc-row{ display:flex; align-items:center; gap:12px; padding:4px 0; }
   .cc-lbl{ flex:1; font-weight:600; color:var(--chalk-100); }
   .cc-sub{ display:block; font-weight:400; font-size:0.75rem; color:var(--lichen-400); margin-top:1px; }
@@ -575,27 +591,39 @@
   <section class="screen" id="screen-settings">
     <h2 style="margin-bottom:14px;">Ustawienia</h2>
     <div class="card">
+      <h2 style="margin-bottom:10px;">Program treningowy</h2>
       <div class="setting-row">
-        <label>Głębokość dipów</label>
-        <select id="setDips" onchange="saveSettings()">
-          <option value="100-110">Płycej: stop na 100–110°</option>
-          <option value="90">Do kąta prostego</option>
+        <label>Plan</label>
+        <select id="setProgram" onchange="saveProgram(this.value)">
+          <option value="fbw">Plan FBW (siła + wspinanie)</option>
+          <option value="lina">Plan na drogi z liną (wytrzymałość)</option>
         </select>
       </div>
-      <div class="log-row" style="margin-top:4px;">
-        <div><label>Rozstaw stacji do dipów (cm)</label><input type="number" id="setStationWidth" step="0.5" onchange="saveBodyMeasurements()"></div>
-        <div><label>Szerokość barków, deltoid–deltoid (cm)</label><input type="number" id="setShoulderWidth" step="0.5" onchange="saveBodyMeasurements()"></div>
+      <div id="linaSettings">
+        <div class="setting-row">
+          <label>Start planu na linę (tydzień 0 — testy)</label>
+          <input type="date" id="setLinaStart" onchange="saveLinaStart(this.value)" style="width:auto;">
+        </div>
+        <div class="setting-row">
+          <label>Bouldery zwykle w</label>
+          <select id="setLinaBoulder" onchange="saveLinaBoulder(this.value)">
+            <option value="mon">poniedziałek</option>
+            <option value="thu">czwartek</option>
+          </select>
+        </div>
+        <div class="meta" id="linaInfo"></div>
+        <div class="meta" style="margin-top:8px;">Gdy dodasz, zmienisz albo usuniesz jednostkę, plan sam przelicza resztę tygodnia. Układ tygodnia jest w banerze planu na ekranie Dziś.</div>
       </div>
-      <div class="meta" id="dipsWidthInfo" style="margin-top:8px;"></div>
-      <div class="meta" style="margin-top:8px;" id="calfLevelInfo"></div>
+      <div class="meta" style="margin-top:8px;">Przełączenie niczego nie kasuje — do drugiego planu możesz wrócić w każdej chwili.</div>
     </div>
-    <div class="card">
-      <h2 style="margin-bottom:10px;">Dźwięki timera</h2>
-      <div id="setVolumeBox"></div>
-      <div class="btn-row" style="margin-top:10px;">
-        <button class="btn btn-ghost" onclick="ensureAudio(); beep(880, 0.15); setTimeout(()=>beep(520, 0.2), 260);">🔊 Sprawdź dźwięk</button>
+    <div class="card" id="fbwCycleCard">
+      <h2 style="margin-bottom:10px;">Makrocykl</h2>
+      <div class="setting-row">
+        <label>Start planu (poniedziałek)</label>
+        <input type="date" id="setCycleStart" onchange="saveCycleStart(this.value)" style="width:auto;">
       </div>
-      <div class="meta" style="margin-top:8px;">Głośność sygnałów timera (start fazy, przerwa, odliczanie 3-2-1, koniec). Wibracje działają niezależnie od suwaka — także przy wyciszeniu. Ten sam suwak jest na dole timera na pełnym ekranie. Na telefonie dźwięk zależy też od głośności multimediów w systemie.</div>
+      <div class="meta" id="cycleInfo"></div>
+      <div class="meta" style="margin-top:8px;">Cykle 14-dniowe, rotacja modułów A→B→C, deload co trzeci cykl. Zmiana daty przelicza kalendarz.</div>
     </div>
     <div class="card">
       <h2 style="margin-bottom:10px;">Skale trudności</h2>
@@ -624,42 +652,31 @@
           <option value="yds">amerykańska YDS (5.10a…)</option>
         </select>
       </div>
-      <div class="meta" style="margin-top:8px;">Z tej skali wybierasz trudność przy zapisie dróg, obwodów i bulderów. Zmiana skali nie przelicza starych wpisów — każdy zapis pamięta skalę, w której powstał.</div>
+      <div class="meta" style="margin-top:8px;">Zmiana skali nie przelicza starych wpisów — każdy zapis pamięta swoją skalę.</div>
     </div>
     <div class="card">
-      <h2 style="margin-bottom:10px;">Program treningowy</h2>
+      <h2 style="margin-bottom:10px;">Dźwięki timera</h2>
+      <div id="setVolumeBox"></div>
+      <div class="btn-row" style="margin-top:10px;">
+        <button class="btn btn-ghost" onclick="ensureAudio(); beep(880, 0.15); setTimeout(()=>beep(520, 0.2), 260);">🔊 Sprawdź dźwięk</button>
+      </div>
+      <div class="meta" style="margin-top:8px;">Wibracje działają zawsze, także przy wyciszeniu. Na telefonie dźwięk zależy też od głośności multimediów.</div>
+    </div>
+    <div class="card">
+      <h2 style="margin-bottom:10px;">Dipy i Achilles</h2>
       <div class="setting-row">
-        <label>Plan</label>
-        <select id="setProgram" onchange="saveProgram(this.value)">
-          <option value="fbw">Plan FBW (siła + wspinanie)</option>
-          <option value="lina">Plan na drogi z liną (wytrzymałość)</option>
+        <label>Głębokość dipów</label>
+        <select id="setDips" onchange="saveSettings()">
+          <option value="100-110">Płycej: stop na 100–110°</option>
+          <option value="90">Do kąta prostego</option>
         </select>
       </div>
-      <div id="linaSettings">
-        <div class="setting-row">
-          <label>Start planu na linę (tydzień 0 — testy)</label>
-          <input type="date" id="setLinaStart" onchange="saveLinaStart(this.value)" style="width:auto;">
-        </div>
-        <div class="setting-row">
-          <label>Bouldery zwykle w</label>
-          <select id="setLinaBoulder" onchange="saveLinaBoulder(this.value)">
-            <option value="mon">poniedziałek</option>
-            <option value="thu">czwartek</option>
-          </select>
-        </div>
-        <div class="meta" id="linaInfo"></div>
-        <div class="meta" style="margin-top:8px;">Tydzień: pon — bouldering (albo czw), wt — dom A, śr — ściana: wytrzymałość, czw — wolne, pt — chwytotablica 10/5 + core, sob — dom B, nd — wolne. Gdy dodasz, zmienisz albo usuniesz jednostkę, plan sam przelicza resztę tygodnia. Cykl 8 tygodni idzie naprzód po tygodniu z sesją na ścianie.</div>
+      <div class="log-row" style="margin-top:4px;">
+        <div><label>Rozstaw stacji do dipów (cm)</label><input type="number" id="setStationWidth" step="0.5" onchange="saveBodyMeasurements()"></div>
+        <div><label>Szerokość barków, deltoid–deltoid (cm)</label><input type="number" id="setShoulderWidth" step="0.5" onchange="saveBodyMeasurements()"></div>
       </div>
-      <div class="meta" style="margin-top:8px;">Przełączenie niczego nie kasuje — historia, poziomy ćwiczeń i ustawienia zostają, a do drugiego planu możesz wrócić w każdej chwili.</div>
-    </div>
-    <div class="card" id="fbwCycleCard">
-      <h2 style="margin-bottom:10px;">Makrocykl</h2>
-      <div class="setting-row">
-        <label>Start planu (poniedziałek)</label>
-        <input type="date" id="setCycleStart" onchange="saveCycleStart(this.value)" style="width:auto;">
-      </div>
-      <div class="meta" id="cycleInfo"></div>
-      <div class="meta" style="margin-top:8px;">Od tej daty aplikacja liczy cykle 14-dniowe: tydzień wspinaczkowy → tydzień modułowy (pon/śr/pt), rotacja modułów A→B→C i deload co trzeci cykl. Zmiana daty przelicza cały kalendarz.</div>
+      <div class="meta" id="dipsWidthInfo" style="margin-top:8px;"></div>
+      <div class="meta" style="margin-top:8px;" id="calfLevelInfo"></div>
     </div>
     <div class="card">
       <h2 style="margin-bottom:10px;">Test sprawności i poziomy</h2>
@@ -674,7 +691,7 @@
     </div>
     <div class="card">
       <h2 style="margin-bottom:10px;">Wideo i poradniki</h2>
-      <div class="meta" style="margin-bottom:10px;">Filmy YouTube oraz artykuły ze zdjęciami i schematami do każdego ćwiczenia — propozycje, szukajka i miejsce na Twoje własne wybory. Wymaga internetu.</div>
+      <div class="meta" style="margin-bottom:10px;">Filmy i artykuły do każdego ćwiczenia, z miejscem na własne linki.</div>
       <button class="btn btn-secondary" onclick="openVideos()">Otwórz wideo i poradniki</button>
     </div>
     <div class="card">
@@ -684,11 +701,11 @@
         <button class="btn btn-ghost" onclick="document.getElementById('importFile').click()">Import</button>
       </div>
       <input type="file" id="importFile" accept="application/json" style="display:none;" onchange="importData(this)">
-      <div class="meta" style="margin-top:10px;">Wszystkie dane są zapisane wyłącznie na tym telefonie — nie ma konta ani serwera. Rób eksport raz na jakiś czas i trzymaj plik np. na Dysku Google.</div>
+      <div class="meta" style="margin-top:10px;">Dane są tylko na tym telefonie. Rób eksport co jakiś czas (np. na Dysk Google).</div>
     </div>
     <div class="card">
       <h2 style="margin-bottom:10px;">Aktualizacja aplikacji</h2>
-      <div class="meta" style="margin-bottom:10px;">Aplikacja aktualizuje się sama, gdy otwierasz ją z internetem — ale nowa wersja bywa widoczna dopiero przy kolejnym uruchomieniu. Tym przyciskiem sprawdzisz od ręki, czy na serwerze jest coś nowszego; jeśli jest, aplikacja pobierze nową wersję i da przycisk do natychmiastowego przeładowania. Twoje dane (historia, ustawienia, poziomy) zostają nietknięte — aktualizacja wymienia tylko samą aplikację. Wymaga internetu.</div>
+      <div class="meta" style="margin-bottom:10px;">Sprawdza od ręki, czy jest nowsza wersja. Dane zostają nietknięte.</div>
       <button class="btn btn-primary" id="updCheckBtn" onclick="checkForUpdate()">Sprawdź, czy jest nowa wersja</button>
       <div class="meta" id="updStatus" style="margin-top:10px;"></div>
       <button class="btn btn-secondary" id="updReloadBtn" style="display:none;margin-top:8px;" onclick="location.reload()">Uruchom ponownie z nową wersją</button>
@@ -718,7 +735,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.29.0';
+const APP_VERSION = '1.30.0';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -1686,37 +1703,25 @@ function resetLevelUI(id){
 }
 function levelBarHTML(ex){
   if(ex.levelIdx == null) return '';
+  const L = LADDERS[ex.id], prog = !!L.progressive;
   const atMin = ex.levelIdx <= 0, atMax = ex.levelIdx >= ex.levelMax;
   const onPlan = ex.levelIdx === ex.levelDef;
-  const planName = LADDERS[ex.id].steps[ex.levelDef].name;
-  if(LADDERS[ex.id].progressive){
-    return `<div class="card">
-    <div class="slider-row" style="margin-bottom:8px;"><b>Stopień progresji</b><span class="val tabnum">${ex.levelIdx+1} / ${ex.levelMax+1}</span></div>
-    <div class="btn-row">
-      <button class="btn btn-secondary" ${atMin?'disabled':''} onclick="changeLevel('${ex.id}',-1)">⬇ Objawy albo za trudne — stopień niżej</button>
-      <button class="btn btn-ghost" ${atMax?'disabled':''} onclick="changeLevel('${ex.id}',1)">Stopień wyżej ⬆</button>
+  const planName = L.steps[ex.levelDef].name;
+  const note = onPlan
+    ? (prog ? 'Stopień startowy — wersja bezpieczna.' : 'Wariant z Twojego planu.')
+    : (prog ? `Start: „${planName}".` : `Plan: poziom ${ex.levelDef+1} — „${planName}".`)
+      + ` <span class="lnk" onclick="resetLevelUI('${ex.id}')">${prog ? 'Wróć do wersji bezpiecznej' : 'Wróć do planu'}</span>`;
+  const when = prog
+    ? 'Wyżej — po dwóch kolejnych sesjach z górnym zakresem we wszystkich seriach, przy ścięgnie bez objawów (propozycja pojawi się sama, jeśli wpisujesz powtórzenia przy seriach). Niżej — od razu przy objawach, bez czekania na dwie sesje.'
+    : 'Wyżej — gdy w dwóch kolejnych sesjach robisz górny zakres powtórzeń we wszystkich seriach i czujesz zapas. Niżej — gdy nie domykasz dolnego zakresu albo technika się sypie. Aplikacja sama podpowie zmianę, jeśli przy seriach wpisujesz liczbę powtórzeń' + (ex.holdBased ? ' (tu: sekund)' : '') + '; wyniki zostają w tej samej pozycji, więc historia jest ciągła.';
+  return `<div class="card lvl-card">
+    <div class="lvl-row">
+      <b>${prog ? 'Stopień' : 'Poziom'} <span class="tabnum">${ex.levelIdx+1} / ${ex.levelMax+1}</span></b>
+      <button class="btn btn-secondary lvl-btn" ${atMin?'disabled':''} onclick="changeLevel('${ex.id}',-1)">⬇ Niżej</button>
+      <button class="btn btn-ghost lvl-btn" ${atMax?'disabled':''} onclick="changeLevel('${ex.id}',1)">Wyżej ⬆</button>
     </div>
-    <div class="meta" style="margin-top:10px;">${onPlan
-      ? 'Stopień startowy — wersja bezpieczna.'
-      : `Stopień startowy (wersja bezpieczna): „${planName}". Wyniki zapisują się do tej samej pozycji, więc historia zostaje ciągła.`}
-    </div>
-    ${onPlan ? '' : `<button class="btn btn-ghost" style="margin-top:10px;" onclick="resetLevelUI('${ex.id}')">Wróć do wersji bezpiecznej</button>`}
-    <div class="meta" style="margin-top:10px;">Wyżej — po dwóch kolejnych sesjach z górnym zakresem we wszystkich seriach, przy ścięgnie bez objawów (propozycja pojawi się sama, jeśli wpisujesz powtórzenia przy seriach). Niżej — od razu przy objawach, bez czekania na dwie sesje.</div>
-  </div>`;
-  }
-  return `<div class="card">
-    <div class="slider-row" style="margin-bottom:8px;"><b>Poziom trudności</b><span class="val tabnum">${ex.levelIdx+1} / ${ex.levelMax+1}</span></div>
-    <div class="btn-row">
-      <button class="btn btn-secondary" ${atMin?'disabled':''} onclick="changeLevel('${ex.id}',-1)">⬇ Za trudne — stopień niżej</button>
-      <button class="btn btn-ghost" ${atMax?'disabled':''} onclick="changeLevel('${ex.id}',1)">Stopień wyżej ⬆</button>
-    </div>
-    <div class="meta" style="margin-top:10px;">${onPlan
-      ? 'To wariant z Twojego planu.'
-      : `Wariant z planu to poziom ${ex.levelDef+1}: „${planName}". Wyniki zapisują się do tej samej pozycji, więc historia zostaje ciągła.`}
-    </div>
-    ${onPlan ? '' : `<button class="btn btn-ghost" style="margin-top:10px;" onclick="resetLevelUI('${ex.id}')">Wróć do wariantu z planu</button>`}
-    <div class="meta" style="margin-top:10px;">Kiedy wyżej? Gdy w dwóch kolejnych sesjach robisz górny zakres powtórzeń we wszystkich seriach i czujesz zapas. Kiedy niżej? Gdy nie domykasz dolnego zakresu albo technika się sypie.</div>
-    <div class="meta" style="margin-top:8px;">Aplikacja sama podpowie zmianę, gdy zobaczy to w Twoich zapisach. Warunek: przy każdej serii wpisujesz liczbę powtórzeń${ex.holdBased ? ' (tu: sekund)' : ''}. RPE pomaga, ale nie jest konieczne.</div>
+    <div class="meta" style="margin-top:8px;">${note}</div>
+    <details class="lvl-when"><summary>Kiedy zmienić ${prog ? 'stopień' : 'poziom'}</summary><div class="meta" style="margin-top:6px;">${when}</div></details>
   </div>`;
 }
 
@@ -3196,6 +3201,9 @@ function unitRecordKeys(unit){
   });
   return keys;
 }
+function pickerDeleteHTML(delHTML){
+  return delHTML ? `<div class="meta" style="margin-bottom:2px;"><b>Nie udało się zrobić treningu?</b></div>${delHTML}<div style="height:16px;"></div>` : '';
+}
 function deleteUnitButtonsHTML(units){
   const btn = (which, label) => `<button class="btn btn-ghost" style="width:auto;margin:12px 8px 0 0;padding:9px 14px;font-weight:600;font-size:0.85rem;" onclick="deleteUnit('${which}')">🗑 ${label}</button>`;
   if(units.length === 1) return btn('main', 'Nie zrobiłem — usuń tę jednostkę');
@@ -3281,7 +3289,7 @@ function climbCounterHTML(entry, kind){
 /* ---------- Trudności dróg i bulderów (skale wybierane w Ustawieniach) ---------- */
 const GRADE_SCALES = {
   routes: {
-    fr:      {name:'francuska', anchor:'5A', grades:['4A','4B','4C','5A','5A+','5B','5B+','5C','5C+','6A','6A+','6B','6B+','6C','6C+','7A','7A+','7B','7B+','7C','7C+','8A','8A+','8B','8B+','8C']},
+    fr:      {name:'francuska', anchor:'5A', grades:['5A','5A+','5B','5B+','5C','5C+','6A','6A+','6B','6B+','6C','6C+','7A','7A+','7B','7B+','7C','7C+','8A','8A+','8B','8B+','8C']},
     uiaa:    {name:'UIAA', anchor:'V', grades:['IV','IV+','V-','V','V+','VI-','VI','VI+','VII-','VII','VII+','VIII-','VIII','VIII+','IX-','IX','IX+','X-','X','X+']},
     kurtyka: {name:'polska (Kurtyki)', anchor:'VI', grades:['IV','V','V+','VI','VI+','VI.1','VI.1+','VI.2','VI.2+','VI.3','VI.3+','VI.4','VI.4+','VI.5','VI.5+','VI.6']},
     yds:     {name:'amerykańska (YDS)', anchor:'5.9', grades:['5.6','5.7','5.8','5.9','5.10a','5.10b','5.10c','5.10d','5.11a','5.11b','5.11c','5.11d','5.12a','5.12b','5.12c','5.12d','5.13a','5.13b','5.13c','5.13d']},
@@ -3293,7 +3301,7 @@ const GRADE_SCALES = {
 };
 // automat: ta sama skala co drogi z liną; obwody: te same skale co drogi, osobny wybór (domyślnie francuska)
 GRADE_SCALES.autos = GRADE_SCALES.routes;
-GRADE_SCALES.circuits = {...GRADE_SCALES.routes, fr:{...GRADE_SCALES.routes.fr, anchor:'5B'}};
+GRADE_SCALES.circuits = GRADE_SCALES.routes;
 const CLIMB_FIELDS = ['routes', 'autos', 'circuits', 'boulders'];
 const GRADE_FIELD = {routes:'routeGrades', boulders:'boulderGrades', autos:'autoGrades', circuits:'circuitGrades'};
 const SCALE_FIELD = {routes:'routeScale', boulders:'boulderScale', autos:'autoScale', circuits:'circuitScale'};
@@ -3663,7 +3671,7 @@ function comboWarningHTML(day, extra){
   return bannerHTML('warn', '⚠️', 'Dwie jednostki tego samego dnia', body);
 }
 
-function dayPickerHTML(planned, day, overridden, extras){
+function dayPickerHTML(planned, day, overridden, extras, delHTML){
   const opt = (fn, key, icon, label) =>
     `<button class="btn btn-secondary" style="margin-bottom:8px;text-align:left;" onclick="${fn}('${key}')">${icon} ${label}</button>`;
 
@@ -3682,8 +3690,9 @@ function dayPickerHTML(planned, day, overridden, extras){
   }
 
   return `<details class="tech" style="margin-top:12px;">
-    <summary>Zmień lub dołóż jednostkę do tego dnia</summary>
+    <summary>Zmień, dołóż albo usuń jednostkę</summary>
     <div class="inner">
+      ${pickerDeleteHTML(delHTML)}
       <div class="meta" style="margin-bottom:12px;">Według planu ten dzień to <b>${planned.title}</b>. Jeśli dziś nie możesz go zrealizować, wybierz, co robisz <b>zamiast</b> tego:</div>
       ${opt('setDayOverride','mon','💪','Trening: Blok nóg + core')}
       ${opt('setDayOverride','thu','💪','Trening: Moduł A + chwytotablica')}
@@ -4381,8 +4390,15 @@ function linaTodayHTML(iso){
   const mon = mondayOf(iso), plan = linaPlanWeek(mon), st = plan.st;
   if(st.before) return bannerHTML('info', '🧗', 'Plan na linę startuje ' + fmtDayLong(linaStartISO()),
     'Do tego dnia nic nie jest zaplanowane. Datę startu zmienisz w Ustawieniach → Program treningowy.');
-  let html = bannerHTML('info', '🗓️', 'Plan na linę · ' + st.label, linaWeekInfo(st, plan));
   const thisMon = mondayOf(todayISO()), prevMon = addDaysISO(thisMon, -7);
+  const bd = plan.bd;
+  const bdPick = iso >= thisMon ? `<div style="margin-top:14px;"><b>Bouldery w tym tygodniu:</b></div>
+      <div class="btn-row" style="margin-top:8px;">
+        <button class="btn ${bd === 'mon' ? 'btn-primary' : 'btn-ghost'}" onclick="linaSetWeekBoulder('${mon}','mon')">Poniedziałek</button>
+        <button class="btn ${bd === 'thu' ? 'btn-primary' : 'btn-ghost'}" onclick="linaSetWeekBoulder('${mon}','thu')">Czwartek</button>
+      </div>
+      ${bd === 'thu' ? '<div class="meta" style="margin-top:8px;">Czwartek po środzie na ścianie łamie zasadę 48 h, więc środa staje się sesją lekką, a tablica idzie na sobotę.</div>' : ''}` : '';
+  let html = bannerHTML('info', '🗓️', 'Plan na linę · ' + st.label + ' · bouldery: ' + (bd === 'thu' ? 'czw' : 'pon'), linaWeekInfo(st, plan) + bdPick);
   if(mon === thisMon && (st.repeats || []).indexOf(prevMon) !== -1){
     html += bannerHTML('warn', '🔁', 'Etap powtórzony — w zeszłym tygodniu brak sesji na ścianie',
       `Etap cyklu idzie naprzód tylko po tygodniu z sesją na linie albo obwodach (sam bouldering jej nie zastępuje). W zeszłym tygodniu takiej sesji nie ma w zapisach, więc ten tydzień powtarza poprzedni etap.<br><br>Jeśli sesja była, tylko jej nie zapisałeś:
@@ -4395,17 +4411,6 @@ function linaTodayHTML(iso){
       + '<b>Zmiany w tym tygodniu:</b><br>' + all.map(x => `• ${LINA_DOW_SHORT[x.idx]}: ${x.notes.join(' ')}`).join('<br>')
       + '<br><br>Plan przelicza się sam, gdy dodasz, zmienisz albo usuniesz jednostkę. Stałe zasady: ok. 48 h między intensywnymi dniami dla palców, maks. 3 intensywne na 7 dni, bez tablicy w dniu sesji lekkiej i nazajutrz, co najmniej jeden dzień całkiem wolny.';
     html += bannerHTML('warn', '🔄', d && d.notes.length ? 'Plan tego dnia przeliczony automatycznie' : `Plan tygodnia przeliczony (zmiany: ${all.length})`, body, !!(d && d.notes.length));
-  }
-  if(iso >= thisMon){
-    const bd = plan.bd;
-    html += `<div class="card" style="padding:12px 14px;">
-      <div class="meta" style="margin-bottom:8px;">Bouldery w tym tygodniu:</div>
-      <div class="btn-row">
-        <button class="btn ${bd === 'mon' ? 'btn-primary' : 'btn-ghost'}" onclick="linaSetWeekBoulder('${mon}','mon')">Poniedziałek</button>
-        <button class="btn ${bd === 'thu' ? 'btn-primary' : 'btn-ghost'}" onclick="linaSetWeekBoulder('${mon}','thu')">Czwartek</button>
-      </div>
-      ${bd === 'thu' ? '<div class="meta" style="margin-top:8px;">Czwartek po środzie na ścianie łamie zasadę 48 h, więc środa staje się sesją lekką, a tablica idzie na sobotę.</div>' : ''}
-    </div>`;
   }
   return html;
 }
@@ -4486,7 +4491,7 @@ function linaClimbDayHTML(dayObj, entry){
 }
 
 /* Zmień lub dołóż — wersja dla planu na linę. */
-function linaPickerHTML(planned, day, overridden, extras){
+function linaPickerHTML(planned, day, overridden, extras, delHTML){
   const opt = (fn, key, icon, label) =>
     `<button class="btn btn-secondary" style="margin-bottom:8px;text-align:left;" onclick="${fn}('${key}')">${icon} ${label}</button>`;
   let addSection;
@@ -4502,8 +4507,9 @@ function linaPickerHTML(planned, day, overridden, extras){
     addSection = `<div class="meta" style="margin:16px 0 8px;">Albo <b>dwie rzeczy jednego dnia</b> — dołóż drugą jednostkę:</div>${adds}`;
   }
   return `<details class="tech" style="margin-top:12px;">
-    <summary>Zmień lub dołóż jednostkę do tego dnia</summary>
+    <summary>Zmień, dołóż albo usuń jednostkę</summary>
     <div class="inner">
+      ${pickerDeleteHTML(delHTML)}
       <div class="meta" style="margin-bottom:12px;">Według planu ten dzień to <b>${planned.title}</b>. Wybierz, co robisz <b>zamiast</b> tego — <b>plan sam przeliczy resztę tygodnia</b>: przesunie albo odpuści tablicę, zamieni sesję główną na lekką, przeniesie dom na wolny dzień — tak, żeby zostały zasady palców.</div>
       ${opt('setDayOverride','L:wall','🧗','Ściana: wytrzymałość (sesja główna)')}
       ${opt('setDayOverride','L:boulder','🪨','Ściana: bouldering')}
@@ -4719,27 +4725,29 @@ function dayComponentHTML(dayObj, entry){
 function blocksListHTML(blocks, entry, prefix){
   let html = '';
   blocks.forEach((block, bi)=>{
-    html += `<div class="block-title"><div class="idx">${bi+1}</div><h3>${prefix || ''}${block.name}</h3></div>`;
+    // blok z jedną pozycją = jeden wiersz z numerem (bez nagłówka o tej samej nazwie)
+    const nm = (prefix || '') + block.name, no = bi + 1;
+    if(block.kind==='exercises') html += `<div class="block-title"><div class="idx">${no}</div><h3>${nm}</h3></div>`;
     if(block.kind==='guided'){
       state.registry[block.id] = {type:'guided', data:block};
       const log = entry.exercises && entry.exercises[block.id];
-      html += rowHTML(block.id, block.name, (block.sub || '') + (log && log.pump != null ? ` · pompa ${log.pump}/10` : ''), !!(log && log.completedAt));
+      html += rowHTML(block.id, nm, (block.sub || '') + (log && log.pump != null ? ` · pompa ${log.pump}/10` : ''), !!(log && log.completedAt), no);
     } else if(block.kind==='linatest'){
       state.registry[block.id] = {type:'linatest', data:block};
       const log = entry.exercises && entry.exercises[block.id];
-      html += rowHTML(block.id, block.name, log && log.values ? esc(linaTestSummary(block, log.values)) || 'zapisany' : 'po teście wpisz wynik', !!(log && log.completedAt));
+      html += rowHTML(block.id, nm, log && log.values ? esc(linaTestSummary(block, log.values)) || 'zapisany' : 'po teście wpisz wynik', !!(log && log.completedAt), no);
     } else if(block.kind==='warmup'){
       state.registry[block.id] = {type:'warmup', data:block};
       const isDone = !!(entry.warmups && entry.warmups[block.id]);
-      html += rowHTML(block.id, block.name, kroki(block.steps.length), isDone);
+      html += rowHTML(block.id, nm, kroki(block.steps.length), isDone, no);
     } else if(block.kind==='hangboard'){
       state.registry[block.id] = {type:'hangboard', data:block};
       const done = !!(entry.exercises && entry.exercises[block.id] && entry.exercises[block.id].completedAt);
-      html += rowHTML(block.id, block.name, `${serie(block.series)} po ${block.reps} zwisów (${block.hang} s / ${block.hangRest} s)`, done);
+      html += rowHTML(block.id, nm, `${serie(block.series)} po ${block.reps} zwisów (${block.hang} s / ${block.hangRest} s)`, done, no);
     } else if(block.kind==='measure'){
       state.registry[block.id] = {type:'measure', data:block};
       const done = !!(entry.exercises && entry.exercises[block.id]);
-      html += rowHTML(block.id, block.name, 'pomiar jednorazowy', done);
+      html += rowHTML(block.id, nm, 'pomiar jednorazowy', done, no);
     } else if(block.kind==='exercises'){
       block.items.forEach(ex=>{
         state.registry[ex.id] = {type:'exercise', data:ex};
@@ -4789,7 +4797,7 @@ function renderToday(){
     <span class="badge ${meta.badge}">${meta.label}</span>${extras.map(x=>` <span class="badge ${TYPE_META[x.type].badge}">${TYPE_META[x.type].label}</span>`).join('')}
     <h2 style="margin-top:8px;">${allTitles.join(' + ')}</h2>
     <div class="meta" style="text-transform:capitalize;">${niceDate}</div>
-    ${canDelete ? quickLogButtonHTML() + deleteUnitButtonsHTML(trainingUnits) : ''}
+    ${canDelete ? quickLogButtonHTML() : ''}
   </div>`;
 
   if(planned.lina) html += linaTodayHTML(iso);
@@ -4821,7 +4829,8 @@ function renderToday(){
       `Według planu ten dzień to „${planned.title}", a Ty wybrałeś „${day.title}". ${tail}`);
   }
   extras.forEach(x=>{ html += comboWarningHTML(day, x); });
-  html += planned.lina ? linaPickerHTML(planned, day, overridden, extras) : dayPickerHTML(planned, day, overridden, extras);
+  const delHTML = canDelete ? deleteUnitButtonsHTML(trainingUnits) : '';
+  html += planned.lina ? linaPickerHTML(planned, day, overridden, extras, delHTML) : dayPickerHTML(planned, day, overridden, extras, delHTML);
 
 
   const units = [day, ...extras];
@@ -4854,9 +4863,9 @@ function renderToday(){
   setTimeout(scrollGradeRows, 0);
 }
 
-function rowHTML(id, name, sub, done){
-  return `<div class="exercise-row ${done?'done':''}" onclick="openExercise('${id}')">
-    <div class="left"><div class="exname">${name}</div><div class="exsub">${sub}</div></div>
+function rowHTML(id, name, sub, done, idx){
+  return `<div class="exercise-row ${done?'done':''}${idx != null ? ' numbered' : ''}" onclick="openExercise('${id}')">
+    ${idx != null ? `<div class="row-idx">${idx}</div>` : ''}<div class="left"><div class="exname">${name}</div><div class="exsub">${sub}</div></div>
     <div class="checkmark">${done?'✓':''}</div>
   </div>`;
 }
@@ -5157,7 +5166,7 @@ function renderHangboardBody(data){
       <option value="brak">Nie — to było blisko maksimum</option>
     </select></div></div>`;
   html += `<button class="btn btn-secondary" style="margin-top:12px;" onclick="saveHangboardLog('${data.id}')">Zapisz parametry sesji</button>`;
-  html += techBlock(data, true);
+  html += techBlock(data, false);
 
   const single = data.reps === 1;   // pojedyncze zwisy (np. Protokół C)
   const phases = [];
@@ -5584,22 +5593,21 @@ function renderTools(){
     else if(r.type === 'guided') guided.push(r);
   }
 
-  html += `<div class="block-title"><div class="idx">2</div><h3>Ściana i oddech</h3></div>`;
-  html += `<div class="meta" style="margin-bottom:10px;">Timery z planu na drogi z liną — obwody, przerwa między seriami na automacie i oddech 4/6.</div>`;
-  guided.forEach(r=>{
-    html += launchRow('ex:'+r.data.id, r.data.name, exSummary(r.data), `openFromTools('${r.data.id}')`);
+  const rows = list => list.map(r => launchRow('ex:'+r.data.id, r.data.name, exSummary(r.data), `openFromTools('${r.data.id}')`)).join('');
+  const group = (title, list) => list.length ? `<details class="tech tools-group"><summary><span>${title}<span class="tools-n">${list.length}</span></span></summary><div class="inner">${rows(list)}</div></details>` : '';
+  const eNum = r => { const m = /^E(\d+)$/.exec(r.data.id); return m ? Number(m[1]) : null; };
+  const groups = {A:[], B:[], C:[], G:[], L:[], X:[]};
+  exercises.forEach(r => {
+    const id = r.data.id, e = eNum(r);
+    if(e != null) groups[e <= 13 ? 'A' : e <= 22 ? 'B' : 'C'].push(r);
+    else if(id[0] === 'G') groups.G.push(r);
+    else if(id[0] === 'L') groups.L.push(r);
+    else groups.X.push(r);
   });
-
-  html += `<div class="block-title"><div class="idx">3</div><h3>Pojedyncze ćwiczenia</h3></div>`;
-  html += `<div class="meta" style="margin-bottom:10px;">Każde z opisem techniki, timerem tempa i odliczaniem przerw — możesz odpalić o dowolnej porze.</div>`;
-  exercises.forEach(r=>{
-    html += launchRow('ex:'+r.data.id, r.data.name, exSummary(r.data), `openFromTools('${r.data.id}')`);
-  });
-
-  html += `<div class="block-title"><div class="idx">4</div><h3>Rozgrzewki</h3></div>`;
-  warmups.forEach(r=>{
-    html += launchRow('ex:'+r.data.id, r.data.name, exSummary(r.data), `openFromTools('${r.data.id}')`);
-  });
+  html += `<div class="block-title"><div class="idx">2</div><h3>Ćwiczenia i rozgrzewki</h3></div>`;
+  html += group('Plan FBW i moduł A', groups.A) + group('Moduł B', groups.B) + group('Moduł C', groups.C)
+    + group('Program z gumami', groups.G) + group('Plan na linę: ćwiczenia w domu', groups.L.concat(groups.X))
+    + group('Ściana i oddech (plan na linę)', guided) + group('Rozgrzewki i wyciszenie', warmups);
 
   document.getElementById('toolsContent').innerHTML = html;
 }
@@ -5622,18 +5630,13 @@ function renderHistory(){
     const tags = [];
     if(entry.climb){
       const c = entry.climb, r = Number(c.routes) || 0, b = Number(c.boulders) || 0, a = Number(c.autos) || 0, o = Number(c.circuits) || 0;
-      if(r) tags.push(`<span class="pill">🧗 ${r} ${plural(r,'droga','drogi','dróg')}</span>`);
-      if(a) tags.push(`<span class="pill">🔄 ${a} na automacie</span>`);
-      if(o) tags.push(`<span class="pill">🔁 ${o} ${plural(o,'obwód','obwody','obwodów')}</span>`);
-      if(b || c.boulderEffort) tags.push(`<span class="pill">🪨 ${b} buld.${c.boulderEffort ? ' · '+BOULDER_EFFORT[c.boulderEffort] : ''}</span>`);
+      const gs = field => { const g = gradesSummary(c, field); return g ? ' · ' + esc(g) : ''; };
+      if(r) tags.push(`<span class="pill">🧗 ${r} z liną${gs('routes')}</span>`);
+      if(a) tags.push(`<span class="pill">🔄 ${a} na automacie${gs('autos')}</span>`);
+      if(o) tags.push(`<span class="pill">🔁 ${o} ${plural(o,'obwód','obwody','obwodów')}${gs('circuits')}</span>`);
+      if(b || c.boulderEffort) tags.push(`<span class="pill">🪨 ${b} buld.${gs('boulders')}${c.boulderEffort ? ' · '+BOULDER_EFFORT[c.boulderEffort] : ''}</span>`);
       if(!r && !b && !a && !o && !c.boulderEffort) tags.push(`<span class="pill">🧗 ${LINA_CLIMB_KINDS[c.kind] || 'wspinanie'}</span>`);
       if(c.pump != null) tags.push(`<span class="pill">pompa ${c.pump}/10</span>`);
-      const rgs = gradesSummary(c, 'routes'), bgs = gradesSummary(c, 'boulders');
-      if(rgs) tags.push(`<span class="pill">🧗 ${esc(rgs)}</span>`);
-      if(bgs) tags.push(`<span class="pill">🪨 ${esc(bgs)}</span>`);
-      const ags = gradesSummary(c, 'autos'), ogs = gradesSummary(c, 'circuits');
-      if(ags) tags.push(`<span class="pill">🔄 ${esc(ags)}</span>`);
-      if(ogs) tags.push(`<span class="pill">🔁 ${esc(ogs)}</span>`);
     }
     if(entry.exercises){
       const n = Object.keys(entry.exercises).length;
@@ -5641,7 +5644,9 @@ function renderHistory(){
     }
     if(entry.dayOverride === 'skip') tags.push('<span class="pill">✕ nie zrobione</span>');
     if(!tags.length) continue;   // wpis bez treści (np. sama zmiana typu dnia) — nie pokazuj pustego wiersza
-    html += `<div class="hist-item"><span class="date">${iso}</span><div class="tags">${tags.join('')}</div></div>`;
+    const dd = new Date(iso+'T00:00:00');
+    const dLabel = ['nd','pon','wt','śr','czw','pt','sob'][dd.getDay()] + ' ' + String(dd.getDate()).padStart(2,'0') + '.' + String(dd.getMonth()+1).padStart(2,'0');
+    html += `<div class="hist-item"><span class="date">${dLabel}</span><div class="tags">${tags.join('')}</div></div>`;
   }
   list.innerHTML = html || '<div class="empty-hint">Brak danych.</div>';
 }
@@ -5936,7 +5941,7 @@ function renderDipsWidthInfo(){
     : 'Wpisz obie wartości, żeby opis dipów pokazywał, o ile stacja różni się od Twoich barków.';
 }
 function loadSettingsForm(){
-  document.getElementById('calfLevelInfo').innerHTML = `<b>Wspięcia na palce (Achilles):</b> ${calfLevelTxt()}. Start od wersji obunóż; po dwóch sesjach na górze zakresu aplikacja zaproponuje stopień wyżej — przechodzisz tylko bez objawów ze strony ścięgna. Stopień zmieniasz też ręcznie przy samym ćwiczeniu.`;
+  document.getElementById('calfLevelInfo').innerHTML = `<b>Wspięcia na palce (Achilles):</b> ${calfLevelTxt()}. Stopień wyżej tylko bez objawów ze strony ścięgna.`;
   document.getElementById('setDips').value = SETTINGS.dipsDepth;
   document.getElementById('setStationWidth').value = SETTINGS.stationWidthCm ?? '';
   document.getElementById('setShoulderWidth').value = SETTINGS.shoulderWidthCm ?? '';
