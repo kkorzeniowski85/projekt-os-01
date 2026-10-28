@@ -597,7 +597,27 @@
         <select id="setProgram" onchange="saveProgram(this.value)">
           <option value="fbw">Plan FBW (siła + wspinanie)</option>
           <option value="lina">Plan na drogi z liną (wytrzymałość)</option>
+          <option value="kostka">Plan na czas urazu kostki (8 tygodni bez ściany)</option>
         </select>
+      </div>
+      <div id="kostkaSettings">
+        <div class="setting-row">
+          <label>Start planu (tydzień 1)</label>
+          <input type="date" id="setKostkaStart" onchange="saveKostkaStart(this.value)" style="width:auto;">
+        </div>
+        <div class="setting-row">
+          <label>Trening stopy — etap</label>
+          <select id="setKostkaEtap" onchange="saveKostkaEtap(this.value)">
+            <option value="1">1 — chód i ruchomość</option>
+            <option value="2">2 — pierwsza równowaga i siła</option>
+            <option value="3">3 — równowaga na niestabilnym</option>
+            <option value="4">4 — odruchy i pierwsze skoki</option>
+            <option value="5">5 — pełne skoki i bieg</option>
+            <option value="6">6 — powrót do sportu</option>
+          </select>
+        </div>
+        <div class="meta" id="kostkaInfo"></div>
+        <div class="meta" style="margin-top:8px;">Etap stopy zmieniasz po spełnieniu kryteriów — także przyciskami w banerze na ekranie Dziś.</div>
       </div>
       <div id="linaSettings">
         <div class="setting-row">
@@ -735,7 +755,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.30.0';
+const APP_VERSION = '1.31.0';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -2525,6 +2545,7 @@ function scheduleFor(iso){
   const dow = new Date(iso+'T00:00:00').getDay();      // 0=Nd..6=Sob
   const label = {1:'Pon',2:'Wt',3:'Śr',4:'Czw',5:'Pt',6:'Sob',0:'Nd'}[dow];
   if(linaOn()){ const ld = linaDayFor(iso); ld.label = label; return ld; }
+  if(kostkaOn()){ const kd = kostkaDayFor(iso); kd.label = label; return kd; }
   const pos = planPos(iso);
   let day;
   if(pos.weekInCycle === 1){
@@ -2557,7 +2578,7 @@ function scheduleFor(iso){
    NISKOINTENSYWNE = Protokół A i Protokół D (oba z odciążeniem stopą,
    ~40–50% obciążenia, z założenia ŁATWE). */
 function isHbIntensive(hbId){
-  return !(hbId === 'hangboard' || hbId === 'hangboard_D');
+  return !(hbId === 'hangboard' || hbId === 'hangboard_D' || hbId === 'hangboard_k_lekkie');
 }
 function fingerLoadInfo(){
   const byDate = {};
@@ -3038,7 +3059,7 @@ function rebuildRegistry(){
   // Program gumowy — osobny trening, dostępny też pojedynczo w Timerach
   GUM_EXERCISES.forEach(ex=>{ GLOBAL_REGISTRY[ex.id] = {type:'exercise', data:ex}; });
   // Plan na linę: ćwiczenia antagonistyczne i core (też do dokładania), mobilność, oddech, ściana
-  EXERCISE_CATALOG = EXERCISE_CATALOG.concat(linaExList());
+  EXERCISE_CATALOG = EXERCISE_CATALOG.concat(linaExList(), kostkaExList());
   [LINA_HIPS, LINA_ANKLE_HIPS, LINA_WALL_WARMUP, LINA_WALL_COOL].forEach(b=>{ GLOBAL_REGISTRY[b.id] = {type:'warmup', data:b}; });
   [LINA_BREATH, linaCircuits(3), linaAutoSeries(1, 3, '5A', 'wzrok na stopniu, aż stopa go obciąży')]
     .forEach(b=>{ GLOBAL_REGISTRY[b.id] = {type:'guided', data:b}; });
@@ -3119,6 +3140,7 @@ function pickClimbPump(btn){
    ========================================================================= */
 function dayFromKey(key, label, iso){
   if(key && key.startsWith('L:')) return {...linaMakeDay(key.slice(2), iso || state.selectedDate), label};
+  if(key && key.startsWith('K:')) return {...kostkaMakeDay(key.slice(2), iso || state.selectedDate), label};
   if(key === 'mon' || key === 'thu') return {...WEEK.find(w=>w.key===key), label};
   if(key === 'gumA' || key === 'gumB' || key === 'gumC'){
     return {...GUM_PROGRAM[key.slice(3)], label, gumProgram:true};
@@ -3666,7 +3688,7 @@ function comboWarningHTML(day, extra){
   }
   let body = `Ten blok nie obciąża palców, więc <b>nie koliduje ze wspinaniem</b> — to bezpieczne połączenie.
     Pilnuj tylko kolejności: zmęczone nogi pogarszają pracę stóp na ścianie, więc albo wspinaj się najpierw, albo rozdziel obie jednostki o kilka godzin.`
-    + (linaOn() ? '' : ` Pamiętaj też o limicie <b>5 jednostek siłowych na 14 dni</b>.`);
+    + ((linaOn() || kostkaOn()) ? '' : ` Pamiętaj też o limicie <b>5 jednostek siłowych na 14 dni</b>.`);
   if(hasDips) body += ` Dipy pomiń, jeśli wspinanie było mocne — plan zabrania ich w dobie po ciężkiej sesji.`;
   return bannerHTML('warn', '⚠️', 'Dwie jednostki tego samego dnia', body);
 }
@@ -4630,7 +4652,9 @@ function saveLinaTest(id){
 
 /* ---------- Ustawienia ---------- */
 function saveProgram(v){
-  store.set('program', v === 'lina' ? 'lina' : 'fbw');
+  store.set('program', (v === 'lina' || v === 'kostka') ? v : 'fbw');
+  // plan na czas urazu: tydzień 1 to bieżący tydzień
+  if(v === 'kostka' && !store.get('kostkaStart', null)) store.set('kostkaStart', mondayOf(todayISO()));
   if(v === 'lina' && !store.get('linaStart', null)){
     // pon–śr: tydzień 0 (testy) jeszcze w tym tygodniu; czw–nd: od najbliższego poniedziałku
     const dow = new Date(todayISO()+'T00:00:00').getDay();
@@ -4656,6 +4680,416 @@ function linaSettingsInfo(){
   const st = linaStage(mondayOf(todayISO()));
   return st.before ? 'Plan wystartuje ' + fmtDayLong(linaStartISO()) + '.'
     : 'Dziś: ' + st.label + '.' + ((st.repeats || []).length ? ` Powtórzone tygodnie (bez sesji na ścianie): ${st.repeats.length}.` : '');
+}
+
+/* =========================================================================
+   PLAN NA CZAS URAZU KOSTKI — ok. 8 tygodni bez ściany: utrzymanie siły,
+   siła palców na chwytotablicy (pomiar na wadze łazienkowej) i codzienny
+   trening stopy w 6 etapach. Tydzień planu liczy się od daty startu;
+   etap stopy zmieniasz sam, gdy spełnisz kryteria (nie kalendarz).
+   ========================================================================= */
+function kostkaOn(){ return store.get('program', 'fbw') === 'kostka'; }
+function kostkaStartISO(){ return store.get('kostkaStart', null) || mondayOf(todayISO()); }
+/* 0 = przed startem, 1–8 = tydzień planu, 9+ = po planie */
+function kostkaWeek(iso){
+  const d = Math.round((new Date(iso+'T00:00:00') - new Date(kostkaStartISO()+'T00:00:00')) / 864e5);
+  return d < 0 ? 0 : Math.floor(d / 7) + 1;
+}
+function kostkaEtap(){ const e = Number(store.get('kostkaEtap', 1)); return (e >= 1 && e <= 6) ? e : 1; }
+/* Ostatni pomiar siły palców: siła maks. = masa ciała − odczyt wagi przy ciągnięciu z całej siły. */
+function kostkaMax(){
+  const e = allEntries();
+  for(const iso of Object.keys(e).sort().reverse()){
+    const l = e[iso].exercises && e[iso].exercises.hangboard_k_pomiar;
+    const v = l && l.values;
+    if(v && v.masa > 0 && v.odczyt != null && v.masa - v.odczyt > 0) return {max: v.masa - v.odczyt, masa: v.masa, iso};
+  }
+  return null;
+}
+/* „35% to odczyt wagi ok. 68,5 kg" — z ostatniego pomiaru. */
+function kostkaOdczyt(p, p2){
+  const k = kostkaMax();
+  if(!k) return ' Odczyt wagi wyliczy się sam po pierwszym pomiarze siły (poniedziałek tygodnia 1).';
+  const rd = q => fmtKg(Math.round((k.masa - q * k.max) * 2) / 2);
+  const txt = p2 ? `${Math.round(p * 100)}–${Math.round(p2 * 100)}% to <b>odczyt wagi ok. ${rd(p2)}–${rd(p)} kg</b>` : `${Math.round(p * 100)}% to <b>odczyt wagi ok. ${rd(p)} kg</b>`;
+  return ` Z Twojego pomiaru (${fmtDayLong(k.iso)}: siła maks. ${fmtKg(Math.round(k.max * 10) / 10)} kg, masa ${fmtKg(k.masa)} kg) ${txt}.`;
+}
+
+/* Parametry tygodni 1–8 (po 8. tygodniu zostają liczby z tygodnia 7). */
+const KOSTKA_WEEKS = {
+  1:{wed:[2,6,0.35], sat:[3,4], hang:false, pomiar:true, rir:3,
+     note:'Pomiar siły palców w poniedziałek. Środa 2 × 6 min. Sobota 3 serie po 4 — bez dochodzenia do odpadnięcia. Dipy i podciągnięcia: 3 powtórzenia w zapasie.'},
+  2:{wed:[2,8,0.35], sat:[4,4], hang:false, rir:2,
+     note:'Środa 2 × 8 min. Sobota 4 serie po 4. Dipy i podciągnięcia: 2 powtórzenia w zapasie.'},
+  3:{wed:[2,10,0.35], sat:[4,4], hang:false, rir:2,
+     note:'Środa 2 × 10 min. Sobota do bliskiego odpadnięcia. Podciągnięcia z obciążeniem +1,25 kg.'},
+  4:{wed:[3,8,0.35], sat:'test', hang:true, pomiar:true, rir:2,
+     note:'Ponowny pomiar siły w poniedziałek. Najcięższa część poniedziałku jako zwis nad podestem, +1,25 kg. Środa 3 × 8 min. Sobota: zamiast zwisów test 7 s / 3 s przy 60% do odpadnięcia.'},
+  5:{wed:[3,10,0.35], sat:[4,5], hang:true, rir:2,
+     note:'Środa 3 × 10 min. Sobota 4 serie po 5.'},
+  6:{wed:[3,5,0.35], sat:[2,5], hang:true, deload:true, rir:2,
+     note:'<b>Tydzień lżejszy:</b> wszystkiego o połowę mniej, ten sam ciężar.'},
+  7:{wed:[3,10,0.40], sat:[5,5], hang:true, rir:2,
+     note:'Środa 3 × 10 min przy ok. 40%. Sobota 5 × 5.'},
+  8:{wed:[2,8,0.35], sat:'test', hang:true, pomiar:true, rir:2,
+     note:'Ponowny pomiar siły w poniedziałek i test 7/3 przy 60% w sobotę. Środa lżej (2 × 8 min), żeby test był na wypoczętych palcach. Jeśli kostka pozwala — powrót na ścianę.'},
+};
+function kostkaWk(iso){ const w = kostkaWeek(iso); return KOSTKA_WEEKS[w > 8 ? 7 : Math.max(w, 1)]; }
+const kHalf = (n, wk) => wk.deload ? Math.max(1, Math.ceil(n / 2)) : n;
+
+/* ---------- Rozgrzewki ---------- */
+const KOSTKA_PRZEDRAMIONA = [
+  {label:'Obracanie przedramienia z młotkiem — 1–2 × 15 w każdą stronę', reps:'1–2 × 15', desc:'Łokieć przy tułowiu zgięty 90°, młotek trzymany blisko głowicy. Powoli dłoń w dół i w górę, na każdą rękę. Lekko, ból 0–2/10.'},
+  {label:'Uginanie nadgarstka, dłoń do góry — 15–20', reps:'1 × 15–20', desc:'Przedramię na udzie, lekki ciężarek albo butelka z wodą, pełny zakres.'},
+  {label:'Uginanie nadgarstka, dłoń w dół — 15–20', reps:'1 × 15–20', desc:'Jak wyżej, lżej.'},
+  {label:'Otwieranie dłoni przeciw gumce na palcach — 20', reps:'1 × 20', desc:'Gumka założona na palce, rozkładasz je szeroko.'},
+];
+const KOSTKA_SEKW = {label:'Sekwencja palców — kilka razy', reps:'kilka razy', desc:'Dłoń prosta → „hak" (zgięte tylko końcowe stawy) → pełna pięść → „stolik" (zgięte tylko stawy u nasady palców) → prosta pięść.'};
+const KOSTKA_KRAZENIA = {label:'Krążenia ramion — 1–2 min', seconds:90, desc:'Spokojnie, w obie strony.'};
+function kostkaWarmup(id, extra){
+  return {id, kind:'warmup', name:'Rozgrzewka przedramion i palców',
+    intro:'Ok. 8 min. Lekko, bez zmęczenia, ból 0–2/10. Pod drążkiem i chwytotablicą stabilny podest — nigdy nie zeskakuj, schodzisz zawsze zdrową nogą.',
+    steps:[KOSTKA_KRAZENIA, ...KOSTKA_PRZEDRAMIONA, ...extra]};
+}
+
+/* ---------- Chwytotablica ---------- */
+const KOSTKA_HB_ZASADY = [
+  {t:'Zasady dla palców', h:'Tylko chwyt otwarty albo półzamknięty — nigdy pełne zamknięcie (kciuk na palcu wskazującym). Maksymalnie 3 ciężkie sesje palców w tygodniu (poniedziałek, środa, sobota), co najmniej 48 h przerwy między nimi. Trudność zwiększasz ciężarem albo czasem, nie mniejszą listwą. W danym tygodniu zmieniasz tylko jedną rzecz: ciężar albo czas albo liczbę serii.'},
+  {t:'Kiedy zwolnić', h:'Ból powyżej 2–3/10 albo poranna sztywność palców ponad 30 min — tydzień na poprzednim poziomie. Trzask albo ostry ból u podstawy palca — natychmiast przerywasz i idziesz do lekarza.'},
+  {t:'Kostka przy tablicy', h:'Stabilny podest pod drążkiem i tablicą. Nigdy nie zeskakujesz — schodzisz zdrową nogą. W tygodniach 1–3 najcięższe wysiłki robisz bez wiszenia: stopy na wadze łazienkowej.'},
+];
+const kHB = (id, name, o) => applyHangboardOverride({id, kind:'hangboard', name, series:o.series, reps:o.reps, hang:o.hang, hangRest:o.hangRest || 0, seriesRest:o.seriesRest, workLabel:o.workLabel, cue:o.cue, warn:o.warn, tech:[...(o.tech || []), ...KOSTKA_HB_ZASADY]});
+function kostkaPomiarBlock(){
+  return {id:'hangboard_k_pomiar', kind:'linatest', name:'Pomiar siły palców na wadze (listwa 20 mm)',
+    how:'1. Stań na wadze łazienkowej pod chwytotablicą i zapisz masę ciała.<br>2. Złap listwę 20 mm obiema rękami w półzamknięciu.<br>3. Przez 5–7 s ciągnij w dół z całej siły i odczytaj najniższe wskazanie wagi.<br><br><b>Siła maksymalna = masa ciała − odczyt wagi.</b> Z niej aplikacja wylicza odczyt wagi dla 35%, 40%, 60% i 85–90% przy kolejnych sesjach. Pomiar powtarzasz w tygodniu 4 i 8.',
+    fields:[{k:'masa', l:'Masa ciała (kg)'}, {k:'odczyt', l:'Najniższy odczyt wagi przy ciągnięciu (kg)'}],
+    change:'Siłę maksymalną aplikacja liczy sama z obu liczb.'};
+}
+function kostkaTest73Block(){
+  return {id:'hangboard_k_test73', kind:'linatest', name:'Test: 7 s / 3 s przy 60% do odpadnięcia',
+    how:'Listwa 20 mm, półzamknięcie, stopy na wadze (albo zwis nad podestem z odpowiednim odciążeniem). 7 s ciągnięcia przy 60% siły maksymalnej, 3 s przerwy, do odmowy — kończysz, gdy nie utrzymujesz 60% albo 7 s. Timer liczy powtórzenia; przerwij go w chwili odmowy.' + kostkaOdczyt(0.60),
+    fields:[{k:'powt', l:'Liczba pełnych powtórzeń'}],
+    change:'Porównujesz z wynikiem z tygodnia 4.',
+    phases:Array.from({length:40}, (_, i) => [{label:`Ciągnięcie ${i+1}`, seconds:7, kind:'work'}, {label:'Luz', seconds:3, kind:'rest'}]).flat()};
+}
+
+/* ---------- Ćwiczenia (id K..) ---------- */
+const KOSTKA_EX = {
+  K01:{id:'K01', name:'Pompki na poręczach (dipy) do 90°', sets:4, repsRange:'6–10 powt.', rest:120, tempo:null,
+    cue:'Zgięcie łokci do 90°, nie niżej. 3–4 serie, zostaw 2 powtórzenia w zapasie (w tygodniu 1 — 3).',
+    tech:[{t:'Wykonanie', h:'Barki wciśnięte w dół przez cały ruch, łokcie blisko ciała. Schodzisz do kąta prostego w łokciu i wracasz. Ból z przodu barku albo w łokciu — mniej serii.'}]},
+  K02:{id:'K02', name:'Pompki: wąsko / szeroko / na pięściach', sets:3, repsRange:'10–15 powt.', rest:90, tempo:null,
+    cue:'2–3 serie, warianty na zmianę.',
+    tech:[{t:'Wykonanie', h:'Ciało w jednej linii. Wąsko — łokcie przy tułowiu; szeroko — dłonie szerzej niż barki; na pięściach — nadgarstki proste.'}]},
+  K03:{id:'K03', name:'Obroty ramienia z gumą (rotacja zewnętrzna w odwiedzeniu)', sets:3, repsRange:'12–15 na stronę', rest:60, tempo:null,
+    cue:'Ramię w bok na wysokości barku, łokieć 90°; obracasz przedramię w górę do pionu, powrót powoli.',
+    tech:[{t:'Wykonanie', h:'Łokieć zostaje w miejscu — ruch wychodzi z barku. Powrót ok. 3 s.'}]},
+  K04:{id:'K04', name:'Guma: przyciąganie do twarzy albo rozciąganie na boki', sets:3, repsRange:'15 powt.', rest:60, tempo:null,
+    cue:'Przyciąganie: guma na wysokości twarzy, łokcie wysoko, dłonie na boki uszu. Rozciąganie: proste ręce przed sobą, rozciągasz do klatki.',
+    tech:[{t:'Po co', h:'Tylna część barku i łopatki — przeciwwaga dla ciągnięcia przy wspinaniu.'}]},
+  K05:{id:'K05', name:'Otwieranie dłoni przeciw gumce na palcach', sets:3, repsRange:'20 powt.', rest:45, tempo:null,
+    cue:'Gumka na palcach, rozkładasz je szeroko i wolno wracasz.', tech:[]},
+  K06:{id:'K06', name:'Kółko do brzucha z kolan', sets:3, repsRange:'6–10 powt.', rest:90, tempo:null,
+    cue:'Plecy się nie wyginają — zakres kończysz, zanim lędźwie zaczną się zapadać.', tech:[]},
+  K07:{id:'K07', name:'Deska bokiem z kolan', sets:3, holdBased:true, holdRange:[30,45], rest:45, tempo:null,
+    cue:'30–45 s na stronę. Biodra w linii z barkami.', tech:[]},
+  K08:{id:'K08', name:'Podciągnięcia na drążku spokojnie', sets:3, repsRange:'6–8 powt.', rest:120, tempo:null,
+    cue:'Zostaw 3 powtórzenia w zapasie. Stabilny podest — nie zeskakuj.', tech:[]},
+  K09:{id:'K09', name:'Brzuch: łopatki i proste nogi nad podłogą', sets:3, holdBased:true, holdRange:[30,30], rest:45, tempo:null,
+    cue:'Leżąc na plecach, lędźwie dociśnięte do podłogi, łopatki i proste nogi lekko uniesione.', tech:[]},
+  K10:{id:'K10', name:'Podciągnięcia z obciążeniem', sets:5, repsRange:'3–5 powt.', rest:150, tempo:null,
+    cue:'4–5 serii, zostaw 2 powtórzenia w zapasie, przerwa 2–3 min. Obciążenie wg tygodnia (od tygodnia 3 +1,25 kg).',
+    warn:'Pod drążkiem stabilny podest. Nigdy nie zeskakujesz — schodzisz zdrową nogą.', tech:[]},
+  K11:{id:'K11', name:'Zatrzymania w podciągnięciu (3 pozycje po 5 s)', sets:3, repsRange:'3 pozycje × 5 s', rest:120, tempo:null,
+    cue:'Po 5 s: broda nad drążkiem → łokcie pod kątem prostym → łokcie lekko zgięte.', tech:[]},
+  K12:{id:'K12', name:'Poziomy zwis z kolanami przy klatce (tuck front lever)', sets:4, holdBased:true, holdRange:[8,10], rest:90, tempo:null,
+    cue:'Proste ręce, łopatki ściągnięte w dół, tułów poziomo plecami do podłogi.', tech:[]},
+  K13a:{id:'K13a', name:'Podciąganie jedną ręką z pomocą drugiej (guma albo ręcznik)', sets:3, repsRange:'3 na stronę', rest:150, tempo:null,
+    cue:'Druga ręka tylko pomaga — na gumie albo ręczniku przewieszonym przez drążek.', tech:[]},
+  K13b:{id:'K13b', name:'Przesuwanie się w górnej pozycji od ręki do ręki', sets:3, repsRange:'3 na stronę', rest:150, tempo:null,
+    cue:'W górnej pozycji podciągnięcia przesuwasz ciało nad jedną, potem nad drugą rękę.', tech:[]},
+  K14:{id:'K14', name:'Mostek na jednej nodze', sets:3, repsRange:'12 powt.', rest:60, tempo:null,
+    cue:'Chora noga tylko bez bólu.', tech:[]},
+  K15:{id:'K15', name:'Przyciąganie pięt na ręczniku do pośladków', sets:3, repsRange:'8–10 powt.', rest:75, tempo:null,
+    cue:'Leżąc na plecach, pięty na ręczniku na gładkiej podłodze, biodra uniesione.', tech:[]},
+  K16:{id:'K16', name:'Leżąc bokiem: otwieranie kolan z gumą', sets:3, repsRange:'15 powt.', rest:45, tempo:null, cue:'Stopy razem, guma nad kolanami.', tech:[]},
+  K17:{id:'K17', name:'Leżąc bokiem: unoszenie prostej nogi w bok', sets:3, repsRange:'15 powt.', rest:45, tempo:null, cue:'Palce stopy do przodu, nie do sufitu.', tech:[]},
+  K18:{id:'K18', name:'Zwis na drabince: przyciąganie kolan do klatki', sets:3, repsRange:'8–12 powt.', rest:75, tempo:null,
+    cue:'Wchodzisz i schodzisz po szczeblach — bez zeskoku.', tech:[]},
+};
+function kEx(id, wk, patch){
+  const ex = {...KOSTKA_EX[id], ...(patch || {})};
+  ex.sets = kHalf(ex.sets, wk);
+  return applyExerciseOverride(ex);
+}
+function kostkaExList(){ return Object.keys(KOSTKA_EX).map(id => applyExerciseOverride(KOSTKA_EX[id])); }
+
+/* ---------- Trening stopy: 6 etapów ---------- */
+const KOSTKA_ETAPY = {
+  1:{name:'Chód i ruchomość', kiedy:'dni 0–7',
+     next:'Chód bez utykania, ból najwyżej 2/10, bez narastającego obrzęku.',
+     daily:[
+       {label:'Chód w ortezie', reps:'w miarę tolerancji', desc:'Przetaczanie pięta → śródstopie → palce. Lepiej krótszy krok niż utykanie.'},
+       {label:'Stopa w górę i w dół — 3 × 20–30', reps:'3 × 20–30', desc:'Siedząc albo leżąc, 3 razy dziennie.'},
+       {label:'„Pisanie" alfabetu stopą — 1–2 razy', reps:'1–2 razy', desc:'Bez mocnego skręcania stopy do środka.'},
+       {label:'Krążenia stopą — po 10 w każdą stronę', reps:'2 × 10'},
+       {label:'Od 3.–5. dnia: rozciąganie łydki w wykroku przy ścianie', seconds:30, sets:3, desc:'Chora noga z tyłu, pięta na podłodze, 3 × 30 s.'},
+       {label:'Napinanie bez ruchu: stopa na zewnątrz, w górę, w dół', reps:'5–10 × 5–10 s', desc:'Przeciw dłoni albo ścianie, 30–50% siły, ból najwyżej 3/10, 2–3 razy dziennie. <b>Pchania stopy do środka na razie nie robisz.</b>'},
+     ], strength:null},
+  2:{name:'Pierwsza równowaga i siła', kiedy:'tydzień 2',
+     next:'30 s na chorej nodze z zamkniętymi oczami.',
+     daily:[
+       {label:'Stanie na chorej nodze — oczy otwarte, potem zamknięte', seconds:45, sets:4, desc:'3–5 × 30–60 s, przy ścianie.'},
+       {label:'Rozciąganie łydki z kolanem do ściany — 3 × 30 s', seconds:30, sets:3, desc:'Palce kilka cm od ściany, pięta na podłodze, kolano dotyka ściany. Zapisz odległość palców od ściany (najlepiej w notatce przy pomiarze kostki).'},
+       {label:'Ruchomość z etapu 1 — raz dziennie', reps:'1 raz', desc:'Stopa w górę i w dół, alfabet, krążenia.'},
+     ],
+     strength:[
+       {label:'Guma, siedząc: stopa na zewnątrz — 3 × 15', reps:'3 × 15', desc:'Lekki opór.'},
+       {label:'Guma, siedząc: stopa w górę do siebie — 3 × 15', reps:'3 × 15'},
+       {label:'Wspięcia na palce obunóż przy drabince — 3 × 15', reps:'3 × 15', desc:'Trzymasz się drabinki. Pięta nie schodzi poniżej poziomu palców.'},
+       {label:'Mostek na dwóch nogach — 3 × 15', reps:'3 × 15'},
+       {label:'Leżąc bokiem: otwieranie kolan z gumą — 3 × 15', reps:'3 × 15'},
+     ]},
+  3:{name:'Równowaga na niestabilnym, mocniejsza siła', kiedy:'tygodnie 3–4',
+     next:'20 wspięć na jednej nodze, schody bez bólu, rozciąganie łydki prawie jak po zdrowej stronie (różnica do ok. 2 cm).',
+     daily:[
+       {label:'Stanie na poduszce na chorej nodze, potem z zadaniem', seconds:45, sets:4, desc:'3–5 × 30–60 s. Zadania: rzut piłką o ścianę, obracanie głowy, zamknięte oczy.'},
+       {label:'Sięganie wolną stopą w 3 kierunkach (litera Y z taśmy)', reps:'3 × 3–5 na kierunek', desc:'Do przodu, w tył po skosie do środka, w tył po skosie na zewnątrz. Lekko dotykasz podłogi i wracasz. Zapisuj zasięg.'},
+       {label:'Rozciąganie łydki z kolanem do ściany — 3 × 30 s', seconds:30, sets:3},
+     ],
+     strength:[
+       {label:'Guma we wszystkich kierunkach — 3 × 10–15', reps:'3 × 10–15', desc:'Na zewnątrz, w górę, w dół, a od tygodnia 3 także do środka (bez bólu). Opór zwiększasz co 1–2 tygodnie.'},
+       {label:'Wspięcia na palce na jednej nodze na stopniu — 3 × 10–15', reps:'3 × 10–15', desc:'Przodostopie na stopniu. Przy Twoim Achillesie pięta nie schodzi poniżej poziomu stopnia, dopóki drabinka wspięć w planie głównym nie doszła do deficytu.'},
+       {label:'Chodzenie bokiem z gumą nad kolanami — 3 × 10 m', reps:'3 × 10 m w każdą stronę', desc:'Lekki przysiad.'},
+       {label:'Przysiad na chorej nodze do krzesła — 3 × 8–10', reps:'3 × 8–10'},
+     ],
+     extra:'W tym etapie zaczynasz chodzić po domu bez ortezy.'},
+  4:{name:'Odruchy i pierwsze skoki', kiedy:'tygodnie 5–6',
+     next:'Skoki z bólem najwyżej 2/10, bez obrzęku następnego dnia.',
+     daily:[
+       {label:'Deska balansowa albo poduszka — 3 × 30–60 s', seconds:45, sets:3},
+       {label:'Sięganie stopą w 3 kierunkach — 3 × 3–5 na kierunek', reps:'3 × 3–5'},
+     ],
+     strength:[
+       {label:'Stopa na zewnątrz z gumą: szybko wypchnij, powrót 3 s — 4 × 10', reps:'4 × 10'},
+       {label:'Wspięcia na jednej nodze z plecakiem — 3 × 12–15', reps:'3 × 12–15', desc:'Pięta nie niżej niż poziom stopnia, dopóki drabinka wspięć nie doszła do deficytu.'},
+       {label:'Chodzenie bokiem z gumą, przysiad na jednej nodze', reps:'jak w etapie 3'},
+     ],
+     jumps:[
+       {label:'Podskoki obunóż w miejscu — 3 × 20–30 s', seconds:25, sets:3, desc:'Potem przód–tył i na boki przez linię.'},
+       {label:'Skok na chorej nodze z zatrzymaniem — 5–10 na kierunek', reps:'5–10 na kierunek', desc:'Do przodu, w bok, po skosie. Miękkie lądowanie, utrzymanie 2–3 s.'},
+       {label:'Albo zamiast skoków (lub w inny dzień): marszobieg 1 min / 1 min × 10', reps:'10 × (1 + 1 min)', desc:'Po równym.'},
+     ]},
+  5:{name:'Pełne skoki i bieg', kiedy:'tygodnie 7–8',
+     next:'Kryteria powrotu do bulderingu: skoki na chorej nodze min. 85–90% zdrowej, sięganie stopą do przodu — różnica najwyżej 4 cm, wspięcia na jednej nodze i siła stopy na zewnątrz min. 90% zdrowej, brak bólu i obrzęku po treningu, brak lęku przed obciążaniem nogi.',
+     daily:[{label:'Równowaga jak w etapie 4 (krócej, podtrzymanie)', seconds:30, sets:3}],
+     strength:[{label:'Wspięcia na jednej nodze z obciążeniem + guma we wszystkich kierunkach', reps:'3 × 12–15'}],
+     jumps:[
+       {label:'Skoki na chorej nodze: przód–tył, na boki, po skosie — 3–4 × 10', reps:'3–4 × 10'},
+       {label:'Zeskoki ze stopnia 20–30 cm na jedną nogę — 3 × 5', reps:'3 × 5', desc:'Miękko, kolano nad stopą, utrzymanie 2 s.'},
+       {label:'W inny dzień: bieg ciągły 20–30 min po równym', reps:'20–30 min', desc:'Potem lekkie zmiany kierunku.'},
+     ]},
+  6:{name:'Powrót do sportu', kiedy:'tygodnie 9–12',
+     next:'',
+     daily:[
+       {label:'Lądowania z 40–60 cm obunóż na materac', reps:'kilka serii', desc:'Potem na jedną nogę z niższej wysokości.'},
+       {label:'Stanie na poduszce, ktoś delikatnie popycha w różnych kierunkach', seconds:30, sets:3},
+     ],
+     strength:[{label:'Podtrzymanie: równowaga + siła jako rozgrzewka', reps:'2–3 razy w tygodniu', desc:'Przez kilka miesięcy.'}]},
+};
+const KOSTKA_SILA_DNI = ['tue','thu','fri','sat'];
+function kostkaFootBlocks(slot){
+  const e = kostkaEtap(), E = KOSTKA_ETAPY[e];
+  const out = [];
+  if(E.jumps && (slot === 'tue' || slot === 'thu')) out.push({id:'kostka_skoki_e'+e, kind:'warmup', crumb:'TRENING STOPY', doneLabel:'Oznacz jako zrobione', name:`Stopa: skoki (etap ${e}) — na początku sesji`,
+    intro:'Skoki robisz na początku sesji, gdy nogi są świeże. Bez ortezy, na równym i twardym podłożu.', steps:E.jumps});
+  out.push({id:'kostka_stopa_e'+e, kind:'warmup', crumb:'TRENING STOPY', doneLabel:'Oznacz jako zrobione', name:`Stopa: codziennie (etap ${e} — ${E.name.toLowerCase()})`,
+    intro:'10–20 min. Bez ortezy, przy ścianie albo krześle. Ból w trakcie najwyżej 3/10 (chwilowo 5/10 przy nowym zadaniu); po kilku godzinach wraca do stanu wyjściowego, rano nie gorzej, bez narastającego obrzęku.' + (E.extra ? ' ' + E.extra : ''),
+    steps:E.daily});
+  if(E.strength && KOSTKA_SILA_DNI.includes(slot)) out.push({id:'kostka_sila_e'+e, kind:'warmup', crumb:'TRENING STOPY', doneLabel:'Oznacz jako zrobione', name:`Stopa: część siłowa (etap ${e})`,
+    intro:'W dni siłowe stopy (wtorek, czwartek, piątek, sobota). Bez ortezy. Przez pierwsze 4–6 tygodni unikasz mocnego skręcania stopy do środka pod obciążeniem.', steps:E.strength});
+  return out;
+}
+function kostkaPomiarKostkiBlock(){
+  return {id:'kostka_pomiar_kostki', kind:'linatest', name:'Pomiar postępów kostki',
+    how:'Start, po 6 i po 12 tygodniach — zawsze tak samo. Wpisz to, co już możesz zrobić; resztę zostaw pustą. Wartości: chora / zdrowa noga.',
+    fields:[
+      {k:'yChora', l:'Sięganie stopą do przodu — chora (cm)'}, {k:'yZdrowa', l:'Sięganie stopą do przodu — zdrowa (cm)'},
+      {k:'wspChora', l:'Wspięcia na jednej nodze — chora (liczba)'}, {k:'wspZdrowa', l:'Wspięcia na jednej nodze — zdrowa (liczba)'},
+      {k:'skokiChora', l:'Skoki na boki przez linię w 30 s — chora'}, {k:'skokiZdrowa', l:'Skoki na boki przez linię w 30 s — zdrowa'},
+      {k:'kwsChora', l:'Kolano do ściany: palce od ściany — chora (cm)'}, {k:'kwsZdrowa', l:'Kolano do ściany: palce od ściany — zdrowa (cm)'},
+      {k:'ucieka', l:'Ile razy kostka „uciekła" od ostatniego pomiaru'},
+    ],
+    change:'Jeśli po 3 miesiącach kostka nadal ucieka przy zwykłym chodzeniu — konsultacja u ortopedy od stopy.'};
+}
+
+/* ---------- Dni tygodnia ---------- */
+const KOSTKA_SLOTS = ['mon','tue','wed','thu','fri','sat','sun'];
+const KOSTKA_SLOT_TITLE = {mon:'Siła palców', tue:'Pchanie, mięśnie przeciwne, brzuch', wed:'Wytrzymałość przedramion',
+  thu:'Ciągnięcie i nogi', fri:'Stopa i rozciąganie', sat:'Zwisy z przerwami', sun:'Wolne — tylko trening stopy'};
+function kostkaMakeDay(slot, iso){
+  const w = Math.max(kostkaWeek(iso), 1), wk = kostkaWk(iso);
+  const base = {key:'K:'+slot, kostka:true, kostkaSlot:slot};
+  const S = (icon, blocks, note) => ({...base, type:'strength', icon, title:KOSTKA_SLOT_TITLE[slot], blocks, note});
+  const foot = kostkaFootBlocks(slot);
+  switch(slot){
+    case 'mon': {
+      const hang = wk.hang;
+      const blocks = [kostkaWarmup('kostka_rozgrzewka_pon', [KOSTKA_SEKW,
+        {label:'3 pary: podciągnięcia + pompki (ok. 75% możliwości)', reps:'3 pary', desc:'Lekko, bez zmęczenia.'}])];
+      if(wk.pomiar && w <= 8) blocks.push(kostkaPomiarBlock());
+      blocks.push(
+        kHB('hangboard_k_otwarty', 'Zwis chwytem otwartym (listwa 20–40 mm)', {series:kHalf(2, wk), reps:1, hang:30, seriesRest:60,
+          cue:'2 serie × 30 s, przerwa 1 min. W przerwie: podpór i dotykanie dłonią przeciwnego barku (z kolan, jeśli kostka boli).'}),
+        kHB('hangboard_k_jednoracz', 'Ciągnięcie jednorącz, stopy na podłodze (listwa 15–20 mm)', {series:kHalf(3, wk), reps:10, hang:5, hangRest:5, seriesRest:90, workLabel:'Ciągnięcie',
+          cue:'Półzamknięcie. 5 s ciągnięcia coraz mocniej, ręce na zmianę — 5 powtórzeń na każdą rękę, 3 serie, przerwa 1,5 min. Pierwsze 2–3 sesje: nie dochodź do pełnej siły. W przerwie: leżąc na plecach, powolne opuszczanie przeciwnej ręki i nogi.'}),
+        kHB('hangboard_k_obciazenie', 'Zwis z obciążeniem (listwa 30–50 mm, chwyt otwarty)', {series:kHalf(3, wk), reps:1, hang:20, seriesRest:90,
+          cue:'3 serie × 20 s (od 15 do 25 s), przerwa 1,5 min. Ciężar tak, żeby ostatnie sekundy były trudne. W przerwie: deska bokiem z kolan.'}),
+        hang
+          ? kHB('hangboard_k_max', 'Najcięższa część: zwis 12 s nad podestem (listwa 15–20 mm)', {series:kHalf(4, wk), reps:1, hang:12, seriesRest:180,
+              cue:'Półzamknięcie, zwis 12 s (od 9 do 15 s), 3–4 powtórzenia, przerwa 3 min — obowiązkowo. Trudność zwiększasz ciężarem, nie mniejszą listwą. W przerwach: klęk podparty z unoszeniem przeciwnej ręki i nogi + rozciąganie na leżąco.',
+              warn:'Pod tablicą stabilny podest. Po zwisie schodzisz zdrową nogą — nigdy nie zeskakujesz.'})
+          : kHB('hangboard_k_max', 'Najcięższa część: ciągnięcie obiema rękami na wadze (listwa 15–20 mm)', {series:kHalf(4, wk), reps:1, hang:12, seriesRest:180, workLabel:'Ciągnięcie',
+              cue:'Stopy na wadze, półzamknięcie, 85–90% siły maksymalnej, 3–4 powtórzenia × 10–12 s, przerwa 3 min — obowiązkowo.' + kostkaOdczyt(0.85, 0.90) + ' W przerwach: klęk podparty z unoszeniem przeciwnej ręki i nogi + rozciąganie na leżąco.'}),
+        ...foot);
+      return S('✋', blocks, 'Ok. 50 min. Najcięższa sesja palców w tygodniu.');
+    }
+    case 'tue': {
+      const items = ['K01','K02','K03','K04','K05','K06','K07'].map(id => kEx(id, wk, id === 'K01' ? {cue:`Zgięcie łokci do 90°, nie niżej. Zostaw ${wk.rir} ${plural(wk.rir,'powtórzenie','powtórzenia','powtórzeń')} w zapasie.`} : null));
+      const blocks = [...foot.filter(b => b.id.startsWith('kostka_skoki')),
+        {id:'block_main', name:'Pchanie, mięśnie przeciwne, brzuch', kind:'exercises', items},
+        ...foot.filter(b => !b.id.startsWith('kostka_skoki')),
+        kHB('hangboard_k_lekkie', 'Opcjonalnie: lekkie ciągnięcie listwy, stopy na ziemi (ok. 40%)', {series:1, reps:30, hang:10, hangRest:10, seriesRest:0, workLabel:'Ciągnięcie',
+          cue:'Tylko jeśli masz ochotę — co najmniej 6 h przed albo po innej sesji. Ok. 40% siły, po 10 s, łącznie najwyżej 10 min.' + kostkaOdczyt(0.40)})];
+      return S('💪', blocks, 'Ok. 45 min.');
+    }
+    case 'wed': {
+      const [n, min, p] = wk.wed;
+      const blocks = [kostkaWarmup('kostka_rozgrzewka_sr', [KOSTKA_SEKW]),
+        kHB('hangboard_k_wytrz', `Ciągnięcie z przerwami 7 s / 3 s — ${n} × ${min} min`, {series:n, reps:min * 6, hang:7, hangRest:3, seriesRest:300, workLabel:'Ciągnięcie',
+          cue:`Listwa 20 mm, na zmianę chwyt otwarty trzema palcami i półzamknięcie. 7 s ciągnięcia, 3 s przerwy, bez zatrzymania przez całą serię. Ok. ${Math.round(p * 100)}% siły maksymalnej (ustawione na wadze). Przerwa między seriami 5 min. Pod koniec serii wyraźnie ciężko, ale bez odpadania.` + kostkaOdczyt(p)}),
+        {id:'block_main', name:'Podciągnięcia i brzuch', kind:'exercises', items:[kEx('K08', wk), kEx('K09', wk)]},
+        ...foot];
+      return S('✋', blocks, 'Ok. 45 min.');
+    }
+    case 'thu': {
+      const alt = w % 2 === 1 ? 'K13a' : 'K13b';
+      const blocks = [...foot.filter(b => b.id.startsWith('kostka_skoki')),
+        kostkaWarmup('kostka_rozgrzewka_czw', [{label:'Kilka lekkich podciągnięć', reps:'kilka', desc:'Lekko, bez zmęczenia.'}]),
+        {id:'block_main', name:'Ciągnięcie', kind:'exercises', items:['K10','K11','K12',alt].map(id => kEx(id, wk, id === 'K10' && w >= 3 ? {cue:'4–5 serii, zostaw 2 powtórzenia w zapasie, przerwa 2–3 min. Od tygodnia 3: +1,25 kg.'} : null))},
+        {id:'block_legs', name:'Nogi', kind:'exercises', items:['K14','K15','K16','K17'].map(id => kEx(id, wk))},
+        ...foot.filter(b => !b.id.startsWith('kostka_skoki'))];
+      return S('💪', blocks, `Ok. 50 min. Ćwiczenie 4 na zmianę co tydzień — w tym tygodniu: ${KOSTKA_EX[alt].name.toLowerCase()}.`);
+    }
+    case 'fri': {
+      const blocks = [...foot,
+        {id:'kostka_rozciaganie', kind:'warmup', crumb:'ROZCIĄGANIE', doneLabel:'Oznacz jako zrobione', name:'Rozciąganie na leżąco',
+          intro:'<b>Bez rozciągania na stojąco</b> (głębokie przysiady, szpagaty).',
+          steps:[
+            {label:'Tył ud leżąc z taśmą — 3 × 30 s na nogę', seconds:30, sets:6},
+            {label:'Uda od wewnątrz: leżąc, nogi rozchylone oparte o ścianę — 2 × 60 s', seconds:60, sets:2},
+            {label:'Rozciąganie barków', reps:'kilka minut'},
+          ]}];
+      if(w === 1 || w === 6) blocks.unshift(kostkaPomiarKostkiBlock());
+      return S('🦶', blocks, 'Ok. 30 min.' + ((w === 1 || w === 6) ? ' W tym tygodniu także pomiar postępów kostki.' : ''));
+    }
+    case 'sat': {
+      const blocks = [kostkaWarmup('kostka_rozgrzewka_sob', [KOSTKA_SEKW, {label:'2–3 lekkie zwisy', reps:'2–3', desc:'Z odciążeniem stopą.'}])];
+      if(wk.sat === 'test') blocks.push(kostkaTest73Block());
+      else {
+        const [n, r] = wk.sat;
+        blocks.push(kHB('hangboard_k_przerywane', `Zwisy z przerwami 10/5 — ${n} × ${r}`, {series:n, reps:r, hang:10, hangRest:5, seriesRest:60,
+          cue:`Listwa 20 mm. 10 s zwisu, 5 s przerwy, ${r} razy z rzędu = 1 seria; ${n} serie, przerwa 1 min. Odciążasz się stopą na krześle albo dociążasz tak, żeby ostatnie powtórzenie ostatniej serii było bliskie odpadnięcia.` + (w <= 2 ? ' W tygodniach 1–2 zostaw ok. 2 s zapasu.' : '') + ' Gdy palce są zmęczone — zamiast tego lekkie ciągnięcie ze stopami na ziemi.'}));
+      }
+      blocks.push({id:'block_main', name:'Brzuch', kind:'exercises', items:[kEx('K18', wk)]}, ...foot);
+      return S('✋', blocks, 'Ok. 40 min.');
+    }
+    default:
+      return {...base, type:'rest', icon:'🦶', title:KOSTKA_SLOT_TITLE.sun, blocks:foot, note:'Wolne. Tylko codzienny trening stopy.'};
+  }
+}
+function kostkaDayFor(iso){
+  const dow = new Date(iso+'T00:00:00').getDay();
+  return kostkaMakeDay(KOSTKA_SLOTS[(dow + 6) % 7], iso);
+}
+
+/* ---------- Ekran Dziś ---------- */
+function kostkaOrteza(w){
+  return w <= 2
+    ? 'Tygodnie 1–2: orteza przy każdym chodzeniu, także w domu. Zdejmujesz ją do siedzenia, leżenia, ćwiczeń i snu.'
+    : 'Od ok. 3. tygodnia: w domu bez ortezy, jeśli chodzisz bez utykania, ból najwyżej 2/10 i nie ma obrzęku. Na zewnątrz 4–6 tygodni, na nierównym terenie dłużej, przy sporcie 6–12 miesięcy.';
+}
+function kostkaTodayHTML(iso){
+  const w = kostkaWeek(iso);
+  if(w === 0) return bannerHTML('info', '🩹', 'Plan na czas urazu kostki startuje ' + fmtDayLong(kostkaStartISO()),
+    'Do tego dnia nic nie jest zaplanowane. Datę startu zmienisz w Ustawieniach → Program treningowy.');
+  const wk = kostkaWk(iso);
+  const tydz = KOSTKA_SLOTS.map((s, i) => `• ${LINA_DOW_SHORT[i]} — ${KOSTKA_SLOT_TITLE[s]}`).join('<br>');
+  let body = (w <= 8 ? wk.note : '<b>8 tygodni za Tobą.</b> Po powrocie na ścianę: odstaw zwisy z przerwami i ciągnięcie wytrzymałościowe, zostaw 1 krótką sesję siłową palców w tygodniu, dużo łatwego wspinania (ruch, praca nóg). Plan zmienisz w Ustawieniach → Program treningowy.')
+    + '<br><br><b>Orteza:</b> ' + kostkaOrteza(w)
+    + '<br><br><b>Tydzień:</b><br>' + tydz
+    + '<br><br>Trening stopy codziennie; część siłowa stopy we wtorek, czwartek, piątek i sobotę.';
+  let html = bannerHTML('info', '🩹', `Plan na czas urazu kostki · tydzień ${Math.min(w, 8)} z 8` + (w > 8 ? ' (po planie)' : ''), body);
+  const e = kostkaEtap(), E = KOSTKA_ETAPY[e];
+  const btns = `<div class="btn-row" style="margin-top:10px;">
+      ${e > 1 ? `<button class="btn btn-ghost" onclick="kostkaSetEtap(${e - 1})">⬇ Cofnij o etap</button>` : ''}
+      ${e < 6 ? `<button class="btn btn-secondary" onclick="kostkaSetEtap(${e + 1})">Kryteria spełnione — etap ${e + 1} ⬆</button>` : ''}
+    </div>`;
+  html += bannerHTML('info', '🦶', `Stopa: etap ${e} z 6 — ${E.name}`,
+    `Zwykle ${E.kiedy}. O przejściu decydują kryteria, nie kalendarz — przy lżejszym urazie etapy mogą być krótsze.`
+    + (E.next ? `<br><br><b>Przejście do etapu ${e + 1}:</b> ${E.next}` : '<br><br>Ostatni etap — potem podtrzymanie 2–3 razy w tygodniu przez kilka miesięcy.')
+    + '<br><br><b>Cofnij o etap</b>, gdy ból następnego dnia jest wyższy o 2 punkty albo pojawia się obrzęk.' + btns);
+  return html;
+}
+function kostkaSetEtap(e){
+  if(e < 1 || e > 6) return;
+  store.set('kostkaEtap', e);
+  vibrate(25);
+  renderAll();
+}
+function kostkaPickerHTML(planned, day, overridden, extras, delHTML){
+  const opt = (fn, key, icon, label) =>
+    `<button class="btn btn-secondary" style="margin-bottom:8px;text-align:left;" onclick="${fn}('${key}')">${icon} ${label}</button>`;
+  return `<details class="tech" style="margin-top:12px;">
+    <summary>Zmień, dołóż albo usuń jednostkę</summary>
+    <div class="inner">
+      ${pickerDeleteHTML(delHTML)}
+      <div class="meta" style="margin-bottom:12px;">Według planu ten dzień to <b>${planned.title}</b>. Wybierz, co robisz <b>zamiast</b> tego. Pamiętaj o zasadzie palców: najwyżej 3 ciężkie sesje w tygodniu, co najmniej 48 h między nimi.</div>
+      ${KOSTKA_SLOTS.map(s => opt('setDayOverride', 'K:' + s, s === 'sun' ? '🦶' : '•', KOSTKA_SLOT_TITLE[s])).join('')}
+      ${opt('setDayOverride', 'rest', '😴', 'Odpoczynek (pauza)')}
+      ${(overridden || extras.length) ? `<button class="btn btn-primary" style="margin-top:4px;" onclick="setDayOverride('plan')">✓ Wróć do planu (${planned.title})</button>` : ''}
+    </div>
+  </details>`;
+}
+function kostkaRefHTML(){
+  const det = (t, h) => `<details class="tech"><summary>${t}</summary><div class="inner">${h}</div></details>`;
+  return `<div class="tech-head">Ściąga — plan na czas urazu kostki</div>`
+    + det('Ból — ile wolno', 'W trakcie ćwiczenia najwyżej 3/10 (chwilowo 5/10 przy nowym zadaniu). Po kilku godzinach wraca do stanu wyjściowego, rano nie gorzej, bez narastającego obrzęku. Jeśli nie — cofasz się o etap na 2–3 dni.')
+    + det('Orteza', '<ul><li>Tygodnie 1–2: przy każdym chodzeniu, także w domu. Zdejmujesz do siedzenia, leżenia, ćwiczeń i snu.</li><li>Od ok. 3. tygodnia: w domu bez ortezy, jeśli chodzisz bez utykania, ból najwyżej 2/10 i nie ma obrzęku.</li><li>Na zewnątrz: 4–6 tygodni, na nierównym terenie dłużej, przy sporcie 6–12 miesięcy.</li><li>Ćwiczenia na stojąco w ortezie — poza treningiem stopy, który robisz zawsze bez ortezy, przy ścianie albo krześle.</li></ul>')
+    + det('Progresja', 'W danym tygodniu zmieniasz tylko jedną rzecz: ciężar albo czas albo liczbę serii.')
+    + det('Powrót do wspinania', '<ul><li>Od tygodnia 3–4 (jeśli chód i schody bez bólu): wspinanie z liną, łatwe drogi, zjazd na linie, bez zeskoków, bez zaczepiania piętą.</li><li>Od tygodnia 6–8: zaczepianie piętą i palcami stopy.</li><li>Od tygodnia 8–12, po spełnieniu kryteriów z etapu 5: bouldering — pierwsze 2–3 tygodnie niskie, łatwe problemy; schodzisz po chwytach; lądowanie obunóż na środek materaca, z dala od szwów i krawędzi; bez mocnego tarcia stopą ustawioną do środka; orteza do rozgrzewki i lądowań (albo taping, jeśli nie mieści się do buta). Kostka puchnie albo boli bardziej następnego dnia — cofasz się o tydzień.</li><li>Po powrocie na ścianę: bez zwisów z przerwami i ciągnięcia wytrzymałościowego, 1 krótka sesja siłowa palców w tygodniu, dużo łatwego wspinania.</li></ul>')
+    + det('Kiedy zwolnić albo przerwać', '<ul><li><b>Palce:</b> ból powyżej 2–3/10 albo poranna sztywność ponad 30 min — tydzień na poprzednim poziomie. Trzask albo ostry ból u podstawy palca — natychmiast przerywasz, do lekarza.</li><li><b>Kostka:</b> ból następnego dnia wyższy o 2 punkty albo obrzęk — cofasz się o etap.</li><li><b>Barki i łokcie:</b> ból przy zwisie albo dipach — mniejsza objętość.</li></ul>')
+    + det('Czerwone flagi — od razu do lekarza', '<ul><li>Nagły wzrost bólu albo obrzęku, nie możesz zrobić 4 kroków.</li><li>Ból kości na tylnej krawędzi albo szczycie kostki, albo u podstawy piątej kości śródstopia.</li><li>Ból po wewnętrznej stronie stawu albo wysoko nad kostką.</li><li>Przeskakiwanie albo trzaskanie ścięgien za kostką boczną.</li><li>Głęboki ból w stawie z blokowaniem.</li><li>Drętwienie stopy.</li><li>Ból i obrzęk łydki.</li></ul>')
+    + det('Chłodzenie i ciepło', '<b>Chłodzenie:</b> po pierwszych 72 h tylko gdy boli (np. po dłuższym chodzeniu), 10–15 min przez ręcznik — nie bezpośrednio na skórę, nie zasypiasz z okładem.<br><br><b>Ciepło:</b> najwcześniej po 72 h, gdy okolica nie jest cieplejsza niż druga kostka; 10–15 min, ok. 38–40 °C, najlepiej przed ćwiczeniami ruchomości. Jeśli po ogrzewaniu pojawi się obrzęk albo większy ból — kilka dni wracasz do chłodzenia.')
+    + det('Żywienie', '<ul><li>Białko: cel ok. 125 g dziennie (1,6 g/kg), minimum ok. 95 g (1,2 g/kg), w 3–4 posiłkach po ok. 30 g.</li><li>Bez deficytu kalorycznego — waga ma być stabilna; brakujące kalorie głównie z węglowodanów.</li><li>Opcjonalnie: 10–15 g żelatyny albo kolagenu + ok. 1 h przed treningiem stopy witamina C (dowody słabe).</li><li>Opcjonalnie: kreatyna 3–5 g dziennie (wspiera mięśnie, nie więzadło).</li><li>Alkohol ograniczyć.</li></ul>');
+}
+function kostkaSettingsInfo(){
+  if(!kostkaOn()) return '';
+  const w = kostkaWeek(todayISO());
+  const k = kostkaMax();
+  return (w === 0 ? 'Plan wystartuje ' + fmtDayLong(kostkaStartISO()) + '.' : `Dziś: tydzień ${Math.min(w, 8)} z 8${w > 8 ? ' (po planie)' : ''}.`)
+    + ` Stopa: etap ${kostkaEtap()} z 6.` + (k ? ` Ostatni pomiar siły palców: ${fmtKg(Math.round(k.max * 10) / 10)} kg (${fmtDayLong(k.iso)}).` : '');
+}
+function saveKostkaStart(val){
+  if(!val) return;
+  store.set('kostkaStart', mondayOf(val));
+  vibrate(20);
+  loadSettingsForm();
+}
+function saveKostkaEtap(v){
+  store.set('kostkaEtap', Math.min(Math.max(Number(v) || 1, 1), 6));
+  vibrate(20);
+  loadSettingsForm();
 }
 
 /* =========================================================================
@@ -4703,6 +5137,12 @@ function dayComponentHTML(dayObj, entry){
     return html;
   }
   if(dayObj.skipped) return '';   // opis i „Przywróć" są w banerze nad listą
+  if(dayObj.kostka){
+    if(dayObj.note) html += `<div class="notes-box" style="margin-top:0;">${dayObj.note}</div>`;
+    html += blocksListHTML(dayObj.blocks || [], entry);
+    html += kostkaRefHTML();
+    return html;
+  }
   if(dayObj.type==='rest'){
     html += `<div class="notes-box">Dziś wolne. Jeśli chcesz, możesz zrobić lekką mobilność albo rozciąganie.</div>`;
     if(dayObj.lina && dayObj.note) html += `<div class="notes-box">${dayObj.note}</div>`;
@@ -4743,7 +5183,7 @@ function blocksListHTML(blocks, entry, prefix){
     } else if(block.kind==='hangboard'){
       state.registry[block.id] = {type:'hangboard', data:block};
       const done = !!(entry.exercises && entry.exercises[block.id] && entry.exercises[block.id].completedAt);
-      html += rowHTML(block.id, nm, `${serie(block.series)} po ${block.reps} zwisów (${block.hang} s / ${block.hangRest} s)`, done, no);
+      html += rowHTML(block.id, nm, hbRowSub(block), done, no);
     } else if(block.kind==='measure'){
       state.registry[block.id] = {type:'measure', data:block};
       const done = !!(entry.exercises && entry.exercises[block.id]);
@@ -4801,6 +5241,7 @@ function renderToday(){
   </div>`;
 
   if(planned.lina) html += linaTodayHTML(iso);
+  if(planned.kostka) html += kostkaTodayHTML(iso);
   const pos = planned.pos;
   if(pos && pos.deload && !overridden){
     html += bannerHTML('warn', '🪫', 'Tydzień odciążeniowy (deload)',
@@ -4830,7 +5271,9 @@ function renderToday(){
   }
   extras.forEach(x=>{ html += comboWarningHTML(day, x); });
   const delHTML = canDelete ? deleteUnitButtonsHTML(trainingUnits) : '';
-  html += planned.lina ? linaPickerHTML(planned, day, overridden, extras, delHTML) : dayPickerHTML(planned, day, overridden, extras, delHTML);
+  html += planned.lina ? linaPickerHTML(planned, day, overridden, extras, delHTML)
+    : planned.kostka ? kostkaPickerHTML(planned, day, overridden, extras, delHTML)
+    : dayPickerHTML(planned, day, overridden, extras, delHTML);
 
 
   const units = [day, ...extras];
@@ -4856,6 +5299,8 @@ function renderToday(){
   cont.innerHTML = html;
   const hdr = planned.lina
     ? 'Plan na linę · ' + linaStage(mondayOf(iso)).short
+    : planned.kostka
+    ? 'Uraz kostki · tydz. ' + Math.min(Math.max(kostkaWeek(iso), 1), 8) + '/8 · stopa: etap ' + kostkaEtap()
     : pos
     ? `Cykl ${pos.cycleIndex+1} · Tydz. ${pos.weekInCycle}${pos.deload?' (deload)':''} · ${pos.planWeek}. tydzień planu`
     : '';
@@ -4863,6 +5308,13 @@ function renderToday(){
   setTimeout(scrollGradeRows, 0);
 }
 
+/* „4 × 12 s · przerwa 3:00" albo „3 serie po 10 ciągnięć (5 s / 5 s)" */
+function hbRowSub(b){
+  const unit = b.workLabel ? plural(b.reps, 'ciągnięcie', 'ciągnięcia', 'ciągnięć') : plural(b.reps, 'zwis', 'zwisy', 'zwisów');
+  return b.reps === 1
+    ? `${b.series} × ${b.hang} s` + (b.series > 1 && b.seriesRest ? ` · przerwa ${fmtTime(b.seriesRest)}` : '')
+    : `${serie(b.series)} po ${b.reps} ${unit} (${b.hang} s / ${b.hangRest} s)`;
+}
 function rowHTML(id, name, sub, done, idx){
   return `<div class="exercise-row ${done?'done':''}${idx != null ? ' numbered' : ''}" onclick="openExercise('${id}')">
     ${idx != null ? `<div class="row-idx">${idx}</div>` : ''}<div class="left"><div class="exname">${name}</div><div class="exsub">${sub}</div></div>
@@ -4912,7 +5364,7 @@ function openExerciseData(found){
   document.getElementById('screen-exercise').classList.add('active');
   document.getElementById('exBreadcrumb').textContent =
     found.type==='hangboard' ? 'CHWYTOTABLICA' :
-    found.type==='warmup' ? 'ROZGRZEWKA' :
+    found.type==='warmup' ? (found.data.crumb || 'ROZGRZEWKA') :
     found.type==='measure' ? 'POMIAR' :
     found.type==='guided' ? (found.data.climbKind ? 'ŚCIANA' : 'TIMER') :
     found.type==='linatest' ? 'TEST POSTĘPÓW' : 'ĆWICZENIE';
@@ -5037,7 +5489,7 @@ function renderWarmupBody(data){
   });
   html += `</div>`;
   html += `<div id="simpleTimerHost"></div>`;
-  html += `<button class="btn btn-primary" onclick="markWarmupDone('${data.id}')">Oznacz rozgrzewkę jako zrobioną</button>`;
+  html += `<button class="btn btn-primary" onclick="markWarmupDone('${data.id}')">${data.doneLabel || 'Oznacz rozgrzewkę jako zrobioną'}</button>`;
   return html;
 }
 function startSimpleTimer(seconds, label){
@@ -5173,7 +5625,7 @@ function renderHangboardBody(data){
   for(let s=1;s<=data.series;s++){
     for(let r=1;r<=data.reps;r++){
       phases.push({
-        label: single ? `Zwis ${s}/${data.series}` : `Seria ${s}/${data.series} · Zwis ${r}/${data.reps}`,
+        label: single ? `${data.workLabel || 'Zwis'} ${s}/${data.series}` : `Seria ${s}/${data.series} · ${data.workLabel || 'Zwis'} ${r}/${data.reps}`,
         seconds:data.hang, kind:'work'});
       if(r < data.reps) phases.push({label:`Seria ${s}/${data.series} · Luz`, seconds:data.hangRest, kind:'rest'});
     }
@@ -5596,17 +6048,19 @@ function renderTools(){
   const rows = list => list.map(r => launchRow('ex:'+r.data.id, r.data.name, exSummary(r.data), `openFromTools('${r.data.id}')`)).join('');
   const group = (title, list) => list.length ? `<details class="tech tools-group"><summary><span>${title}<span class="tools-n">${list.length}</span></span></summary><div class="inner">${rows(list)}</div></details>` : '';
   const eNum = r => { const m = /^E(\d+)$/.exec(r.data.id); return m ? Number(m[1]) : null; };
-  const groups = {A:[], B:[], C:[], G:[], L:[], X:[]};
+  const groups = {A:[], B:[], C:[], G:[], L:[], K:[], X:[]};
   exercises.forEach(r => {
     const id = r.data.id, e = eNum(r);
     if(e != null) groups[e <= 13 ? 'A' : e <= 22 ? 'B' : 'C'].push(r);
     else if(id[0] === 'G') groups.G.push(r);
     else if(id[0] === 'L') groups.L.push(r);
+    else if(id[0] === 'K') groups.K.push(r);
     else groups.X.push(r);
   });
   html += `<div class="block-title"><div class="idx">2</div><h3>Ćwiczenia i rozgrzewki</h3></div>`;
   html += group('Plan FBW i moduł A', groups.A) + group('Moduł B', groups.B) + group('Moduł C', groups.C)
     + group('Program z gumami', groups.G) + group('Plan na linę: ćwiczenia w domu', groups.L.concat(groups.X))
+    + group('Plan na czas urazu kostki', groups.K)
     + group('Ściana i oddech (plan na linę)', guided) + group('Rozgrzewki i wyciszenie', warmups);
 
   document.getElementById('toolsContent').innerHTML = html;
@@ -5717,7 +6171,7 @@ function aiHistory(days, today){
     const iso = aiShift(today, -i);
     const r = resolveDay(iso);
     const units = [r.day, ...r.extras];
-    const before = linaOn() ? !!linaStage(mondayOf(iso)).before : planPos(iso).beforeStart;
+    const before = linaOn() ? !!linaStage(mondayOf(iso)).before : kostkaOn() ? kostkaWeek(iso) === 0 : planPos(iso).beforeStart;
     const planned = !before && units.some(u => u.type !== 'rest');
     const skipped = !before && !!r.day.skipped;
     const entry = loadEntry(iso);
@@ -5834,6 +6288,11 @@ function claudeSummary(days, today){
     const ls = linaStage(mondayOf(today));
     L.push('Program: plan na drogi z liną (wytrzymałość tlenowa przedramion i ekonomia ruchu). Dziś ('+aiDay(today)+'): '+ls.label+(ls.repeats && ls.repeats.length ? '; tygodnie powtórzone z braku sesji na ścianie: '+ls.repeats.length : '')+'.');
     L.push('Układ tygodnia: pon — bouldering (albo czw), wt — dom A (antagoniści, przysiad jednonóż, core, mobilność, oddech), śr — ściana: wytrzymałość (obwody + interwały na automacie), czw — wolne, pt — chwytotablica 10/5 + core, sob — dom B (noga, dipy, podciąganie, łokcie, stopy), nd — wolne. Cykl 8 tygodni: tydz. 1–3 baza, 4 lżejszy, 5–7 trudniejsze drogi w parach (pompa 7–8/10), 8 lżejszy + testy (A automat, B obwód, C oddech, D palce). Aplikacja sama przelicza tydzień po dodatkowym, zmienionym albo niezrobionym dniu.');
+  } else if(kostkaOn()){
+    const kw = kostkaWeek(today), km = kostkaMax(), ke = kostkaEtap();
+    L.push('Program: plan na czas urazu kostki (skręcenie stawu skokowego do środka, naderwanie II stopnia więzadła piętowo-strzałkowego, przewlekle niewydolne więzadło skokowo-strzałkowe przednie; orteza półsztywna; ok. 8 tygodni bez ściany). Dziś ('+aiDay(today)+'): '+(kw === 0 ? 'przed startem planu' : 'tydzień '+Math.min(kw, 8)+' z 8'+(kw > 8 ? ' (po planie)' : ''))+'; trening stopy: etap '+ke+' z 6 ('+KOSTKA_ETAPY[ke].name.toLowerCase()+').'
+      +(km ? ' Ostatni pomiar siły palców (listwa 20 mm, półzamknięcie, na wadze): '+String(Math.round(km.max * 10) / 10).replace('.', ',')+' kg przy masie '+String(km.masa).replace('.', ',')+' kg ('+aiDate(km.iso)+').' : ' Pomiaru siły palców jeszcze nie ma.'));
+    L.push('Układ tygodnia: pon — siła palców (zwisy, ciągnięcie na wadze), wt — pchanie, mięśnie przeciwne, brzuch, śr — wytrzymałość przedramion (7 s / 3 s przy 35–40%), czw — ciągnięcie i nogi, pt — stopa i rozciąganie, sob — zwisy z przerwami 10/5, nd — wolne. Codziennie trening stopy (etapy 1–6 wg kryteriów), część siłowa stopy wt/czw/pt/sob. Tydzień 6 lżejszy (połowa), pomiar siły w tyg. 1, 4, 8, test 7/3 przy 60% w tyg. 4 i 8.');
   } else {
     L.push('Dziś ('+aiDay(today)+'): cykl '+(p.cycleIndex+1)+', tydzień '+p.weekInCycle+' z 2 ('+p.planWeek+'. tydzień planu)'+(p.deload ? ' — tydzień odciążeniowy (deload)' : '')+'.');
     L.push('Układ planu: makrocykl 14 dni. Tydzień 1: pon — blok nóg + core; wt i sob — wspinanie (lina i/lub bouldering); czw — moduł siłowy + chwytotablica; pozostałe dni wolne. Tydzień 2: pon, śr, pt — moduły siłowe (kolejka A→B→C) + chwytotablica, bez wspinania. Co trzeci cykl tydzień 2 to deload: połowa serii, bez chwytotablicy.');
@@ -5955,10 +6414,14 @@ function loadSettingsForm(){
   document.getElementById('setScaleRoutes').value = gradeScaleKey('routes');
   document.getElementById('setScaleBoulders').value = gradeScaleKey('boulders');
   document.getElementById('setScaleCircuits').value = gradeScaleKey('circuits');
-  const lina = linaOn();
-  document.getElementById('setProgram').value = lina ? 'lina' : 'fbw';
+  const lina = linaOn(), kostka = kostkaOn();
+  document.getElementById('setProgram').value = lina ? 'lina' : kostka ? 'kostka' : 'fbw';
   document.getElementById('linaSettings').style.display = lina ? '' : 'none';
-  document.getElementById('fbwCycleCard').style.display = lina ? 'none' : '';
+  document.getElementById('kostkaSettings').style.display = kostka ? '' : 'none';
+  document.getElementById('fbwCycleCard').style.display = (lina || kostka) ? 'none' : '';
+  document.getElementById('setKostkaStart').value = kostkaStartISO();
+  document.getElementById('setKostkaEtap').value = String(kostkaEtap());
+  document.getElementById('kostkaInfo').textContent = kostkaSettingsInfo();
   document.getElementById('setLinaStart').value = linaStartISO();
   document.getElementById('setLinaBoulder').value = store.get('linaBoulderDefault', 'mon');
   document.getElementById('linaInfo').textContent = linaSettingsInfo();
