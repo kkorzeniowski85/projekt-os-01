@@ -755,7 +755,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.31.1';
+const APP_VERSION = '1.31.2';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -4769,7 +4769,7 @@ function kostkaWarmup(id, extra){
 
 /* ---------- Chwytotablica ---------- */
 const KOSTKA_HB_ZASADY = [
-  {t:'Zasady dla palców', h:'Tylko chwyt otwarty albo półzamknięty — nigdy pełne zamknięcie (kciuk na palcu wskazującym). Maksymalnie 3 ciężkie sesje palców w tygodniu (poniedziałek, środa, sobota), co najmniej 48 h przerwy między nimi. Trudność zwiększasz mocniejszym ciągnięciem (aplikacja poda niższą liczbę na wadze po kolejnym pomiarze) albo czasem, nie mniejszą listwą. W danym tygodniu zmieniasz tylko jedną rzecz: ciężar albo czas albo liczbę serii.'},
+  {t:'Zasady dla palców', h:'Tylko chwyt otwarty albo półzamknięty — nigdy pełne zamknięcie (kciuk na palcu wskazującym). Maksymalnie 3 ciężkie sesje palców w tygodniu (poniedziałek, środa, sobota), co najmniej 48 h przerwy między nimi. Na wadze trudność zwiększasz mocniejszym ciągnięciem (aplikacja poda niższą liczbę na wadze po kolejnym pomiarze). Przy zwisach w tym planie — najpierw czasem, potem <b>mniejszą listwą zamiast dociążania</b> (np. 20 mm zamiast 30 mm), bo plecak i pas z ciężarem obciążają chorą kostkę. W danym tygodniu zmieniasz tylko jedną rzecz: ciężar albo czas albo liczbę serii.'},
   {t:'Kiedy zwolnić', h:'Ból powyżej 2–3/10 albo poranna sztywność palców ponad 30 min — tydzień na poprzednim poziomie. Trzask albo ostry ból u podstawy palca — natychmiast przerywasz i idziesz do lekarza.'},
   {t:'Kostka przy tablicy', h:'Stabilny podest pod drążkiem i tablicą. Nigdy nie zeskakujesz — schodzisz zdrową nogą. Najcięższe wysiłki robisz bez wiszenia: stoisz na wadze łazienkowej na obu nogach, a ciągnięcie odciąża kostkę. <b>Bez plecaka i pasa z ciężarem</b> — dodatkowy ciężar obciąża kostkę przy staniu i schodzeniu.'},
 ];
@@ -4971,8 +4971,8 @@ function kostkaMakeDay(slot, iso){
           cue:'2 serie × 30 s, przerwa 1 min. W przerwie: podpór i dotykanie dłonią przeciwnego barku (z kolan, jeśli kostka boli).'}),
         kHB('hangboard_k_jednoracz', 'Ciągnięcie jednorącz, stopy na podłodze (listwa 15–20 mm)', {series:kHalf(3, wk), reps:10, hang:5, hangRest:5, seriesRest:90, workLabel:'Ciągnięcie',
           cue:'Półzamknięcie. 5 s ciągnięcia coraz mocniej, ręce na zmianę — 5 powtórzeń na każdą rękę, 3 serie, przerwa 1,5 min. Pierwsze 2–3 sesje: nie dochodź do pełnej siły. W przerwie: leżąc na plecach, powolne opuszczanie przeciwnej ręki i nogi.'}),
-        kHB('hangboard_k_obciazenie', 'Długi zwis chwytem otwartym (listwa 30–50 mm)', {series:kHalf(3, wk), reps:1, hang:20, seriesRest:90,
-          cue:'3 serie × 20 s (od 15 do 25 s), przerwa 1,5 min, <b>bez dodatkowego ciężaru</b>. Ostatnie sekundy mają być trudne — gdy 25 s jest łatwe, weź węższą listwę z zakresu 30–50 mm. Zwis nad podestem, schodzisz zdrową nogą. W przerwie: deska bokiem z kolan.'}),
+        kHB('hangboard_k_obciazenie', 'Długi zwis chwytem otwartym (listwa 30–50 mm, potem mniejsza)', {series:kHalf(3, wk), reps:1, hang:20, seriesRest:90,
+          cue:'3 serie × 20 s (od 15 do 25 s), przerwa 1,5 min, <b>bez dodatkowego ciężaru</b>. Ostatnie sekundy mają być trudne — gdy 25 s jest łatwe, zamiast dociążania bierzesz <b>mniejszą listwę</b>, np. 20 mm zamiast 30 mm. Zwis nad podestem, schodzisz zdrową nogą. W przerwie: deska bokiem z kolan.'}),
         kHB('hangboard_k_max', 'Najcięższa część: ciągnięcie jedną ręką na wadze (listwa 15–20 mm)', {series:kHalf(4, wk), reps:2, hang:12, hangRest:30, seriesRest:180, workLabel:'Ciągnięcie', repLabels:['lewa ręka', 'prawa ręka'],
           cue:'Stoisz na wadze na obu nogach, w ortezie. Półzamknięcie, 10–12 s ciągnięcia — najpierw lewa, potem prawa ręka (30 s na zmianę ręki). 3–4 serie, przerwa 3 min — obowiązkowo.' + kostkaWaga(0.85, 0.90, true) + ' W przerwach: klęk podparty z unoszeniem przeciwnej ręki i nogi + rozciąganie na leżąco.'}),
         ...foot);
