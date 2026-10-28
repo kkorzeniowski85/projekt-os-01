@@ -755,7 +755,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.31.0';
+const APP_VERSION = '1.31.1';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -4607,6 +4607,7 @@ function saveGuided(id){
   goToday();
 }
 function linaTestSummary(data, v){
+  if(data.summary) return data.summary(v);
   return data.fields.filter(f => v[f.k] != null).map(f => f.l.split(' (')[0].toLowerCase() + ': ' + v[f.k]).join(' · ');
 }
 function renderLinaTestBody(data){
@@ -4696,23 +4697,37 @@ function kostkaWeek(iso){
   return d < 0 ? 0 : Math.floor(d / 7) + 1;
 }
 function kostkaEtap(){ const e = Number(store.get('kostkaEtap', 1)); return (e >= 1 && e <= 6) ? e : 1; }
-/* Ostatni pomiar siły palców: siła maks. = masa ciała − odczyt wagi przy ciągnięciu z całej siły. */
+/* Ostatni pomiar siły palców. Wpisujesz masę ciała i najniższy odczyt wagi przy ciągnięciu
+   lewą i prawą ręką; siła ręki = masa − odczyt. Starszy zapis (obie ręce naraz) też działa. */
 function kostkaMax(){
   const e = allEntries();
   for(const iso of Object.keys(e).sort().reverse()){
     const l = e[iso].exercises && e[iso].exercises.hangboard_k_pomiar;
     const v = l && l.values;
-    if(v && v.masa > 0 && v.odczyt != null && v.masa - v.odczyt > 0) return {max: v.masa - v.odczyt, masa: v.masa, iso};
+    if(!v || !(v.masa > 0)) continue;
+    const L = v.lewa != null && v.masa - v.lewa > 0 ? v.masa - v.lewa : null;
+    const P = v.prawa != null && v.masa - v.prawa > 0 ? v.masa - v.prawa : null;
+    if(L != null && P != null) return {L, P, sum: L + P, masa: v.masa, iso};
+    if(v.odczyt != null && v.masa - v.odczyt > 0) return {L:null, P:null, sum: v.masa - v.odczyt, masa: v.masa, iso};
   }
   return null;
 }
-/* „35% to odczyt wagi ok. 68,5 kg" — z ostatniego pomiaru. */
-function kostkaOdczyt(p, p2){
+const kKg = x => fmtKg(Math.max(0, Math.round(x * 2) / 2));
+/* Gotowa liczba na wadze. Obie ręce: masa − p × (lewa + prawa). Jedna ręka: osobno dla lewej i prawej. */
+function kostkaWaga(p, p2, oneHand){
   const k = kostkaMax();
-  if(!k) return ' Odczyt wagi wyliczy się sam po pierwszym pomiarze siły (poniedziałek tygodnia 1).';
-  const rd = q => fmtKg(Math.round((k.masa - q * k.max) * 2) / 2);
-  const txt = p2 ? `${Math.round(p * 100)}–${Math.round(p2 * 100)}% to <b>odczyt wagi ok. ${rd(p2)}–${rd(p)} kg</b>` : `${Math.round(p * 100)}% to <b>odczyt wagi ok. ${rd(p)} kg</b>`;
-  return ` Z Twojego pomiaru (${fmtDayLong(k.iso)}: siła maks. ${fmtKg(Math.round(k.max * 10) / 10)} kg, masa ${fmtKg(k.masa)} kg) ${txt}.`;
+  if(!k) return ' <b>Liczbę, jaką ma pokazywać waga, aplikacja poda po pierwszym pomiarze siły</b> (poniedziałek tygodnia 1).';
+  const range = force => p2 ? `${kKg(k.masa - p2 * force)}–${kKg(k.masa - p * force)} kg` : `${kKg(k.masa - p * force)} kg`;
+  if(oneHand){
+    if(k.L == null) return ' Ostatni pomiar był obiema rękami naraz — zrób pomiar każdą ręką osobno, wtedy aplikacja poda liczby dla lewej i prawej ręki.';
+    return ` <b>Na wadze: lewa ręka ok. ${range(k.L)}, prawa ok. ${range(k.P)}</b> (z pomiaru ${fmtDayLong(k.iso)}).`;
+  }
+  return ` <b>Na wadze ma być ok. ${range(k.sum)}</b> (z pomiaru ${fmtDayLong(k.iso)}).`;
+}
+function kostkaPomiarTxt(v){
+  if(v.lewa != null && v.prawa != null && v.masa > 0) return `siła: lewa ${kKg(v.masa - v.lewa)} kg · prawa ${kKg(v.masa - v.prawa)} kg (masa ciała ${fmtKg(v.masa)} kg)`;
+  if(v.odczyt != null && v.masa > 0) return `siła obiema rękami ${kKg(v.masa - v.odczyt)} kg`;
+  return 'niepełny zapis';
 }
 
 /* Parametry tygodni 1–8 (po 8. tygodniu zostają liczby z tygodnia 7). */
@@ -4722,9 +4737,9 @@ const KOSTKA_WEEKS = {
   2:{wed:[2,8,0.35], sat:[4,4], hang:false, rir:2,
      note:'Środa 2 × 8 min. Sobota 4 serie po 4. Dipy i podciągnięcia: 2 powtórzenia w zapasie.'},
   3:{wed:[2,10,0.35], sat:[4,4], hang:false, rir:2,
-     note:'Środa 2 × 10 min. Sobota do bliskiego odpadnięcia. Podciągnięcia z obciążeniem +1,25 kg.'},
+     note:'Środa 2 × 10 min. Sobota do bliskiego odpadnięcia. Podciągnięcia ciężkie: opuszczanie wydłużasz do 3–4 s.'},
   4:{wed:[3,8,0.35], sat:'test', hang:true, pomiar:true, rir:2,
-     note:'Ponowny pomiar siły w poniedziałek. Najcięższa część poniedziałku jako zwis nad podestem, +1,25 kg. Środa 3 × 8 min. Sobota: zamiast zwisów test 7 s / 3 s przy 60% do odpadnięcia.'},
+     note:'Ponowny pomiar siły w poniedziałek — liczby na wadze przeliczą się same. Środa 3 × 8 min. Sobota: zamiast zwisów test 7 s / 3 s do odpadnięcia.'},
   5:{wed:[3,10,0.35], sat:[4,5], hang:true, rir:2,
      note:'Środa 3 × 10 min. Sobota 4 serie po 5.'},
   6:{wed:[3,5,0.35], sat:[2,5], hang:true, deload:true, rir:2,
@@ -4732,7 +4747,7 @@ const KOSTKA_WEEKS = {
   7:{wed:[3,10,0.40], sat:[5,5], hang:true, rir:2,
      note:'Środa 3 × 10 min przy ok. 40%. Sobota 5 × 5.'},
   8:{wed:[2,8,0.35], sat:'test', hang:true, pomiar:true, rir:2,
-     note:'Ponowny pomiar siły w poniedziałek i test 7/3 przy 60% w sobotę. Środa lżej (2 × 8 min), żeby test był na wypoczętych palcach. Jeśli kostka pozwala — powrót na ścianę.'},
+     note:'Ponowny pomiar siły w poniedziałek i test 7/3 w sobotę. Środa lżej (2 × 8 min), żeby test był na wypoczętych palcach. Jeśli kostka pozwala — powrót na ścianę.'},
 };
 function kostkaWk(iso){ const w = kostkaWeek(iso); return KOSTKA_WEEKS[w > 8 ? 7 : Math.max(w, 1)]; }
 const kHalf = (n, wk) => wk.deload ? Math.max(1, Math.ceil(n / 2)) : n;
@@ -4754,20 +4769,21 @@ function kostkaWarmup(id, extra){
 
 /* ---------- Chwytotablica ---------- */
 const KOSTKA_HB_ZASADY = [
-  {t:'Zasady dla palców', h:'Tylko chwyt otwarty albo półzamknięty — nigdy pełne zamknięcie (kciuk na palcu wskazującym). Maksymalnie 3 ciężkie sesje palców w tygodniu (poniedziałek, środa, sobota), co najmniej 48 h przerwy między nimi. Trudność zwiększasz ciężarem albo czasem, nie mniejszą listwą. W danym tygodniu zmieniasz tylko jedną rzecz: ciężar albo czas albo liczbę serii.'},
+  {t:'Zasady dla palców', h:'Tylko chwyt otwarty albo półzamknięty — nigdy pełne zamknięcie (kciuk na palcu wskazującym). Maksymalnie 3 ciężkie sesje palców w tygodniu (poniedziałek, środa, sobota), co najmniej 48 h przerwy między nimi. Trudność zwiększasz mocniejszym ciągnięciem (aplikacja poda niższą liczbę na wadze po kolejnym pomiarze) albo czasem, nie mniejszą listwą. W danym tygodniu zmieniasz tylko jedną rzecz: ciężar albo czas albo liczbę serii.'},
   {t:'Kiedy zwolnić', h:'Ból powyżej 2–3/10 albo poranna sztywność palców ponad 30 min — tydzień na poprzednim poziomie. Trzask albo ostry ból u podstawy palca — natychmiast przerywasz i idziesz do lekarza.'},
-  {t:'Kostka przy tablicy', h:'Stabilny podest pod drążkiem i tablicą. Nigdy nie zeskakujesz — schodzisz zdrową nogą. W tygodniach 1–3 najcięższe wysiłki robisz bez wiszenia: stopy na wadze łazienkowej.'},
+  {t:'Kostka przy tablicy', h:'Stabilny podest pod drążkiem i tablicą. Nigdy nie zeskakujesz — schodzisz zdrową nogą. Najcięższe wysiłki robisz bez wiszenia: stoisz na wadze łazienkowej na obu nogach, a ciągnięcie odciąża kostkę. <b>Bez plecaka i pasa z ciężarem</b> — dodatkowy ciężar obciąża kostkę przy staniu i schodzeniu.'},
 ];
-const kHB = (id, name, o) => applyHangboardOverride({id, kind:'hangboard', name, series:o.series, reps:o.reps, hang:o.hang, hangRest:o.hangRest || 0, seriesRest:o.seriesRest, workLabel:o.workLabel, cue:o.cue, warn:o.warn, tech:[...(o.tech || []), ...KOSTKA_HB_ZASADY]});
+const kHB = (id, name, o) => applyHangboardOverride({id, kind:'hangboard', name, series:o.series, reps:o.reps, hang:o.hang, hangRest:o.hangRest || 0, seriesRest:o.seriesRest, workLabel:o.workLabel, repLabels:o.repLabels, cue:o.cue, warn:o.warn, tech:[...(o.tech || []), ...KOSTKA_HB_ZASADY]});
 function kostkaPomiarBlock(){
-  return {id:'hangboard_k_pomiar', kind:'linatest', name:'Pomiar siły palców na wadze (listwa 20 mm)',
-    how:'1. Stań na wadze łazienkowej pod chwytotablicą i zapisz masę ciała.<br>2. Złap listwę 20 mm obiema rękami w półzamknięciu.<br>3. Przez 5–7 s ciągnij w dół z całej siły i odczytaj najniższe wskazanie wagi.<br><br><b>Siła maksymalna = masa ciała − odczyt wagi.</b> Z niej aplikacja wylicza odczyt wagi dla 35%, 40%, 60% i 85–90% przy kolejnych sesjach. Pomiar powtarzasz w tygodniu 4 i 8.',
-    fields:[{k:'masa', l:'Masa ciała (kg)'}, {k:'odczyt', l:'Najniższy odczyt wagi przy ciągnięciu (kg)'}],
-    change:'Siłę maksymalną aplikacja liczy sama z obu liczb.'};
+  return {id:'hangboard_k_pomiar', kind:'linatest', name:'Pomiar siły palców na wadze (każda ręka osobno)',
+    how:'Po rozgrzewce. Stoisz na wadze łazienkowej pod chwytotablicą, na obu nogach, w ortezie.<br><br>1. Wpisz masę ciała (stojąc spokojnie na wadze).<br>2. Złap listwę 20 mm <b>jedną ręką</b> w półzamknięciu i przez 5–7 s ciągnij w dół z całej siły, bez uginania kolan. Wpisz najniższą liczbę, jaką pokazała waga.<br>3. To samo drugą ręką.<br><br>Wyświetlacz łatwo przegapić — najprościej nagrać wagę telefonem. Możesz zrobić 2–3 próby z przerwą 2–3 min i wpisać najniższy odczyt. <b>Niczego nie liczysz</b> — aplikacja sama poda, ile ma pokazywać waga przy kolejnych sesjach. Pomiar powtarzasz w tygodniu 4 i 8.',
+    fields:[{k:'masa', l:'Masa ciała (kg)'}, {k:'lewa', l:'Najniższy odczyt wagi — lewa ręka (kg)'}, {k:'prawa', l:'Najniższy odczyt wagi — prawa ręka (kg)'}],
+    summary:kostkaPomiarTxt,
+    change:'Po zapisaniu przy tej pozycji pokaże się siła każdej ręki.'};
 }
 function kostkaTest73Block(){
-  return {id:'hangboard_k_test73', kind:'linatest', name:'Test: 7 s / 3 s przy 60% do odpadnięcia',
-    how:'Listwa 20 mm, półzamknięcie, stopy na wadze (albo zwis nad podestem z odpowiednim odciążeniem). 7 s ciągnięcia przy 60% siły maksymalnej, 3 s przerwy, do odmowy — kończysz, gdy nie utrzymujesz 60% albo 7 s. Timer liczy powtórzenia; przerwij go w chwili odmowy.' + kostkaOdczyt(0.60),
+  return {id:'hangboard_k_test73', kind:'linatest', name:'Test: 7 s / 3 s do odpadnięcia (obie ręce, na wadze)',
+    how:'Listwa 20 mm, półzamknięcie, obie ręce, stoisz na wadze. 7 s ciągnięcia, 3 s przerwy, do odmowy — kończysz, gdy nie utrzymujesz liczby na wadze albo 7 s. Timer liczy powtórzenia; przerwij go w chwili odmowy.' + kostkaWaga(0.60),
     fields:[{k:'powt', l:'Liczba pełnych powtórzeń'}],
     change:'Porównujesz z wynikiem z tygodnia 4.',
     phases:Array.from({length:40}, (_, i) => [{label:`Ciągnięcie ${i+1}`, seconds:7, kind:'work'}, {label:'Luz', seconds:3, kind:'rest'}]).flat()};
@@ -4797,8 +4813,8 @@ const KOSTKA_EX = {
     cue:'Zostaw 3 powtórzenia w zapasie. Stabilny podest — nie zeskakuj.', tech:[]},
   K09:{id:'K09', name:'Brzuch: łopatki i proste nogi nad podłogą', sets:3, holdBased:true, holdRange:[30,30], rest:45, tempo:null,
     cue:'Leżąc na plecach, lędźwie dociśnięte do podłogi, łopatki i proste nogi lekko uniesione.', tech:[]},
-  K10:{id:'K10', name:'Podciągnięcia z obciążeniem', sets:5, repsRange:'3–5 powt.', rest:150, tempo:null,
-    cue:'4–5 serii, zostaw 2 powtórzenia w zapasie, przerwa 2–3 min. Obciążenie wg tygodnia (od tygodnia 3 +1,25 kg).',
+  K10:{id:'K10', name:'Podciągnięcia ciężkie (bez dociążania)', sets:5, repsRange:'3–5 powt.', rest:150, tempo:null,
+    cue:'4–5 serii, zostaw 2 powtórzenia w zapasie, przerwa 2–3 min. Bez pasa z ciężarem i plecaka, dopóki kostka się goi — trudność zwiększasz wolniejszym opuszczaniem (3–4 s).',
     warn:'Pod drążkiem stabilny podest. Nigdy nie zeskakujesz — schodzisz zdrową nogą.', tech:[]},
   K11:{id:'K11', name:'Zatrzymania w podciągnięciu (3 pozycje po 5 s)', sets:3, repsRange:'3 pozycje × 5 s', rest:120, tempo:null,
     cue:'Po 5 s: broda nad drążkiem → łokcie pod kątem prostym → łokcie lekko zgięte.', tech:[]},
@@ -4910,6 +4926,18 @@ function kostkaFootBlocks(slot){
     intro:'W dni siłowe stopy (wtorek, czwartek, piątek, sobota). Bez ortezy. Przez pierwsze 4–6 tygodni unikasz mocnego skręcania stopy do środka pod obciążeniem.', steps:E.strength});
   return out;
 }
+/* „sięganie: różnica 3 cm · wspięcia: chora 70% zdrowej …" — porównanie z kryteriami powrotu do bulderingu */
+function kostkaKostkaTxt(v){
+  const out = [];
+  const diff = (a, b, t) => { if(v[a] != null && v[b] != null) out.push(`${t}: różnica ${fmtKg(Math.round(Math.abs(v[b] - v[a]) * 10) / 10)} cm`); };
+  const pct = (a, b, t) => { if(v[a] != null && v[b] > 0) out.push(`${t}: chora ${Math.round(v[a] / v[b] * 100)}% zdrowej`); };
+  diff('yChora', 'yZdrowa', 'sięganie do przodu');
+  pct('wspChora', 'wspZdrowa', 'wspięcia');
+  pct('skokiChora', 'skokiZdrowa', 'skoki');
+  diff('kwsChora', 'kwsZdrowa', 'kolano do ściany');
+  if(v.ucieka != null) out.push(`kostka uciekła: ${v.ucieka} ${plural(v.ucieka, 'raz', 'razy', 'razy')}`);
+  return out.join(' · ') || 'niepełny zapis';
+}
 function kostkaPomiarKostkiBlock(){
   return {id:'kostka_pomiar_kostki', kind:'linatest', name:'Pomiar postępów kostki',
     how:'Start, po 6 i po 12 tygodniach — zawsze tak samo. Wpisz to, co już możesz zrobić; resztę zostaw pustą. Wartości: chora / zdrowa noga.',
@@ -4920,7 +4948,8 @@ function kostkaPomiarKostkiBlock(){
       {k:'kwsChora', l:'Kolano do ściany: palce od ściany — chora (cm)'}, {k:'kwsZdrowa', l:'Kolano do ściany: palce od ściany — zdrowa (cm)'},
       {k:'ucieka', l:'Ile razy kostka „uciekła" od ostatniego pomiaru'},
     ],
-    change:'Jeśli po 3 miesiącach kostka nadal ucieka przy zwykłym chodzeniu — konsultacja u ortopedy od stopy.'};
+    summary:kostkaKostkaTxt,
+    change:'Po zapisaniu aplikacja pokaże różnice i procent zdrowej strony. Jeśli po 3 miesiącach kostka nadal ucieka przy zwykłym chodzeniu — konsultacja u ortopedy od stopy.'};
 }
 
 /* ---------- Dni tygodnia ---------- */
@@ -4934,7 +4963,6 @@ function kostkaMakeDay(slot, iso){
   const foot = kostkaFootBlocks(slot);
   switch(slot){
     case 'mon': {
-      const hang = wk.hang;
       const blocks = [kostkaWarmup('kostka_rozgrzewka_pon', [KOSTKA_SEKW,
         {label:'3 pary: podciągnięcia + pompki (ok. 75% możliwości)', reps:'3 pary', desc:'Lekko, bez zmęczenia.'}])];
       if(wk.pomiar && w <= 8) blocks.push(kostkaPomiarBlock());
@@ -4943,14 +4971,10 @@ function kostkaMakeDay(slot, iso){
           cue:'2 serie × 30 s, przerwa 1 min. W przerwie: podpór i dotykanie dłonią przeciwnego barku (z kolan, jeśli kostka boli).'}),
         kHB('hangboard_k_jednoracz', 'Ciągnięcie jednorącz, stopy na podłodze (listwa 15–20 mm)', {series:kHalf(3, wk), reps:10, hang:5, hangRest:5, seriesRest:90, workLabel:'Ciągnięcie',
           cue:'Półzamknięcie. 5 s ciągnięcia coraz mocniej, ręce na zmianę — 5 powtórzeń na każdą rękę, 3 serie, przerwa 1,5 min. Pierwsze 2–3 sesje: nie dochodź do pełnej siły. W przerwie: leżąc na plecach, powolne opuszczanie przeciwnej ręki i nogi.'}),
-        kHB('hangboard_k_obciazenie', 'Zwis z obciążeniem (listwa 30–50 mm, chwyt otwarty)', {series:kHalf(3, wk), reps:1, hang:20, seriesRest:90,
-          cue:'3 serie × 20 s (od 15 do 25 s), przerwa 1,5 min. Ciężar tak, żeby ostatnie sekundy były trudne. W przerwie: deska bokiem z kolan.'}),
-        hang
-          ? kHB('hangboard_k_max', 'Najcięższa część: zwis 12 s nad podestem (listwa 15–20 mm)', {series:kHalf(4, wk), reps:1, hang:12, seriesRest:180,
-              cue:'Półzamknięcie, zwis 12 s (od 9 do 15 s), 3–4 powtórzenia, przerwa 3 min — obowiązkowo. Trudność zwiększasz ciężarem, nie mniejszą listwą. W przerwach: klęk podparty z unoszeniem przeciwnej ręki i nogi + rozciąganie na leżąco.',
-              warn:'Pod tablicą stabilny podest. Po zwisie schodzisz zdrową nogą — nigdy nie zeskakujesz.'})
-          : kHB('hangboard_k_max', 'Najcięższa część: ciągnięcie obiema rękami na wadze (listwa 15–20 mm)', {series:kHalf(4, wk), reps:1, hang:12, seriesRest:180, workLabel:'Ciągnięcie',
-              cue:'Stopy na wadze, półzamknięcie, 85–90% siły maksymalnej, 3–4 powtórzenia × 10–12 s, przerwa 3 min — obowiązkowo.' + kostkaOdczyt(0.85, 0.90) + ' W przerwach: klęk podparty z unoszeniem przeciwnej ręki i nogi + rozciąganie na leżąco.'}),
+        kHB('hangboard_k_obciazenie', 'Długi zwis chwytem otwartym (listwa 30–50 mm)', {series:kHalf(3, wk), reps:1, hang:20, seriesRest:90,
+          cue:'3 serie × 20 s (od 15 do 25 s), przerwa 1,5 min, <b>bez dodatkowego ciężaru</b>. Ostatnie sekundy mają być trudne — gdy 25 s jest łatwe, weź węższą listwę z zakresu 30–50 mm. Zwis nad podestem, schodzisz zdrową nogą. W przerwie: deska bokiem z kolan.'}),
+        kHB('hangboard_k_max', 'Najcięższa część: ciągnięcie jedną ręką na wadze (listwa 15–20 mm)', {series:kHalf(4, wk), reps:2, hang:12, hangRest:30, seriesRest:180, workLabel:'Ciągnięcie', repLabels:['lewa ręka', 'prawa ręka'],
+          cue:'Stoisz na wadze na obu nogach, w ortezie. Półzamknięcie, 10–12 s ciągnięcia — najpierw lewa, potem prawa ręka (30 s na zmianę ręki). 3–4 serie, przerwa 3 min — obowiązkowo.' + kostkaWaga(0.85, 0.90, true) + ' W przerwach: klęk podparty z unoszeniem przeciwnej ręki i nogi + rozciąganie na leżąco.'}),
         ...foot);
       return S('✋', blocks, 'Ok. 50 min. Najcięższa sesja palców w tygodniu.');
     }
@@ -4960,14 +4984,14 @@ function kostkaMakeDay(slot, iso){
         {id:'block_main', name:'Pchanie, mięśnie przeciwne, brzuch', kind:'exercises', items},
         ...foot.filter(b => !b.id.startsWith('kostka_skoki')),
         kHB('hangboard_k_lekkie', 'Opcjonalnie: lekkie ciągnięcie listwy, stopy na ziemi (ok. 40%)', {series:1, reps:30, hang:10, hangRest:10, seriesRest:0, workLabel:'Ciągnięcie',
-          cue:'Tylko jeśli masz ochotę — co najmniej 6 h przed albo po innej sesji. Ok. 40% siły, po 10 s, łącznie najwyżej 10 min.' + kostkaOdczyt(0.40)})];
+          cue:'Tylko jeśli masz ochotę — co najmniej 6 h przed albo po innej sesji. Obie ręce, stoisz na wadze, po 10 s, łącznie najwyżej 10 min.' + kostkaWaga(0.40)})];
       return S('💪', blocks, 'Ok. 45 min.');
     }
     case 'wed': {
       const [n, min, p] = wk.wed;
       const blocks = [kostkaWarmup('kostka_rozgrzewka_sr', [KOSTKA_SEKW]),
         kHB('hangboard_k_wytrz', `Ciągnięcie z przerwami 7 s / 3 s — ${n} × ${min} min`, {series:n, reps:min * 6, hang:7, hangRest:3, seriesRest:300, workLabel:'Ciągnięcie',
-          cue:`Listwa 20 mm, na zmianę chwyt otwarty trzema palcami i półzamknięcie. 7 s ciągnięcia, 3 s przerwy, bez zatrzymania przez całą serię. Ok. ${Math.round(p * 100)}% siły maksymalnej (ustawione na wadze). Przerwa między seriami 5 min. Pod koniec serii wyraźnie ciężko, ale bez odpadania.` + kostkaOdczyt(p)}),
+          cue:`Listwa 20 mm, na zmianę chwyt otwarty trzema palcami i półzamknięcie. 7 s ciągnięcia, 3 s przerwy, bez zatrzymania przez całą serię. Obie ręce, stoisz na wadze. Przerwa między seriami 5 min. Pod koniec serii wyraźnie ciężko, ale bez odpadania.` + kostkaWaga(p) + ' Jeśli pod koniec serii jest za ciężko — ciągnij lżej, tak żeby waga pokazywała 1–2 kg więcej.'}),
         {id:'block_main', name:'Podciągnięcia i brzuch', kind:'exercises', items:[kEx('K08', wk), kEx('K09', wk)]},
         ...foot];
       return S('✋', blocks, 'Ok. 45 min.');
@@ -4976,7 +5000,7 @@ function kostkaMakeDay(slot, iso){
       const alt = w % 2 === 1 ? 'K13a' : 'K13b';
       const blocks = [...foot.filter(b => b.id.startsWith('kostka_skoki')),
         kostkaWarmup('kostka_rozgrzewka_czw', [{label:'Kilka lekkich podciągnięć', reps:'kilka', desc:'Lekko, bez zmęczenia.'}]),
-        {id:'block_main', name:'Ciągnięcie', kind:'exercises', items:['K10','K11','K12',alt].map(id => kEx(id, wk, id === 'K10' && w >= 3 ? {cue:'4–5 serii, zostaw 2 powtórzenia w zapasie, przerwa 2–3 min. Od tygodnia 3: +1,25 kg.'} : null))},
+        {id:'block_main', name:'Ciągnięcie', kind:'exercises', items:['K10','K11','K12',alt].map(id => kEx(id, wk, id === 'K10' && w >= 3 ? {cue:'4–5 serii, zostaw 2 powtórzenia w zapasie, przerwa 2–3 min. Od tygodnia 3 opuszczanie 3–4 s. Bez pasa z ciężarem i plecaka.'} : null))},
         {id:'block_legs', name:'Nogi', kind:'exercises', items:['K14','K15','K16','K17'].map(id => kEx(id, wk))},
         ...foot.filter(b => !b.id.startsWith('kostka_skoki'))];
       return S('💪', blocks, `Ok. 50 min. Ćwiczenie 4 na zmianę co tydzień — w tym tygodniu: ${KOSTKA_EX[alt].name.toLowerCase()}.`);
@@ -5078,7 +5102,7 @@ function kostkaSettingsInfo(){
   const w = kostkaWeek(todayISO());
   const k = kostkaMax();
   return (w === 0 ? 'Plan wystartuje ' + fmtDayLong(kostkaStartISO()) + '.' : `Dziś: tydzień ${Math.min(w, 8)} z 8${w > 8 ? ' (po planie)' : ''}.`)
-    + ` Stopa: etap ${kostkaEtap()} z 6.` + (k ? ` Ostatni pomiar siły palców: ${fmtKg(Math.round(k.max * 10) / 10)} kg (${fmtDayLong(k.iso)}).` : '');
+    + ` Stopa: etap ${kostkaEtap()} z 6.` + (k ? ` Ostatni pomiar siły palców (${fmtDayLong(k.iso)}): ` + (k.L != null ? `lewa ${kKg(k.L)} kg, prawa ${kKg(k.P)} kg.` : `obie ręce ${kKg(k.sum)} kg.`) : '');
 }
 function saveKostkaStart(val){
   if(!val) return;
@@ -5625,9 +5649,9 @@ function renderHangboardBody(data){
   for(let s=1;s<=data.series;s++){
     for(let r=1;r<=data.reps;r++){
       phases.push({
-        label: single ? `${data.workLabel || 'Zwis'} ${s}/${data.series}` : `Seria ${s}/${data.series} · ${data.workLabel || 'Zwis'} ${r}/${data.reps}`,
+        label: single ? `${data.workLabel || 'Zwis'} ${s}/${data.series}` : `Seria ${s}/${data.series} · ` + (data.repLabels ? `${data.workLabel || 'Zwis'}: ${data.repLabels[r-1]}` : `${data.workLabel || 'Zwis'} ${r}/${data.reps}`),
         seconds:data.hang, kind:'work'});
-      if(r < data.reps) phases.push({label:`Seria ${s}/${data.series} · Luz`, seconds:data.hangRest, kind:'rest'});
+      if(r < data.reps) phases.push({label:`Seria ${s}/${data.series} · ` + (data.repLabels ? 'zmiana ręki' : 'Luz'), seconds:data.hangRest, kind:'rest'});
     }
     if(s < data.series) phases.push({label: single ? 'Przerwa' : 'Przerwa między seriami', seconds:data.seriesRest, kind:'seriesRest'});
   }
@@ -6291,7 +6315,7 @@ function claudeSummary(days, today){
   } else if(kostkaOn()){
     const kw = kostkaWeek(today), km = kostkaMax(), ke = kostkaEtap();
     L.push('Program: plan na czas urazu kostki (skręcenie stawu skokowego do środka, naderwanie II stopnia więzadła piętowo-strzałkowego, przewlekle niewydolne więzadło skokowo-strzałkowe przednie; orteza półsztywna; ok. 8 tygodni bez ściany). Dziś ('+aiDay(today)+'): '+(kw === 0 ? 'przed startem planu' : 'tydzień '+Math.min(kw, 8)+' z 8'+(kw > 8 ? ' (po planie)' : ''))+'; trening stopy: etap '+ke+' z 6 ('+KOSTKA_ETAPY[ke].name.toLowerCase()+').'
-      +(km ? ' Ostatni pomiar siły palców (listwa 20 mm, półzamknięcie, na wadze): '+String(Math.round(km.max * 10) / 10).replace('.', ',')+' kg przy masie '+String(km.masa).replace('.', ',')+' kg ('+aiDate(km.iso)+').' : ' Pomiaru siły palców jeszcze nie ma.'));
+      +(km ? ' Ostatni pomiar siły palców (listwa 20 mm, półzamknięcie, ciągnięcie na wadze): '+(km.L != null ? 'lewa '+kKg(km.L)+' kg, prawa '+kKg(km.P)+' kg' : 'obie ręce '+kKg(km.sum)+' kg')+' przy masie '+fmtKg(km.masa)+' kg ('+aiDate(km.iso)+'). Najcięższa część w poniedziałek: jedną ręką na wadze; bez dociążania plecakiem i pasem (kostka).' : ' Pomiaru siły palców jeszcze nie ma.'));
     L.push('Układ tygodnia: pon — siła palców (zwisy, ciągnięcie na wadze), wt — pchanie, mięśnie przeciwne, brzuch, śr — wytrzymałość przedramion (7 s / 3 s przy 35–40%), czw — ciągnięcie i nogi, pt — stopa i rozciąganie, sob — zwisy z przerwami 10/5, nd — wolne. Codziennie trening stopy (etapy 1–6 wg kryteriów), część siłowa stopy wt/czw/pt/sob. Tydzień 6 lżejszy (połowa), pomiar siły w tyg. 1, 4, 8, test 7/3 przy 60% w tyg. 4 i 8.');
   } else {
     L.push('Dziś ('+aiDay(today)+'): cykl '+(p.cycleIndex+1)+', tydzień '+p.weekInCycle+' z 2 ('+p.planWeek+'. tydzień planu)'+(p.deload ? ' — tydzień odciążeniowy (deload)' : '')+'.');
