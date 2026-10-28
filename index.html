@@ -755,7 +755,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.31.2';
+const APP_VERSION = '1.31.3';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -4771,19 +4771,20 @@ function kostkaWarmup(id, extra){
 const KOSTKA_HB_ZASADY = [
   {t:'Zasady dla palców', h:'Tylko chwyt otwarty albo półzamknięty — nigdy pełne zamknięcie (kciuk na palcu wskazującym). Maksymalnie 3 ciężkie sesje palców w tygodniu (poniedziałek, środa, sobota), co najmniej 48 h przerwy między nimi. Na wadze trudność zwiększasz mocniejszym ciągnięciem (aplikacja poda niższą liczbę na wadze po kolejnym pomiarze). Przy zwisach w tym planie — najpierw czasem, potem <b>mniejszą listwą zamiast dociążania</b> (np. 20 mm zamiast 30 mm), bo plecak i pas z ciężarem obciążają chorą kostkę. W danym tygodniu zmieniasz tylko jedną rzecz: ciężar albo czas albo liczbę serii.'},
   {t:'Kiedy zwolnić', h:'Ból powyżej 2–3/10 albo poranna sztywność palców ponad 30 min — tydzień na poprzednim poziomie. Trzask albo ostry ból u podstawy palca — natychmiast przerywasz i idziesz do lekarza.'},
-  {t:'Kostka przy tablicy', h:'Stabilny podest pod drążkiem i tablicą. Nigdy nie zeskakujesz — schodzisz zdrową nogą. Najcięższe wysiłki robisz bez wiszenia: stoisz na wadze łazienkowej na obu nogach, a ciągnięcie odciąża kostkę. <b>Bez plecaka i pasa z ciężarem</b> — dodatkowy ciężar obciąża kostkę przy staniu i schodzeniu.'},
+  {t:'Twoja tablica (WhiteOak Plus) — który chwyt', h:'<ul><li><b>Długa listwa 20 mm</b> — głębsza z dwóch długich listew na środku tablicy (płytsza ma 14 mm; która jest która, sprawdzisz raz linijką wsuniętą do tylnej ścianki). Na niej: pomiar siły, środa, sobota, ciągnięcie jednorącz i najcięższa część. Pomiar zawsze na tej samej listwie.</li><li><b>Czwórki 30 mm</b> — najgłębsze szerokie otwory na cztery palce; tablica ma też czwórki 25, 20 i 14 mm. Na nich zwisy chwytem otwartym; trudniej = płytsza czwórka (30 → 25 → 20 mm).</li><li><b>Długa listwa 14 mm</b> — dopiero gdy 20 mm jest za łatwe.</li><li><b>Klama na górze tablicy (43 mm)</b> — rozgrzewka i najłatwiejsze zwisy.</li><li>Trójki 30 i 14 mm, dwójki 30, 25 i 20 mm — w tym planie nieużywane.</li></ul>Głębokości wg producenta (whiteoak.com.pl); producent nie podaje, w którym miejscu jest która czwórka — najgłębszą rozpoznasz palcami.'},
+  {t:'Kostka przy tablicy', h:'Tablica wisi nad drzwiami: pod nią stabilny, szeroki podest, a na nim waga — tak, żeby przy listwie mieć prawie proste ręce. Stabilny podest pod drążkiem i tablicą. Nigdy nie zeskakujesz — schodzisz zdrową nogą. Najcięższe wysiłki robisz bez wiszenia: stoisz na wadze łazienkowej na obu nogach, a ciągnięcie odciąża kostkę. <b>Bez plecaka i pasa z ciężarem</b> — dodatkowy ciężar obciąża kostkę przy staniu i schodzeniu.'},
 ];
 const kHB = (id, name, o) => applyHangboardOverride({id, kind:'hangboard', name, series:o.series, reps:o.reps, hang:o.hang, hangRest:o.hangRest || 0, seriesRest:o.seriesRest, workLabel:o.workLabel, repLabels:o.repLabels, cue:o.cue, warn:o.warn, tech:[...(o.tech || []), ...KOSTKA_HB_ZASADY]});
 function kostkaPomiarBlock(){
   return {id:'hangboard_k_pomiar', kind:'linatest', name:'Pomiar siły palców na wadze (każda ręka osobno)',
-    how:'Po rozgrzewce. Stoisz na wadze łazienkowej pod chwytotablicą, na obu nogach, w ortezie.<br><br>1. Wpisz masę ciała (stojąc spokojnie na wadze).<br>2. Złap listwę 20 mm <b>jedną ręką</b> w półzamknięciu i przez 5–7 s ciągnij w dół z całej siły, bez uginania kolan. Wpisz najniższą liczbę, jaką pokazała waga.<br>3. To samo drugą ręką.<br><br>Wyświetlacz łatwo przegapić — najprościej nagrać wagę telefonem. Możesz zrobić 2–3 próby z przerwą 2–3 min i wpisać najniższy odczyt. <b>Niczego nie liczysz</b> — aplikacja sama poda, ile ma pokazywać waga przy kolejnych sesjach. Pomiar powtarzasz w tygodniu 4 i 8.',
+    how:'Po rozgrzewce. Stoisz na wadze łazienkowej pod chwytotablicą, na obu nogach, w ortezie.<br><br>1. Wpisz masę ciała (stojąc spokojnie na wadze).<br>2. Złap <b>długą listwę 20 mm</b> (głębsza z dwóch długich listew na środku tablicy) <b>jedną ręką</b> w półzamknięciu i przez 5–7 s ciągnij w dół z całej siły, bez uginania kolan. Wpisz najniższą liczbę, jaką pokazała waga.<br>3. To samo drugą ręką.<br><br>Wyświetlacz łatwo przegapić — najprościej nagrać wagę telefonem. Możesz zrobić 2–3 próby z przerwą 2–3 min i wpisać najniższy odczyt. <b>Niczego nie liczysz</b> — aplikacja sama poda, ile ma pokazywać waga przy kolejnych sesjach. Pomiar powtarzasz w tygodniu 4 i 8.',
     fields:[{k:'masa', l:'Masa ciała (kg)'}, {k:'lewa', l:'Najniższy odczyt wagi — lewa ręka (kg)'}, {k:'prawa', l:'Najniższy odczyt wagi — prawa ręka (kg)'}],
     summary:kostkaPomiarTxt,
     change:'Po zapisaniu przy tej pozycji pokaże się siła każdej ręki.'};
 }
 function kostkaTest73Block(){
   return {id:'hangboard_k_test73', kind:'linatest', name:'Test: 7 s / 3 s do odpadnięcia (obie ręce, na wadze)',
-    how:'Listwa 20 mm, półzamknięcie, obie ręce, stoisz na wadze. 7 s ciągnięcia, 3 s przerwy, do odmowy — kończysz, gdy nie utrzymujesz liczby na wadze albo 7 s. Timer liczy powtórzenia; przerwij go w chwili odmowy.' + kostkaWaga(0.60),
+    how:'Długa listwa 20 mm (ta sama co przy pomiarze), półzamknięcie, obie ręce, stoisz na wadze. 7 s ciągnięcia, 3 s przerwy, do odmowy — kończysz, gdy nie utrzymujesz liczby na wadze albo 7 s. Timer liczy powtórzenia; przerwij go w chwili odmowy.' + kostkaWaga(0.60),
     fields:[{k:'powt', l:'Liczba pełnych powtórzeń'}],
     change:'Porównujesz z wynikiem z tygodnia 4.',
     phases:Array.from({length:40}, (_, i) => [{label:`Ciągnięcie ${i+1}`, seconds:7, kind:'work'}, {label:'Luz', seconds:3, kind:'rest'}]).flat()};
@@ -4967,13 +4968,13 @@ function kostkaMakeDay(slot, iso){
         {label:'3 pary: podciągnięcia + pompki (ok. 75% możliwości)', reps:'3 pary', desc:'Lekko, bez zmęczenia.'}])];
       if(wk.pomiar && w <= 8) blocks.push(kostkaPomiarBlock());
       blocks.push(
-        kHB('hangboard_k_otwarty', 'Zwis chwytem otwartym (listwa 20–40 mm)', {series:kHalf(2, wk), reps:1, hang:30, seriesRest:60,
-          cue:'2 serie × 30 s, przerwa 1 min. W przerwie: podpór i dotykanie dłonią przeciwnego barku (z kolan, jeśli kostka boli).'}),
-        kHB('hangboard_k_jednoracz', 'Ciągnięcie jednorącz, stopy na podłodze (listwa 15–20 mm)', {series:kHalf(3, wk), reps:10, hang:5, hangRest:5, seriesRest:90, workLabel:'Ciągnięcie',
+        kHB('hangboard_k_otwarty', 'Zwis chwytem otwartym (czwórki 30 mm)', {series:kHalf(2, wk), reps:1, hang:30, seriesRest:60,
+          cue:'Czwórki 30 mm — najgłębsze szerokie otwory; jeśli 30 s to za dużo, klama na górze tablicy (43 mm). 2 serie × 30 s, przerwa 1 min. W przerwie: podpór i dotykanie dłonią przeciwnego barku (z kolan, jeśli kostka boli).'}),
+        kHB('hangboard_k_jednoracz', 'Ciągnięcie jednorącz, stopy na podłodze (długa listwa 20 mm)', {series:kHalf(3, wk), reps:10, hang:5, hangRest:5, seriesRest:90, workLabel:'Ciągnięcie',
           cue:'Półzamknięcie. 5 s ciągnięcia coraz mocniej, ręce na zmianę — 5 powtórzeń na każdą rękę, 3 serie, przerwa 1,5 min. Pierwsze 2–3 sesje: nie dochodź do pełnej siły. W przerwie: leżąc na plecach, powolne opuszczanie przeciwnej ręki i nogi.'}),
-        kHB('hangboard_k_obciazenie', 'Długi zwis chwytem otwartym (listwa 30–50 mm, potem mniejsza)', {series:kHalf(3, wk), reps:1, hang:20, seriesRest:90,
-          cue:'3 serie × 20 s (od 15 do 25 s), przerwa 1,5 min, <b>bez dodatkowego ciężaru</b>. Ostatnie sekundy mają być trudne — gdy 25 s jest łatwe, zamiast dociążania bierzesz <b>mniejszą listwę</b>, np. 20 mm zamiast 30 mm. Zwis nad podestem, schodzisz zdrową nogą. W przerwie: deska bokiem z kolan.'}),
-        kHB('hangboard_k_max', 'Najcięższa część: ciągnięcie jedną ręką na wadze (listwa 15–20 mm)', {series:kHalf(4, wk), reps:2, hang:12, hangRest:30, seriesRest:180, workLabel:'Ciągnięcie', repLabels:['lewa ręka', 'prawa ręka'],
+        kHB('hangboard_k_obciazenie', 'Długi zwis chwytem otwartym (czwórki 30 mm, potem płytsze)', {series:kHalf(3, wk), reps:1, hang:20, seriesRest:90,
+          cue:'Start: czwórki 30 mm. 3 serie × 20 s (od 15 do 25 s), przerwa 1,5 min, <b>bez dodatkowego ciężaru</b>. Ostatnie sekundy mają być trudne — gdy 25 s jest łatwe, zamiast dociążania bierzesz <b>płytszą czwórkę</b>: 30 → 25 → 20 mm. Zwis nad podestem, schodzisz zdrową nogą. W przerwie: deska bokiem z kolan.'}),
+        kHB('hangboard_k_max', 'Najcięższa część: ciągnięcie jedną ręką na wadze (długa listwa 20 mm)', {series:kHalf(4, wk), reps:2, hang:12, hangRest:30, seriesRest:180, workLabel:'Ciągnięcie', repLabels:['lewa ręka', 'prawa ręka'],
           cue:'Stoisz na wadze na obu nogach, w ortezie. Półzamknięcie, 10–12 s ciągnięcia — najpierw lewa, potem prawa ręka (30 s na zmianę ręki). 3–4 serie, przerwa 3 min — obowiązkowo.' + kostkaWaga(0.85, 0.90, true) + ' W przerwach: klęk podparty z unoszeniem przeciwnej ręki i nogi + rozciąganie na leżąco.'}),
         ...foot);
       return S('✋', blocks, 'Ok. 50 min. Najcięższa sesja palców w tygodniu.');
@@ -4983,7 +4984,7 @@ function kostkaMakeDay(slot, iso){
       const blocks = [...foot.filter(b => b.id.startsWith('kostka_skoki')),
         {id:'block_main', name:'Pchanie, mięśnie przeciwne, brzuch', kind:'exercises', items},
         ...foot.filter(b => !b.id.startsWith('kostka_skoki')),
-        kHB('hangboard_k_lekkie', 'Opcjonalnie: lekkie ciągnięcie listwy, stopy na ziemi (ok. 40%)', {series:1, reps:30, hang:10, hangRest:10, seriesRest:0, workLabel:'Ciągnięcie',
+        kHB('hangboard_k_lekkie', 'Opcjonalnie: lekkie ciągnięcie, stopy na wadze (długa listwa 20 mm)', {series:1, reps:30, hang:10, hangRest:10, seriesRest:0, workLabel:'Ciągnięcie',
           cue:'Tylko jeśli masz ochotę — co najmniej 6 h przed albo po innej sesji. Obie ręce, stoisz na wadze, po 10 s, łącznie najwyżej 10 min.' + kostkaWaga(0.40)})];
       return S('💪', blocks, 'Ok. 45 min.');
     }
@@ -4991,7 +4992,7 @@ function kostkaMakeDay(slot, iso){
       const [n, min, p] = wk.wed;
       const blocks = [kostkaWarmup('kostka_rozgrzewka_sr', [KOSTKA_SEKW]),
         kHB('hangboard_k_wytrz', `Ciągnięcie z przerwami 7 s / 3 s — ${n} × ${min} min`, {series:n, reps:min * 6, hang:7, hangRest:3, seriesRest:300, workLabel:'Ciągnięcie',
-          cue:`Listwa 20 mm, na zmianę chwyt otwarty trzema palcami i półzamknięcie. 7 s ciągnięcia, 3 s przerwy, bez zatrzymania przez całą serię. Obie ręce, stoisz na wadze. Przerwa między seriami 5 min. Pod koniec serii wyraźnie ciężko, ale bez odpadania.` + kostkaWaga(p) + ' Jeśli pod koniec serii jest za ciężko — ciągnij lżej, tak żeby waga pokazywała 1–2 kg więcej.'}),
+          cue:`Długa listwa 20 mm, na zmianę chwyt otwarty trzema palcami i półzamknięcie. 7 s ciągnięcia, 3 s przerwy, bez zatrzymania przez całą serię. Obie ręce, stoisz na wadze. Przerwa między seriami 5 min. Pod koniec serii wyraźnie ciężko, ale bez odpadania.` + kostkaWaga(p) + ' Jeśli pod koniec serii jest za ciężko — ciągnij lżej, tak żeby waga pokazywała 1–2 kg więcej.'}),
         {id:'block_main', name:'Podciągnięcia i brzuch', kind:'exercises', items:[kEx('K08', wk), kEx('K09', wk)]},
         ...foot];
       return S('✋', blocks, 'Ok. 45 min.');
@@ -5018,12 +5019,12 @@ function kostkaMakeDay(slot, iso){
       return S('🦶', blocks, 'Ok. 30 min.' + ((w === 1 || w === 6) ? ' W tym tygodniu także pomiar postępów kostki.' : ''));
     }
     case 'sat': {
-      const blocks = [kostkaWarmup('kostka_rozgrzewka_sob', [KOSTKA_SEKW, {label:'2–3 lekkie zwisy', reps:'2–3', desc:'Z odciążeniem stopą.'}])];
+      const blocks = [kostkaWarmup('kostka_rozgrzewka_sob', [KOSTKA_SEKW, {label:'2–3 lekkie zwisy', reps:'2–3', desc:'Na klamie (43 mm) albo czwórkach 30 mm, z odciążeniem stopą.'}])];
       if(wk.sat === 'test') blocks.push(kostkaTest73Block());
       else {
         const [n, r] = wk.sat;
         blocks.push(kHB('hangboard_k_przerywane', `Zwisy z przerwami 10/5 — ${n} × ${r}`, {series:n, reps:r, hang:10, hangRest:5, seriesRest:60,
-          cue:`Listwa 20 mm. 10 s zwisu, 5 s przerwy, ${r} razy z rzędu = 1 seria; ${n} serie, przerwa 1 min. Odciążasz się stopą na krześle albo dociążasz tak, żeby ostatnie powtórzenie ostatniej serii było bliskie odpadnięcia.` + (w <= 2 ? ' W tygodniach 1–2 zostaw ok. 2 s zapasu.' : '') + ' Gdy palce są zmęczone — zamiast tego lekkie ciągnięcie ze stopami na ziemi.'}));
+          cue:`Długa listwa 20 mm. 10 s zwisu, 5 s przerwy, ${r} razy z rzędu = 1 seria; ${n} serie, przerwa 1 min. Odciążasz się stopą na krześle tak, żeby ostatnie powtórzenie ostatniej serii było bliskie odpadnięcia. Jeśli bez odciążenia jest za łatwo — zamiast dociążania długa listwa 14 mm.` + (w <= 2 ? ' W tygodniach 1–2 zostaw ok. 2 s zapasu.' : '') + ' Gdy palce są zmęczone — zamiast tego lekkie ciągnięcie ze stopami na ziemi.'}));
       }
       blocks.push({id:'block_main', name:'Brzuch', kind:'exercises', items:[kEx('K18', wk)]}, ...foot);
       return S('✋', blocks, 'Ok. 40 min.');
