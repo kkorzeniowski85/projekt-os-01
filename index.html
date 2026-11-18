@@ -773,7 +773,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.32.0';
+const APP_VERSION = '1.33.0';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -2539,18 +2539,43 @@ function hbForSlot(pos, slot){ // slot: 'thu'|'mon2'|'wed2'|'fri2'
   return getProtocol('A');                             // czw
 }
 /* Deload: połowa serii w pozycjach siłowych. */
+/* Najwyżej 5 ćwiczeń na sesję: stały rdzeń (zawsze) + jedno ćwiczenie z rotacji —
+   przy kolejnych sesjach kolejne z listy. Pozostałe są w „Dołóż pojedyncze ćwiczenie". */
+const MODULE_ROT = {
+  A:{core:['E2','E3','E8','E4'], rot:['E11','E12','E10','E9','E5','E6','E7']},
+  B:{core:['E14','E15','E18','E19'], rot:['E22','E11','E12','E21','E16','E20','E17']},
+  C:{core:['E23','E25','E27','E28'], rot:['E30','E12','E21','E24','E26','E29']},
+};
+const GUM_ROT = {
+  A:{core:['G01','G02','G03','G04'], rot:['G05','G06']},
+  B:{core:['G07','G08','G09','G10'], rot:['G11','G12']},
+  C:{core:['G13','G15','G16','G19'], rot:['G14','G17','G18']},
+};
+function weekNo(iso){ return Math.floor(Math.round((new Date(iso+'T00:00:00') - new Date('2026-01-05T00:00:00')) / 864e5) / 7); }
+function rotSession(items, def, k){
+  const byId = id => items.find(x => x && x.id === id);
+  const core = def.core.map(byId).filter(Boolean);
+  const rot = def.rot.map(byId).filter(Boolean);
+  if(!rot.length) return {items:core, info:''};
+  const i = ((k % rot.length) + rot.length) % rot.length;
+  const pick = rot[i], next = rot[(i + 1) % rot.length];
+  return {items:[...core, pick],
+    info: rot.length > 1 ? `Ostatnie ćwiczenie zmienia się co sesję. Dziś: <b>${pick.name}</b>, następnym razem: ${next.name}.` : ''};
+}
 function applyDeload(items){
   return items.map(ex => ({...ex, sets: Math.max(1, Math.floor(ex.sets/2)), deload:true}));
 }
 /* Pełny moduł jako lista bloków dnia (z rozgrzewkami, tablicą wg slotu i wyciszeniem). */
 function moduleDay(pos, slot, label){
+  const q = pos.cycleIndex * 4 + {thu:0, mon2:1, wed2:2, fri2:3}[slot];
   const letter = moduleForSlot(pos.cycleIndex, {thu:0, mon2:1, wed2:2, fri2:3}[slot]);
   const mod = MODULES[letter];
   const hb = hbForSlot(pos, slot);
-  const items = pos.deload ? applyDeload(mod.items) : mod.items;
+  const sel = rotSession(mod.items, MODULE_ROT[letter], Math.floor(q / 3));
+  const items = pos.deload ? applyDeload(sel.items) : sel.items;
   const blocks = [GENERAL_WARMUP];
   if(hb) blocks.push(FINGER_WARMUP, hb);
-  blocks.push({id:'block_main', name:mod.title, kind:'exercises', items});
+  blocks.push({id:'block_main', name:mod.title, kind:'exercises', items, rotInfo:sel.info});
   blocks.push(COOLDOWN);
   return {
     key:'mod'+letter, label, type:'strength',
@@ -3171,12 +3196,20 @@ function pickClimbPump(btn){
    ZMIANA TYPU DNIA — gdy plan nie wchodzi w grę (np. odpoczynek zamiast
    treningu albo wspinanie w dzień wolny). Zapis per data, w entry.dayOverride.
    ========================================================================= */
+function rotDay(day, def, k, label){
+  return {...day, label, blocks:day.blocks.map(b => {
+    if(b.kind !== 'exercises' || b.id !== 'block_main') return b;
+    const sel = rotSession(b.items, def, k);
+    return {...b, items:sel.items, rotInfo:sel.info};
+  })};
+}
 function dayFromKey(key, label, iso){
   if(key && key.startsWith('L:')) return {...linaMakeDay(key.slice(2), iso || state.selectedDate), label};
   if(key && key.startsWith('K:')) return {...kostkaMakeDay(key.slice(2), iso || state.selectedDate), label};
-  if(key === 'mon' || key === 'thu') return {...WEEK.find(w=>w.key===key), label};
+  if(key === 'mon') return {...WEEK.find(w=>w.key===key), label};
+  if(key === 'thu') return rotDay(WEEK.find(w=>w.key==='thu'), MODULE_ROT.A, weekNo(iso || state.selectedDate), label);
   if(key === 'gumA' || key === 'gumB' || key === 'gumC'){
-    return {...GUM_PROGRAM[key.slice(3)], label, gumProgram:true};
+    return {...rotDay(GUM_PROGRAM[key.slice(3)], GUM_ROT[key.slice(3)], weekNo(iso || state.selectedDate), label), gumProgram:true};
   }
   if(key === 'climb') return {key:'ovr_climb', label, type:'climb', title:'Wspinanie'};
   // jednostka była w planie, ale nie została zrobiona — usunięta z dnia
@@ -4321,12 +4354,12 @@ function linaCoreBlock(){
   return {id:'block_core', name:'Core', kind:'exercises',
     items:[linaEx('L05'), linaEx('L06'), lx('E19', {sets:3, repsRange:'6–10 powt.'})].filter(Boolean)};
 }
-function linaHomeA(){
+function linaHomeA(iso){
+  const all = [lx('E3', {sets:3}), lx('E6', {sets:3}), linaEx('L02'), linaEx('L01'),
+    lx('E9', {sets:3, repsRange:'8 powt.'}), lx('E12', {sets:2, repsRange:'20 powt.'})].filter(Boolean);
+  const sel = rotSession(all, {core:['E3','E6','L02','E9'], rot:['L01','E12']}, weekNo(iso || todayISO()));
   return [GUM_WARMUP,
-    {id:'block_main', name:'Przysiad jednonóż, antagoniści, core', kind:'exercises', items:[
-      lx('E3', {sets:3}), lx('E6', {sets:3}), linaEx('L02'), linaEx('L01'),
-      lx('E9', {sets:3, repsRange:'8 powt.'}), lx('E12', {sets:2, repsRange:'20 powt.'}),
-    ].filter(Boolean)},
+    {id:'block_main', name:'Przysiad jednonóż, antagoniści, core', kind:'exercises', items:sel.items, rotInfo:sel.info},
     LINA_HIPS, LINA_BREATH];
 }
 /* Mocne wspinanie dzień wcześniej (zapis albo plan) — wtedy bez dipów. */
@@ -4344,8 +4377,9 @@ function linaHomeB(iso){
   if(!noDips) items.push(lx('E8', {sets:3}));
   const calf = applyLevel(calfExercise());   // poziom z drabinki wspięć, w planie na linę maks. 3 serie
   items.push(lx('E14', {sets:3}), linaEx('L03'), linaEx('L04'), applyExerciseOverride({...calf, sets:Math.min(calf.sets, 3)}));
+  const sel = rotSession(items.filter(Boolean), {core:['E15','E8','E14','E10'], rot:['L03','L04']}, weekNo(iso));
   return {noDips, blocks:[GUM_WARMUP,
-    {id:'block_main', name:'Noga, pchanie, podciąganie, łokcie, stopy', kind:'exercises', items:items.filter(Boolean)},
+    {id:'block_main', name:'Noga, pchanie, podciąganie, łokcie, stopy', kind:'exercises', items:sel.items, rotInfo:sel.info},
     LINA_ANKLE_HIPS, LINA_BREATH]};
 }
 
@@ -4391,7 +4425,7 @@ function linaMakeDay(slot, iso, st){
     case 'boulder': return C('Ściana: bouldering', '🪨', 'boulder', linaBoulderBlocks(false), 'Siła i moc + technika nóg.');
     case 'boulderTech': return C('Ściana: bouldering techniczny (lekko)', '🪨', 'lekka', linaBoulderBlocks(true),
       'Dziś tylko technika i łatwa objętość — intensywne buldery nie mieszczą się w zasadach palców w tym tygodniu.');
-    case 'homeA': return S('Dom A: antagoniści, przysiad jednonóż, core', '🏠', linaHomeA(),
+    case 'homeA': return S('Dom A: antagoniści, przysiad jednonóż, core', '🏠', linaHomeA(iso),
       'Ok. 40 min. Bez palców. Pistol prowadzisz na swoim poziomie (Achilles: pięta cały czas na podłożu).');
     case 'homeB': {
       const hb = linaHomeB(iso);
@@ -5013,13 +5047,15 @@ function kostkaMakeDay(slot, iso){
       return S('✋', blocks, 'Ok. 50 min. Najcięższa sesja palców w tygodniu.');
     }
     case 'tue': {
-      const items = ['K01','K02','K03','K04','K05','K06','K07'].map(id => kEx(id, wk, id === 'K01' ? {cue:`Zgięcie łokci do 90°, nie niżej. Zostaw ${wk.rir} ${plural(wk.rir,'powtórzenie','powtórzenia','powtórzeń')} w zapasie.`} : null));
+      const odd = w % 2 === 1;
+      const items = ['K01','K02', odd ? 'K03' : 'K04', odd ? 'K06' : 'K07'].map(id => kEx(id, wk, id === 'K01' ? {cue:`Zgięcie łokci do 90°, nie niżej. Zostaw ${wk.rir} ${plural(wk.rir,'powtórzenie','powtórzenia','powtórzeń')} w zapasie.`} : null));
       const blocks = [...foot.filter(b => b.id.startsWith('kostka_skoki')),
-        {id:'block_main', name:'Pchanie, mięśnie przeciwne, brzuch', kind:'exercises', items},
+        {id:'block_main', name:'Pchanie, mięśnie przeciwne, brzuch', kind:'exercises', items,
+          rotInfo:`Barki i brzuch zmieniają się co tydzień — w następnym: ${KOSTKA_EX[odd ? 'K04' : 'K03'].name.toLowerCase()} i ${KOSTKA_EX[odd ? 'K07' : 'K06'].name.toLowerCase()}. Otwieranie dłoni z gumką masz w rozgrzewce przedramion.`},
         ...foot.filter(b => !b.id.startsWith('kostka_skoki')),
         kHB('hangboard_k_lekkie', 'Opcjonalnie: lekkie ciągnięcie, stopy na wadze (długa listwa 20 mm)', {series:1, reps:30, hang:10, hangRest:10, seriesRest:0, workLabel:'Ciągnięcie',
           cue:'Tylko jeśli masz ochotę — co najmniej 6 h przed albo po innej sesji. Obie ręce, stoisz na wadze, po 10 s, łącznie najwyżej 10 min.' + kostkaWaga(0.40)})];
-      return S('💪', blocks, 'Ok. 45 min.');
+      return S('💪', blocks, 'Ok. 35 min.');
     }
     case 'wed': {
       const [n, min, p] = wk.wed;
@@ -5031,13 +5067,15 @@ function kostkaMakeDay(slot, iso){
       return S('✋', blocks, 'Ok. 45 min.');
     }
     case 'thu': {
-      const alt = w % 2 === 1 ? 'K13a' : 'K13b';
+      const alt = w % 2 === 1 ? 'K11' : (w % 4 === 2 ? 'K13a' : 'K13b');
+      const legAlt = ['K15','K16','K17'][w % 3];
       const blocks = [...foot.filter(b => b.id.startsWith('kostka_skoki')),
         kostkaWarmup('kostka_rozgrzewka_czw', [{label:'Kilka lekkich podciągnięć', reps:'kilka', desc:'Lekko, bez zmęczenia.'}]),
-        {id:'block_main', name:'Ciągnięcie', kind:'exercises', items:['K10','K11','K12',alt].map(id => kEx(id, wk, id === 'K10' && w >= 3 ? {cue:'4–5 serii, zostaw 2 powtórzenia w zapasie, przerwa 2–3 min. Od tygodnia 3 opuszczanie 3–4 s. Bez pasa z ciężarem i plecaka.'} : null))},
-        {id:'block_legs', name:'Nogi', kind:'exercises', items:['K14','K15','K16','K17'].map(id => kEx(id, wk))},
+        {id:'block_main', name:'Ciągnięcie', kind:'exercises', items:['K10','K12',alt].map(id => kEx(id, wk, id === 'K10' && w >= 3 ? {cue:'4–5 serii, zostaw 2 powtórzenia w zapasie, przerwa 2–3 min. Od tygodnia 3 opuszczanie 3–4 s. Bez pasa z ciężarem i plecaka.'} : null))},
+        {id:'block_legs', name:'Nogi', kind:'exercises', items:['K14',legAlt].map(id => kEx(id, wk)),
+          rotInfo:'Trzecie ćwiczenie ciągnięcia i drugie nóg zmieniają się co tydzień (zatrzymania w podciągnięciu / podciąganie jedną ręką / przesuwanie od ręki do ręki; przyciąganie pięt / otwieranie kolan / unoszenie nogi w bok).'},
         ...foot.filter(b => !b.id.startsWith('kostka_skoki'))];
-      return S('💪', blocks, `Ok. 50 min. Ćwiczenie 4 na zmianę co tydzień — w tym tygodniu: ${KOSTKA_EX[alt].name.toLowerCase()}.`);
+      return S('💪', blocks, 'Ok. 40 min.');
     }
     case 'fri': {
       const blocks = [...foot,
@@ -5210,11 +5248,11 @@ function dayComponentHTML(dayObj, entry){
   if(dayObj.lina){
     if(dayObj.note) html += `<div class="notes-box" style="margin-top:0;">${dayObj.note}</div>`;
     html += blocksListHTML(dayObj.blocks, entry);
-    html += `<div class="meta" style="margin-top:14px;">Jeśli zabraknie czasu: najpierw odpuszczasz prostowniki palców, potem skracasz mobilność — nigdy pracy łopatek i rotatorów (to ochrona barków przy wspinaniu).</div>`;
+    html += `<div class="meta" style="margin-top:14px;">Jeśli zabraknie czasu: najpierw skracasz mobilność, potem odpuszczasz ostatnie ćwiczenie (to z rotacji).</div>`;
     return html;
   }
   html += blocksListHTML(dayObj.blocks, entry);
-  html += `<div class="meta" style="margin-top:14px;">Kolejność: rozgrzewki → palce (na świeżo) → reszta. Jeśli zabraknie czasu, jako pierwsze odpuszczasz pompki archer, potem ab wheel — nigdy chwytotablicy, podciągania, dipów ani pracy łopatek.</div>`;
+  html += `<div class="meta" style="margin-top:14px;">Kolejność: rozgrzewki → palce (na świeżo) → reszta. Jeśli zabraknie czasu, jako pierwsze odpuszczasz ostatnie ćwiczenie (to z rotacji) — nigdy chwytotablicy, podciągania ani dipów.</div>`;
   return html;
 }
 
@@ -5257,6 +5295,7 @@ function blocksListHTML(blocks, entry, prefix){
           : `${serie(ex.sets)} × ${esc(ex.repsRange)}`;
         html += rowHTML(ex.id, ex.name, sub + loadTxt(ex) + (partial ? ` · zrobione ${log.sets.length}/${ex.sets}` : '') + propTag(rowProposal(ex)), done);
       });
+      if(block.rotInfo) html += `<div class="meta" style="margin:2px 0 10px;">${block.rotInfo}</div>`;
     }
   });
   return html;
