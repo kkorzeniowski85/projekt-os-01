@@ -172,6 +172,23 @@
   .timer-wrap{ display:flex; flex-direction:column; align-items:center; padding:8px 0 4px; }
   .timer-ring-holder{ position:relative; width:min(230px, 62vw); height:min(230px, 62vw); margin:6px 0 6px; }
   .timer-ring-holder svg{ width:100%; height:100%; display:block; }
+  /* Tarcza = przycisk Start / pauza: wypukła, przy dotknięciu zapada się */
+  .ring-btn{
+    border-radius:50%; cursor:pointer; user-select:none; -webkit-user-select:none; -webkit-tap-highlight-color:transparent;
+    background:radial-gradient(circle at 50% 28%, var(--stone-700) 0%, var(--stone-800) 40%, var(--stone-900) 75%, var(--stone-950) 100%);
+    box-shadow:0 8px 0 0 var(--stone-700), 0 9px 0 1px rgba(0,0,0,0.35), 0 18px 28px rgba(0,0,0,0.6), inset 0 3px 2px rgba(255,255,255,0.12), inset 0 -12px 20px rgba(0,0,0,0.4);
+    transition:transform 0.07s ease, box-shadow 0.07s ease;
+    margin-bottom:20px !important;
+  }
+  .ring-btn:active, .ring-btn.pressed{
+    transform:translateY(6px);
+    box-shadow:0 2px 0 0 var(--stone-700), 0 3px 0 1px rgba(0,0,0,0.35), 0 6px 12px rgba(0,0,0,0.5), inset 0 3px 6px rgba(0,0,0,0.35), inset 0 -4px 10px rgba(0,0,0,0.25);
+  }
+  .ring-btn:focus-visible{ outline:2px solid var(--lichen-500); outline-offset:6px; }
+  .ring-btn .timer-center{ pointer-events:none; }
+  .timer-center .hint{ font-size:0.74rem; color:var(--chalk-500); margin-top:6px; text-align:center; padding:0 22%; line-height:1.3; }
+  .ring-btn.paused .time{ color:var(--rope-400); }
+  .ring-btn.paused .hint{ color:var(--rope-400); font-weight:700; }
   /* Telefon w poziomie / niski ekran: mniejsza tarcza, żeby przyciski
      zostały widoczne bez przewijania. */
   @media (max-height:560px){
@@ -205,11 +222,12 @@
   #timerFull .fs-body{ flex:1; min-height:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
   #timerFull .timer-wrap{ width:100%; padding:0; }
   #timerFull .timer-ring-holder{ width:min(86vw, 54vh); height:min(86vw, 54vh); margin:0 0 18px; }
+  #timerFull .timer-center .hint{ font-size:clamp(0.8rem, 3.4vw, 1rem); }
   #timerFull .timer-center .time{ font-size:clamp(3.2rem, 16vw, 5.4rem); }
   #timerFull .timer-center .phase{ font-size:clamp(0.85rem, 3.8vw, 1.15rem); color:var(--chalk-300); padding:0 12%; }
   #timerFull .timer-center .rep{ font-size:1rem; }
   #timerFull .timer-wrap .btn-row{ max-width:none !important; width:100%; }
-  #timerFull .timer-wrap .btn{ min-height:68px; font-size:1.2rem; }
+  #timerFull .timer-wrap .btn{ min-height:56px; font-size:1.05rem; }
   #timerFull .fs-open{ display:none; }
   #timerFull .fs-next{ text-align:center; color:var(--chalk-500); font-size:0.95rem; min-height:1.4em; margin-top:14px; }
   #timerFull .fs-vol{ margin-top:12px; padding:0 4px; }
@@ -735,7 +753,7 @@
 
 </main>
 
-<!-- Timer na pełnym ekranie — tarcza trafia tu po naciśnięciu Start -->
+<!-- Timer na pełnym ekranie — tarcza trafia tu po jej dotknięciu (start) -->
 <div id="timerFull" hidden>
   <div class="fs-top">
     <div class="fs-title" id="fsTitle"></div>
@@ -755,7 +773,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = '1.31.3';
+const APP_VERSION = '1.32.0';
 
 /* =========================================================================
    USTAWIENIA + STORAGE (localStorage, offline-first)
@@ -2856,6 +2874,12 @@ function engineToggle(){
   renderTimerFace();
 }
 
+/* Dotknięcie tarczy = Start / pauza / wznów. Krótka wibracja potwierdza naciśnięcie. */
+function ringTap(){
+  if(!engine.phases.length) return;
+  vibrate(18);
+  engineToggle();
+}
 function engineTick(){
   clearTimeout(engine.timer);
   if(!engine.running) return;
@@ -2924,8 +2948,10 @@ function engineFinish(){
   const timeEl = document.getElementById('timerTimeLabel');
   if(phaseEl) phaseEl.textContent = 'GOTOWE';
   if(timeEl) timeEl.textContent = '00:00';
-  const btn = document.getElementById('timerStartBtn');
-  if(btn) btn.textContent = 'Start';
+  const ring = document.getElementById('timerRingBtn');
+  if(ring) ring.classList.remove('paused');
+  const hintEl = document.getElementById('timerHintLabel');
+  if(hintEl) hintEl.textContent = '';
   const fsN = document.getElementById('fsNext');
   if(fsN) fsN.textContent = 'Koniec';
   // pełny ekran znika po chwili (chyba że od razu ruszyła kolejna sekwencja, np. przerwa)
@@ -2941,7 +2967,8 @@ function skipPhase(){
 /* ---- Rysowanie tarczy ---- */
 function timerRingHTML(){
   return `<div class="timer-wrap">
-    <div class="timer-ring-holder">
+    <div class="timer-ring-holder ring-btn" id="timerRingBtn" role="button" tabindex="0" aria-label="Start albo pauza timera"
+      onclick="ringTap()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();ringTap();}">
       <svg width="230" height="230" viewBox="0 0 230 230">
         <circle cx="115" cy="115" r="100" fill="none" stroke="var(--stone-800)" stroke-width="10"/>
         <circle id="timerArc" cx="115" cy="115" r="100" fill="none" stroke="var(--lichen-500)" stroke-width="10"
@@ -2951,10 +2978,10 @@ function timerRingHTML(){
         <div class="phase" id="timerPhaseLabel">GOTOWY</div>
         <div class="time tabnum" id="timerTimeLabel">00:00</div>
         <div class="rep" id="timerRepLabel"></div>
+        <div class="hint" id="timerHintLabel"></div>
       </div>
     </div>
     <div class="btn-row" style="width:100%;max-width:280px;">
-      <button class="btn btn-primary" id="timerStartBtn" onclick="engineToggle()">Start</button>
       <button class="btn btn-ghost" onclick="skipPhase()">Pomiń</button>
       <button class="btn btn-ghost fs-open" style="flex:0 0 auto;width:auto;padding:0 14px;" onclick="openTimerFull()" title="Timer na pełnym ekranie">⛶</button>
     </div>
@@ -2967,8 +2994,8 @@ let fsHome = null;
 function timerFullOpen(){ const b = document.getElementById('timerFull'); return !!(b && b.hidden === false); }
 function openTimerFull(){
   const box = document.getElementById('timerFull');
-  const btn = document.getElementById('timerStartBtn');
-  const wrap = btn && btn.closest ? btn.closest('.timer-wrap') : null;
+  const ring = document.getElementById('timerRingBtn');
+  const wrap = ring && ring.closest ? ring.closest('.timer-wrap') : null;
   if(!box || !wrap || box.hidden !== true) return;
   fsHome = document.createComment('miejsce tarczy timera');
   wrap.parentNode.insertBefore(fsHome, wrap);
@@ -3000,11 +3027,14 @@ function renderTimerFace(){
   const timeEl = document.getElementById('timerTimeLabel');
   const repEl = document.getElementById('timerRepLabel');
   const arc = document.getElementById('timerArc');
-  const btn = document.getElementById('timerStartBtn');
-  if(!phaseEl || !timeEl || !arc || !btn) return;
+  const ring = document.getElementById('timerRingBtn');
+  const hintEl = document.getElementById('timerHintLabel');
+  if(!phaseEl || !timeEl || !arc || !ring) return;
   if(!ph){
     phaseEl.textContent = 'GOTOWY'; timeEl.textContent = '00:00';
     if(repEl) repEl.textContent = '';
+    if(hintEl) hintEl.textContent = '';
+    ring.classList.remove('paused');
     return;
   }
   const remainMs = engineRemainingMs();
@@ -3017,7 +3047,10 @@ function renderTimerFace(){
   arc.setAttribute('stroke-dashoffset', String(628*(1-frac)));
   const color = (ph.kind==='rest'||ph.kind==='seriesRest'||ph.kind==='prep') ? 'var(--rope-500)' : 'var(--lichen-500)';
   arc.setAttribute('stroke', (sec<=3 && !ph.tap && engine.running) ? 'var(--alert-500)' : color);
-  btn.textContent = ph.tap ? (ph.tapLabel || 'Dalej (w górę!)') : engine.running ? 'Pauza' : (engine.pausedRemainMs!==null ? 'Wznów' : 'Start');
+  const paused = !engine.running && engine.pausedRemainMs !== null;
+  ring.classList.toggle('paused', paused);
+  if(hintEl) hintEl.textContent = ph.tap ? (ph.tapLabel || 'dotknij — dalej')
+    : engine.running ? 'dotknij — pauza' : paused ? 'PAUZA — dotknij, aby wznowić' : 'dotknij, aby zacząć';
   if(timerFullOpen()){
     const nx = engine.phases[engine.idx + 1] || (engine.loop ? engine.phases[engine.loopFrom] : null);
     document.getElementById('fsNext').textContent = nx
@@ -4201,7 +4234,7 @@ const LINA_TESTS = {
      fields:[{k:'bezdechy', l:'Liczba bezdechów dłuższych niż 3 s'}],
      change:'Realna zmiana: mniej bezdechów przy wpinkach.'},
   D:{id:'hangboard_testD', name:'Test D: palce — listwa 20 mm, 7 s / 3 s do odmowy',
-     how:'Tylko w dniu bez innego obciążenia palców — zamiast zwisów. Po pełnej rozgrzewce palców. Listwa 20 mm, chwyt otwarty albo półzamknięty (nigdy pełny crimp), 7 s zwisu / 3 s przerwy, do odmowy: kończysz, gdy palce zaczynają się otwierać albo nie dotrzymujesz 7 s. Timer liczy powtórzenia — przerwij go przyciskiem „Pauza" w chwili odmowy.',
+     how:'Tylko w dniu bez innego obciążenia palców — zamiast zwisów. Po pełnej rozgrzewce palców. Listwa 20 mm, chwyt otwarty albo półzamknięty (nigdy pełny crimp), 7 s zwisu / 3 s przerwy, do odmowy: kończysz, gdy palce zaczynają się otwierać albo nie dotrzymujesz 7 s. Timer liczy powtórzenia — w chwili odmowy dotknij tarczy timera (pauza).',
      fields:[{k:'powt', l:'Liczba pełnych powtórzeń'}],
      change:'Wynik służy do porównań w czasie (dokument nie podaje progu realnej zmiany).',
      phases:Array.from({length:40}, (_, i) => [{label:`Zwis ${i+1}`, seconds:7, kind:'work'}, {label:'Luz', seconds:3, kind:'rest'}]).flat()},
@@ -4784,7 +4817,7 @@ function kostkaPomiarBlock(){
 }
 function kostkaTest73Block(){
   return {id:'hangboard_k_test73', kind:'linatest', name:'Test: 7 s / 3 s do odpadnięcia (obie ręce, na wadze)',
-    how:'Długa listwa 20 mm (ta sama co przy pomiarze), półzamknięcie, obie ręce, stoisz na wadze. 7 s ciągnięcia, 3 s przerwy, do odmowy — kończysz, gdy nie utrzymujesz liczby na wadze albo 7 s. Timer liczy powtórzenia; przerwij go w chwili odmowy.' + kostkaWaga(0.60),
+    how:'Długa listwa 20 mm (ta sama co przy pomiarze), półzamknięcie, obie ręce, stoisz na wadze. 7 s ciągnięcia, 3 s przerwy, do odmowy — kończysz, gdy nie utrzymujesz liczby na wadze albo 7 s. Timer liczy powtórzenia; w chwili odmowy dotknij tarczy timera (pauza).' + kostkaWaga(0.60),
     fields:[{k:'powt', l:'Liczba pełnych powtórzeń'}],
     change:'Porównujesz z wynikiem z tygodnia 4.',
     phases:Array.from({length:40}, (_, i) => [{label:`Ciągnięcie ${i+1}`, seconds:7, kind:'work'}, {label:'Luz', seconds:3, kind:'rest'}]).flat()};
